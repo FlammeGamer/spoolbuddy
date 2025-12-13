@@ -1,0 +1,158 @@
+import { MyText, MyButton, ButtonType, WizardButtons, Title } from "framework/widgets.slint";
+import { AppBackend, AppState, ControlState, SpoolStagingState, SpoolScaleState, StagingOperationsPage, UiSpoolRecordDisplay } from "app.slint";
+import { SpoolDisplay } from "spool-display.slint";
+import { Utils } from "utils.slint";
+import { ScaleWeightDisplay } from "app-widgets.slint";
+import { UpdateWeightPage } from "common-operations.slint";
+
+component SpoolDisplayStep inherits Rectangle {
+    callback more-clicked();
+    in property <UiSpoolRecordDisplay> spool-display;
+    VerticalLayout {
+
+        SpoolDisplay {
+            spool-display: root.spool-display;
+        }
+
+        HorizontalLayout {
+            height: 56px;
+            if AppState.spool-scale-state != SpoolScaleState.NotAvailable: MyButton {
+                enabled: AppState.spool-staging-state != SpoolStagingState.Empty && AppState.is-scale-usable-now();
+                text: "Quick Weight";
+                clicked => {
+                    AppBackend.set-spool-weight(spool-display.spool-record.id, AppState.spool-scale-weight, -1, false);
+                }
+            }
+
+            if AppState.spool-scale-state == SpoolScaleState.NotAvailable: MyButton {
+                text: "Configure Slot";
+                clicked => {
+                    AppState.control-state = ControlState.TraySelect;
+                }
+            }
+
+            MyButton {
+                text: "More...";
+                clicked => {
+                    AppState.staging-operation-page = StagingOperationsPage.OperationSelection;
+                }
+            }
+
+            MyButton {
+                text: "Close";
+                clicked => {
+                    AppState.prompt-select-tray();
+                }
+            }
+        }
+    }
+}
+
+component OperationSelectionStep inherits Rectangle {
+    background: white;
+    VerticalLayout {
+        Title {
+            text: "Please Select Staging Operation";
+        }
+
+        GridLayout {
+            padding: 5px;
+            spacing: 5px;
+            Row {
+                MyButton {
+                    text: "Configure Slot Manually";
+                    clicked => {
+                        AppState.control-state = ControlState.TraySelect;
+                    }
+                }
+
+                MyButton {
+                    enabled: AppState.spool-staging-state != SpoolStagingState.Empty && AppState.is-scale-usable-now();
+                    text: "Advanced Weight";
+                    clicked => {
+                        AppState.prev-staging-operation-page = AppState.staging-operation-page;
+                        AppState.staging-operation-page = StagingOperationsPage.UpdateWeight;
+                    }
+                }
+
+                MyButton {
+                    text: "Clear Staging";
+                    clicked => {
+                        AppBackend.clear-staging();
+                        AppState.control-state = ControlState.Ready;
+                    }
+                }
+            }
+
+            Row {
+                MyButton {
+                    text: "Encode Tag";
+                    clicked => {
+                        AppState.encode-start();
+                    }
+                }
+
+                MyButton {
+                    text: "Unlink Tag";
+                    clicked => {
+                        AppBackend.unlink-spool-from-tag(AppState.spool-staging-info.spool-record.id)
+                    }
+                }
+
+                MyButton {
+                    text: "Erase Tag";
+                    clicked => {
+                        AppState.erase-tag-by-spool-id-start(AppState.spool-staging-info.spool-record.id)
+                    }
+                }
+            }
+
+            Row {
+                MyButton {
+                    visible: false;
+                    enabled: false;
+                    text: "Mark as Dried";
+                }
+
+                MyButton {
+                    // for used up spools it needs to show "mark refilled", and start process of weighting;
+                    // used up should clear the weights/fill the used, and mark it as used etc.
+                    visible: false;
+                    enabled: false;
+                    text: "Mark Used-Up";
+                }
+            }
+        }
+
+        HorizontalLayout {
+            MyButton {
+                height: 56px;
+                text: "Cancel";
+                clicked => {
+                    AppState.control-state = ControlState.Ready;
+                }
+            }
+        }
+    }
+}
+
+export component StagingOperations {
+    property <UiSpoolRecordDisplay> spool-display: AppBackend.get-spool-record-display(AppState.spool-staging-info.spool-record.id);
+    if AppState.staging-operation-page == StagingOperationsPage.SpoolDisplay: SpoolDisplayStep {
+        spool-display: spool-display;
+    }
+    if AppState.staging-operation-page == StagingOperationsPage.OperationSelection: OperationSelectionStep { }
+    if AppState.staging-operation-page == StagingOperationsPage.UpdateWeight: UpdateWeightPage {
+        title: "Update Spool \{spool-display.spool-record.id} Weight";
+        user-prompt: "Please place the spool on the scale:";
+        weight-current: spool-display.spool-record.weight-current;
+        weight-new: spool-display.spool-record.weight-new;
+        spool-id: spool-display.spool-record.id;
+        cancel-clicked => {
+            AppState.control-state = ControlState.Ready;
+        }
+        back-clicked => {
+            AppState.staging-operation-page = AppState.prev-staging-operation-page;
+        }
+    }
+}

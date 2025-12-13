@@ -4,96 +4,92 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-SpoolEase is a smart add-on system for Bambu Lab 3D printers that provides NFC-based spool identification, inventory management, and precise filament tracking via weight scale and print usage monitoring. It supports X1, P1, A1, H2, P2 product lines with various AMS configurations.
+SpoolStation is a filament management system for Bambu Lab 3D printers, based on [SpoolEase](https://github.com/yanshay/SpoolEase). The original SpoolEase source code is in `spoolease_sources/`. See `SPOOLSTATION_PLAN.md` for the roadmap of planned modifications.
 
-The system has two products:
-- **SpoolEase Console** - Main hub with display, NFC encoding, inventory tracking, printer setup
-- **SpoolEase Scale** - Weight measurement device (requires Console)
+The system provides:
+- NFC-based spool identification (NTAG, Mifare Classic, Bambu Lab RFID tags)
+- Weight scale integration for filament tracking
+- Inventory management and spool catalog
+- MQTT-based automatic AMS slot configuration for X1, P1, A1, H2, P2 product lines
 
 ## Repository Structure
 
-- **core/** - ESP32-S3 embedded Rust firmware for the Console (main application)
-- **shared/** - Shared Rust library used by core (NFC handling, gcode analysis, FTP client, etc.)
-- **new/src/inventory/** - Preact/TypeScript web-based inventory management UI
+```
+spoolease_sources/
+├── core/           # ESP32-S3 embedded Rust firmware (main application)
+│   ├── src/        # Rust source files
+│   ├── ui/         # Slint UI definitions (.slint files)
+│   ├── static/     # Web assets for embedded server
+│   └── data/       # CSV catalogs (brands, materials, spool weights)
+└── shared/         # Shared Rust library (NFC, gcode, FTP, etc.)
+    └── src/        # Library source files
+```
 
 ## Build Commands
 
 ### Core Firmware (Rust/ESP32-S3)
 
-Requires the ESP Rust toolchain (`esp` channel).
+Requires the ESP Rust toolchain (`esp` channel). Install via [espup](https://github.com/esp-rs/espup).
 
 ```bash
-cd core
-
-# Build debug
-cargo build
+cd spoolease_sources/core
 
 # Build release
 cargo build --release
 
-# Flash and monitor (uses espflash with 16MB flash config)
+# Flash and monitor (16MB flash, DIO mode, 80MHz)
 cargo run --release
 ```
 
-The flash configuration is in `core/.cargo/config.toml` - 16MB flash, DIO mode, 80MHz.
-
-### Inventory Web UI
-
-```bash
-cd new/src/inventory
-
-npm install
-npm run dev      # Development server
-npm run build    # Production build (outputs to static for embedding)
-npm run lint     # ESLint check
-```
+Flash configuration is in `spoolease_sources/core/.cargo/config.toml`.
 
 ### Deploy Scripts
 
-Located in `core/`:
+In `spoolease_sources/core/`:
 - `deploy-beta.sh` - Deploy to beta/unstable OTA channel
 - `deploy-rel.sh` - Deploy to release OTA channel
 - `deploy-debug.sh` - Debug deployment
 
-These scripts require the `esp-hal-app` xtask tooling and `spoolease-bin` output directory to be available in parent directories.
+These require `esp-hal-app` xtask tooling and `spoolease-bin` directory in parent directories.
 
 ## Architecture
 
-### Core Firmware (`core/src/`)
+### Core Firmware (`spoolease_sources/core/src/`)
 
-The firmware is a `no_std` embedded Rust application for ESP32-S3 using:
-- **esp-hal** ecosystem (esp-hal, esp-wifi, esp-mbedtls, embassy)
-- **Slint** for touch UI (`.slint` files in `core/ui/`)
-- **esp-hal-app-framework** - Custom framework for WiFi, display, settings management
+A `no_std` embedded Rust application using:
+- **esp-hal** ecosystem (esp-hal, esp-wifi, esp-mbedtls, embassy-*)
+- **Slint** for touch UI (rendered via software renderer)
+- **esp-hal-app-framework** - Custom framework for WiFi, display, settings
 
 Key modules:
-- `main.rs` - Entry point, hardware init, task spawning
-- `bambu.rs` / `bambu_api.rs` - Bambu Lab printer communication via MQTT
-- `view_model.rs` - UI state management and business logic
-- `store.rs` - Persistent storage for spools, printers, settings
+- `main.rs` - Entry point, hardware init, embassy task spawning
+- `bambu.rs` / `bambu_api.rs` - Printer communication via MQTT
+- `view_model.rs` - UI state management (largest file, ~150KB)
+- `store.rs` - Persistent storage (sequential-storage on flash)
 - `spool_scale.rs` - Scale communication and weight tracking
-- `web_app.rs` - Embedded web server for configuration and inventory API
+- `web_app.rs` - Embedded web server (picoserve)
 - `my_mqtt.rs` - MQTT client for printer communication
+- `csvdb.rs` - CSV data access for catalogs
 
-### Shared Library (`shared/src/`)
+### Shared Library (`spoolease_sources/shared/src/`)
 
-Reusable components:
-- `spool_tag.rs` - NFC tag data encoding/decoding
-- `pn532_ext.rs` - PN532 NFC reader extensions
+`no_std` library for reusable components:
+- `spool_tag.rs` - NFC tag data encoding/decoding (SpoolEase format)
+- `pn532_ext.rs` - PN532 NFC reader async extensions
 - `gcode_analysis.rs` / `gcode_analysis_task.rs` - Print file analysis
-- `my_ftp.rs` - FTP client for printer file access
-- `threemf_extractor.rs` - 3MF file parsing
+- `my_ftp.rs` - Async FTP client for printer file access
+- `threemf_extractor.rs` - 3MF file parsing with miniz_oxide
 
 ### UI Layer
 
-- `core/ui/*.slint` - Slint UI definitions
-- `core/static/` - Web assets served by embedded web server
-- `new/src/inventory/` - Standalone inventory web app (Preact + TailwindCSS)
+- `spoolease_sources/core/ui/*.slint` - Slint UI definitions
+- `spoolease_sources/core/static/` - HTML/CSS served by embedded web server
 
 ## Development Notes
 
-- Target: `xtensa-esp32s3-none-elf`
-- Uses PSRAM for heap allocation
-- Nightly Rust features required (see `#![feature(...)]` in main.rs)
-- TLS certificates for Bambu Lab and OTA in `core/src/certs/`
-- Configuration data (filament brands, materials, spool weights) in `core/data/*.csv`
+- **Target**: `xtensa-esp32s3-none-elf`
+- **Toolchain**: `esp` channel (nightly features required)
+- **Memory**: Uses PSRAM for heap, DRAM2 for bootloader-shared area
+- **TLS certs**: In `core/src/certs/` (Bambu Lab, OTA server)
+- **Catalog data**: CSV files in `core/data/` (brands, materials, spool weights)
+- **Log level**: Set via `ESP_LOG` env var (default: `info,SpoolEase=trace`)

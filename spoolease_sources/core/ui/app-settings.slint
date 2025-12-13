@@ -1,0 +1,102 @@
+import { MyText, MyButton, Title } from "framework/widgets.slint";
+import { SettingsButton } from "framework/settings.slint";
+import { ScaleCalibration } from "scale-calibration.slint";
+import { AppBackend, AppState, SpoolScaleState } from "app.slint";
+import { Settings } from "framework/settings.slint";
+
+enum AppSettingsState {
+  Buttons,
+  ScaleCalibration,
+  ScalesInformation,
+}
+
+export component ScalesInformation inherits Rectangle {
+    callback clicked;
+
+    background: white;
+    VerticalLayout {
+        alignment: space-between;
+        VerticalLayout {
+            alignment: start;
+            title := Title {
+                width: root.width;
+                text: AppState.spool-scale-state == SpoolScaleState.NotAvailable ? "Scale Not Available" : 
+                     (AppState.spool-scale-state == SpoolScaleState.Unknown || AppState.spool-scale-state == SpoolScaleState.Disconnected) ?"Trying to Connect to Scale" :  
+                     "Connected to Scale";
+            }
+
+            MyText {
+                vertical-alignment: center;
+                width: root.width;
+                height: title.height;
+                text: AppBackend.get-connected-scale-info();
+            }
+
+            Title {
+                width: root.width;
+                text: "Scales on Network (close & reopen to update)";
+            }
+
+            for scale in AppBackend.get-available-scales-info(): MyText {
+                vertical-alignment: center;
+                width: root.width;
+                height: 30px;
+                text: scale;
+            }
+        }
+
+        MyButton {
+            clicked => {
+                root.clicked()
+            }
+            width: root.width;
+            height: 56px;
+            text: "Ok";
+        }
+    }
+}
+
+export component AppSettings inherits Settings {
+    callback done;
+    property <AppSettingsState> state: Buttons;
+    tabs: ["1", "2"];
+
+    framework-tab-selected: self.selected-tab == 0;
+
+    if self.selected-tab == 1 && state == AppSettingsState.Buttons: VerticalLayout {
+        x: parent.x-offset;
+        y: parent.y-offset;
+        width: parent.buttons-width;
+
+        SettingsButton {
+            text: "Calibrate Scale";
+            enabled: !(AppState.spool-scale-state == SpoolScaleState.NotAvailable || AppState.spool-scale-state == SpoolScaleState.Unknown || AppState.spool-scale-state == SpoolScaleState.Disconnected);
+            clicked => {
+                root.state = AppSettingsState.ScaleCalibration;
+            }
+        }
+
+        SettingsButton {
+            text: "Scale(s) Information";
+            clicked => {
+                root.state = AppSettingsState.ScalesInformation;
+            }
+        }
+    }
+
+    if state == AppSettingsState.ScaleCalibration: ScaleCalibration {
+        cancel-clicked => {
+            root.state = AppSettingsState.Buttons;
+        }
+        ok-clicked => {
+            root.state = AppSettingsState.Buttons;
+            root.done();
+        }
+    }
+
+    if state == AppSettingsState.ScalesInformation: ScalesInformation {
+        clicked => {
+            root.state = AppSettingsState.Buttons;
+        }
+    }
+}

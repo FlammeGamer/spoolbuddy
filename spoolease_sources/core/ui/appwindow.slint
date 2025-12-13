@@ -1,0 +1,217 @@
+import { ListView, GridBox, VerticalBox, HorizontalBox, Button, ComboBox, SpinBox, ScrollView } from "std-widgets.slint";
+
+import { FrameworkBackend, FrameworkState, OtaState, WebConfigState } from "framework/framework.slint";
+import { Terminal } from "framework/terminal.slint";
+import { Settings } from "framework/settings.slint";
+import { Title, MyText, MyButton } from "framework/widgets.slint";
+
+import { Utils } from "utils.slint";
+import { Trays } from "trays.slint";
+import { AppBackend, AppState, AppConsts, ControlState, SpoolScaleState, UiTray, UiTrayState, UiFilamentState, StatusType } from "app.slint";
+import { ControlPanel } from "controlpanel.slint";
+import { SelectPrinter } from "select-printer.slint";
+import { AppSettings } from "app-settings.slint";
+import { NumPad } from "numpad.slint";
+// import { FilamentInfo } from "filament-info.slint";
+// import { FilamentInfoMode } from "app.slint";
+import { NewTagScan } from "new-tag-scan.slint";
+import { StagingOperations } from "staging-operations.slint";
+import { TrayOperations } from "tray-operations.slint";
+import { MessageBox } from "message-box.slint";
+import { AppOtaSelect } from "ota.slint";
+
+// reexport to rust
+
+export { FrameworkState, FrameworkBackend }
+export { AppState, AppBackend } 
+
+export component AppWindow inherits Window {
+    width: 480px;
+    height: 320px;
+
+    property <int> current-page: (FrameworkState.web-config-state == WebConfigState.Started-AP || FrameworkState.web-config-state == WebConfigState.Started-STA-Displayed) ? 2 : (AppState.control-state == ControlState.Booting || /*AppState.control-state == ControlState.ConnectingToPrinter ||*/ AppState.control-state == ControlState.BootFailed) ? 0 : 1;
+    changed current-page => {
+        if current-page != 0 && terminal.is-scrolled() { // if maybe moved away from terminal 
+          reset-terminal-scroll.running = true;
+        }
+        if current-page == 0 {
+            reset-terminal-scroll.running = false;
+        }
+        if FrameworkState.web-config-state == WebConfigState.Starting || FrameworkState.web-config-state == WebConfigState.Started-STA || FrameworkState.web-config-state == WebConfigState.Started-AP {
+            if current-page != 2 {
+                AppBackend.read-tag-mode();
+            } else {
+                AppBackend.web-config-web-app();
+            }
+        }
+    }
+    property <int> current-page-x: 0;
+
+    reset-terminal-scroll := Timer {
+        interval: 60s;
+        triggered => {
+        // for some reason calling a function in terminal panics slint, so I need to set internal properties instead
+        terminal.scroll-offset-from-end = 0;
+            terminal.locked-offset = 0;
+            self.running = false;
+        }
+    }
+
+    sgr := SwipeGestureHandler {
+        width: parent.width;
+        height: parent.height;
+        handle-swipe-up: current-page < 2 && (!AppState.select-printer);
+        handle-swipe-down: current-page > 0 && (!AppState.select-printer);
+        handle-swipe-left: AppState.select-printer == false;
+        handle-swipe-right: AppState.select-printer == true;
+        swiped => {
+            if FrameworkState.ota-state != OtaState.Started {
+                if self.handle-swipe-down && self.current-position.y > self.pressed-position.y + (self.height / 8) {
+                    // swipe down 
+                    current-page -= 1;
+                } else if self.handle-swipe-up && self.current-position.y < self.pressed-position.y - (self.height / 8) {
+                    current-page += 1;
+                }
+                if self.handle-swipe-left && self.current-position.x < self.pressed-position.x - (self.width / 5) {
+                    AppState.select-printer = true;
+                    current-page_x = 1;
+                    current-page = current-page; // this looks strange, but to 'cut' the automatic state based vertical positioning tht scrolls on events which is confusing after manual touch
+                } else if self.handle-swipe-right && self.current-position.x > self.pressed-position.x + (self.width / 5) {
+                    AppState.select-printer = false;
+                    current-page_x = 0;
+                }
+            }
+        }
+        left-pages := VerticalLayout {
+            x: - current-page_x * 480px;
+            y: - current-page * 320px;
+            animate y {
+                duration: 1000ms;
+                easing: ease-in-out;
+            }
+            animate x {
+                duration: 1000ms;
+                easing: ease-in-out;
+            }
+
+            // Page 0 - Terminal
+            terminal := Terminal {
+                text: FrameworkState.term-text;
+                height: root.height;
+                width: root.width;
+                background: #16161e;
+            }
+
+            // Page 1 :  App Window
+            page1 := VerticalLayout {
+                height: parent.height;
+                width: parent.width;
+                alignment: stretch;
+                top := HorizontalLayout {
+                    spacing: AppConsts.trays-spacing;
+
+                    // Separating the external tray from the ams trays so can scroll the ams trays in case of several ams's
+                    if AppState.ams-exists.length > 0: 
+                      ams := Trays {
+                        is_ams: true;
+                        title: "AMS - " + (AppState.curr-ams-id + 1);
+                        include-paging-left: false;
+                        include-paging-right: false;
+                        tray_numbers: AppState.curr-ams-id <= 3 ? [
+                            AppState.get_tray_index(AppState.curr-ams-id, 0),
+                            AppState.get_tray_index(AppState.curr-ams-id, 1),
+                            AppState.get_tray_index(AppState.curr-ams-id, 2),
+                            AppState.get_tray_index(AppState.curr-ams-id, 3),
+                        ] : [AppState.get_tray_index(AppState.curr-ams-id, 0)];
+                        trays-state: AppState.trays-state;
+                    }
+
+                    external := Trays {
+                        is_ams: false;
+                        title: AppState.num-extruders == 1 ? "External" : AppState.displayed-extruder == 0 ? "Ext Right" : "Ext Left";
+                        tray_numbers: [AppState.displayed-extruder];
+                        trays-state: AppState.trays-state;
+                        title-clicked => { 
+                          if AppState.num-extruders == 2 {
+                            AppState.displayed-extruder = 1 - AppState.displayed-extruder;
+                          }
+                        }
+                    }
+                }
+
+                bottom := ControlPanel {
+                    clicked-ota => {
+                        root.current-page = 2;
+                        FrameworkState.ota-clear-message();
+                        FrameworkState.ota-state = OtaState.Checking;
+                        AppBackend.ota-check-firmwares();
+                    }
+                    staging-section-width: external.width;
+                    button-width: external.width;
+                }
+            }
+
+            page3 := AppSettings {
+                width: root.width;
+                height: root.height;
+                done => { // not used, but if we want to in the future
+                    root.current-page = 1;
+                }
+                // TODO: Can move Checking also to Framework Ota 
+                if FrameworkState.ota-state == OtaState.UserInput: AppOtaSelect {
+                    width: root.width;
+                    height: root.height;
+                }
+            }
+        }
+
+        SelectPrinter {
+            selected => {
+                AppState.select-printer = false;
+                current-page-x = 0;
+            }
+            x: left-pages.x + 480px;
+        }
+    }
+
+    if AppState.control-state == ControlState.NewTagScan: new-tag-scan := NewTagScan {
+        width: root.width;
+        height: root.height;
+    }
+
+    if AppState.control-state == ControlState.StagingSelected: staging-selected := StagingOperations {
+        width: root.width;
+        height: root.height;
+    }
+
+    if AppState.control-state == ControlState.TraySelected: tray-selected := TrayOperations {
+        width: root.width;
+        height: root.height;
+    }
+
+    if AppState.message-box-text != "": MessageBox {
+        width: root.width;
+        height: root.height;
+        dialog-width: 416px;
+        dialog-height: 242px - (self.dialog-text2 == "" ? 76px : 0px);
+        dialog-title: AppState.message-box-title;
+        dialog-text: AppState.message-box-text;
+        dialog-text2: AppState.message-box-text2;
+        dialog-background: AppState.message-box-type == StatusType.Success ? green.brighter(1.0) : AppState.message-box-type == StatusType.Error ? red : skyblue;
+        dialog-button-text: "Ok" + (AppState.message-box-timeout != 0 ? " (\{AppState.message-box-timeout})" : "");
+        clicked => {
+            AppState.hide-message-box();
+        }
+
+        Timer {
+            interval: 1s;
+            running: AppState.message-box-text != "" && AppState.message-box-timeout != 0;
+            triggered => {
+                AppState.message-box-timeout = AppState.message-box-timeout - 1;
+                if AppState.message-box-timeout == 0 {
+                    AppState.hide-message-box();
+                }
+            }
+        }
+    }
+}
