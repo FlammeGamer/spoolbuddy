@@ -3,25 +3,50 @@ name = "spoolbuddy-firmware"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
+rust-version = "1.77"
+
+[[bin]]
+name = "spoolbuddy-firmware"
+harness = false
 
 [dependencies]
-# ESP32-S3 HAL (for Waveshare ESP32-S3-Touch-LCD-4.3)
-esp-hal = { version = "1.0", features = ["esp32s3", "log-04", "unstable", "psram"] }
-esp-backtrace = { version = "0.18", features = ["esp32s3", "panic-handler", "println"] }
-esp-println = { version = "0.16", features = ["esp32s3", "log-04"] }
-esp-bootloader-esp-idf = { version = "0.4", features = ["esp32s3", "log-04"] }
+# ESP-IDF HAL and system bindings (for RGB LCD with bounce buffer support)
+esp-idf-hal = "0.45"
+esp-idf-sys = { version = "0.36", features = ["binstart"] }
+esp-idf-svc = { version = "0.51", default-features = false, features = ["std", "binstart"] }
+
+# For WiFi configuration
+heapless = "0.8"
 
 # Logging
 log = "0.4"
 
-# Graphics
+# Graphics - embedded-graphics for basic shapes
 embedded-graphics = "0.8"
+embedded-graphics-core = "0.4.0"
 
-# Memory allocation (for PSRAM framebuffer)
-esp-alloc = "0.7"
+# LVGL for proper font rendering
+lvgl = { version = "0.6.2", default-features = false, features = [
+    "embedded_graphics",
+    "unsafe_no_autoinit",
+] }
+lvgl-sys = { version = "0.6.2" }
 
-# Utilities
-critical-section = "1.1"
+# Hardware IO
+embedded-hal = "1.0.0"
+
+# Error handling
+anyhow = "1.0"
+
+# C String interop
+cstr_core = "0.2.1"
+
+[build-dependencies]
+embuild = "0.33"
+
+# Custom 1-bit fonts compiled as ESP-IDF component
+[[package.metadata.esp-idf-sys.extra_components]]
+component_dirs = ["components/custom_fonts"]
 
 [features]
 default = []
@@ -31,4 +56,15 @@ opt-level = "s"
 lto = false
 
 [profile.dev]
-opt-level = 1
+debug = true
+opt-level = "z"
+
+# Patches required for LVGL + ESP-IDF v5.x compatibility
+[patch.crates-io]
+lvgl = { git = "https://github.com/enelson1001/lv_binding_rust" }
+lvgl-sys = { git = "https://github.com/enelson1001/lv_binding_rust" }
+
+# Master branches needed for ESP-IDF v5.2+ (esp_lcd_panel_rgb.h support)
+esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf-sys.git" }
+esp-idf-hal = { git = "https://github.com/esp-rs/esp-idf-hal.git" }
+esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf-svc.git" }

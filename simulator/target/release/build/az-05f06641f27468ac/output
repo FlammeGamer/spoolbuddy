@@ -1,0 +1,6 @@
+$ mkdir -p "/opt/claude/projects/SpoolStation/simulator/target/release/build/az-05f06641f27468ac/out/try_track_caller"
+$ cd "/opt/claude/projects/SpoolStation/simulator/target/release/build/az-05f06641f27468ac/out/try_track_caller"
+$ printf '%s' "// try_tra"... > "/opt/claude/projects/SpoolStation/simulator/target/release/build/az-05f06641f27468ac/out/try_track_caller/try_track_caller.rs"
+$ cd "/opt/claude/projects/SpoolStation/simulator/target/release/build/az-05f06641f27468ac/out/try_track_caller" && "/opt/claude/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc" "try_track_caller.rs" "--emit=dep-info,metadata" >& /dev/null
+cargo:rustc-cfg=track_caller
+$ rm -r "/opt/claude/projects/SpoolStation/simulator/target/release/build/az-05f06641f27468ac/out/try_track_caller"

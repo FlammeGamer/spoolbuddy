@@ -1,0 +1,11 @@
+/opt/claude/projects/SpoolStation/simulator/target/debug/deps/env_logger-e22236cfcb0e4605.d: /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/lib.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/logger.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/fmt/mod.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/fmt/humantime.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/fmt/writer/mod.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/fmt/writer/buffer.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/fmt/writer/target.rs
+
+/opt/claude/projects/SpoolStation/simulator/target/debug/deps/libenv_logger-e22236cfcb0e4605.rmeta: /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/lib.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/logger.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/fmt/mod.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/fmt/humantime.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/fmt/writer/mod.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/fmt/writer/buffer.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/fmt/writer/target.rs
+
+/opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/lib.rs:
+/opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/logger.rs:
+/opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/fmt/mod.rs:
+/opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/fmt/humantime.rs:
+/opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/fmt/writer/mod.rs:
+/opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/fmt/writer/buffer.rs:
+/opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/env_logger-0.11.8/src/fmt/writer/target.rs:

@@ -1,15 +1,31 @@
-[target.xtensa-esp32s3-none-elf]
+[target.xtensa-esp32s3-espidf]
+linker = "ldproxy"
 runner = "espflash flash --monitor --chip esp32s3"
+rustflags = ["--cfg", "espidf_time64"]
 
 [env]
-ESP_LOG = "info"
-ESP_HAL_CONFIG_PSRAM_MODE = "octal"
+# ESP-IDF version - use already installed v5.2.3
+ESP_IDF_VERSION = "v5.2.3"
+# Custom fonts directory for LVGL
+LVGL_FONTS_DIR = { relative = true, value = "fonts" }
+# PSRAM configuration
+ESP_IDF_SDKCONFIG_DEFAULTS = "sdkconfig.defaults"
+# LVGL configuration path
+DEP_LV_CONFIG_PATH = { relative = true, value = "lvgl-configs" }
+# Toolchain paths - required for LVGL C compilation (prepend to existing PATH)
+PATH = "/opt/claude/.rustup/toolchains/esp/xtensa-esp-elf/esp-15.2.0_20250920/xtensa-esp-elf/bin:/usr/local/bin:/usr/bin:/bin"
+CC_xtensa_esp32s3_espidf = "/opt/claude/.rustup/toolchains/esp/xtensa-esp-elf/esp-15.2.0_20250920/xtensa-esp-elf/bin/xtensa-esp32s3-elf-gcc"
+CXX_xtensa_esp32s3_espidf = "/opt/claude/.rustup/toolchains/esp/xtensa-esp-elf/esp-15.2.0_20250920/xtensa-esp-elf/bin/xtensa-esp32s3-elf-g++"
+AR_xtensa_esp32s3_espidf = "/opt/claude/.rustup/toolchains/esp/xtensa-esp-elf/esp-15.2.0_20250920/xtensa-esp-elf/bin/xtensa-esp32s3-elf-ar"
+# C include path for fonts
+TARGET_C_INCLUDE_PATH = "/opt/claude/.rustup/toolchains/esp/xtensa-esp-elf/esp-15.2.0_20250920/xtensa-esp-elf/xtensa-esp-elf/include"
+# C flags
+CFLAGS_xtensa_esp32s3_espidf = "-mlongcalls"
+# ESP Clang for bindgen (supports Xtensa target)
+LIBCLANG_PATH = { relative = true, value = ".embuild/espressif/tools/esp-clang/16.0.1-fe4f10a809/esp-clang/lib" }
 
 [build]
-rustflags = [
-  "-C", "link-arg=-nostartfiles",
-]
-target = "xtensa-esp32s3-none-elf"
+target = "xtensa-esp32s3-espidf"
 
 [unstable]
-build-std = ["core", "alloc"]
+build-std = ["std", "panic_abort"]

@@ -45,6 +45,12 @@
 /* Enable complex draw engine */
 #define LV_DRAW_COMPLEX 1
 
+/* Enable gradient dithering to reduce visible banding */
+#define LV_DITHER_GRADIENT 1
+
+/* Max number of cached circle data (improves drawing of rounded corners) */
+#define LV_CIRCLE_CACHE_SIZE 4
+
 /* Disable GPU - not used on PC */
 #define LV_USE_GPU_STM32_DMA2D 0
 #define LV_USE_GPU_NXP_PXP 0

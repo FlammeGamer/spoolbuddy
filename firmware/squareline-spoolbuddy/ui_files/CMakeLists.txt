@@ -1,0 +1,17 @@
+SET(SOURCES screens/ui_HomeScreen.c
+    ui.c
+    components/ui_comp_hook.c
+    ui_helpers.c
+    images/ui_img_logos_spoolbuddy_logo_transparent_png.c
+    images/ui_img_icons_bell_light_png.c
+    images/ui_img_icons_cover_png.c
+    images/ui_img_icons_nfc_png.c
+    images/ui_img_icons_scale_png.c
+    images/ui_img_icons_filament_png.c
+    images/ui_img_icons_rfid_png.c
+    images/ui_img_icons_catalog_png.c
+    images/ui_img_icons_settings2_png.c
+    images/ui_img_icons_ams_png.c
+    images/ui_img_icons_dot_png.c)
+
+add_library(ui ${SOURCES})

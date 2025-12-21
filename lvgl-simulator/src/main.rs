@@ -317,7 +317,7 @@ unsafe fn create_home_screen() {
     lvgl_sys::lv_obj_set_style_bg_opa(scr, 255, 0);
     set_style_pad_all(scr, 0);
 
-    // === STATUS BAR (44px) ===
+    // === STATUS BAR (44px) - Premium styling with subtle bottom shadow ===
     let status_bar = lvgl_sys::lv_obj_create(scr);
     lvgl_sys::lv_obj_set_size(status_bar, 800, 44);
     lvgl_sys::lv_obj_set_pos(status_bar, 0, 0);
@@ -327,6 +327,12 @@ unsafe fn create_home_screen() {
     lvgl_sys::lv_obj_set_style_radius(status_bar, 0, 0);
     lvgl_sys::lv_obj_set_style_pad_left(status_bar, 16, 0);
     lvgl_sys::lv_obj_set_style_pad_right(status_bar, 16, 0);
+    // Visible bottom shadow for depth separation
+    lvgl_sys::lv_obj_set_style_shadow_color(status_bar, lv_color_hex(0x000000), 0);
+    lvgl_sys::lv_obj_set_style_shadow_width(status_bar, 25, 0);
+    lvgl_sys::lv_obj_set_style_shadow_ofs_y(status_bar, 8, 0);
+    lvgl_sys::lv_obj_set_style_shadow_spread(status_bar, 0, 0);
+    lvgl_sys::lv_obj_set_style_shadow_opa(status_bar, 200, 0);
 
     // SpoolBuddy logo image (97x24 PNG converted to ARGB8888)
     // Initialize the image descriptor at runtime
@@ -344,28 +350,34 @@ unsafe fn create_home_screen() {
     lvgl_sys::lv_img_set_src(logo_img, &raw const LOGO_IMG_DSC as *const _);
     lvgl_sys::lv_obj_align(logo_img, lvgl_sys::LV_ALIGN_LEFT_MID as u8, 0, 0);
 
-    // Printer selector (center)
+    // Printer selector (center) - with dropdown indicator
     let printer_btn = lvgl_sys::lv_btn_create(status_bar);
-    lvgl_sys::lv_obj_set_size(printer_btn, 180, 32);
+    lvgl_sys::lv_obj_set_size(printer_btn, 200, 32);  // Wider to fit dropdown arrow
     lvgl_sys::lv_obj_align(printer_btn, lvgl_sys::LV_ALIGN_CENTER as u8, 0, 0);
-    lvgl_sys::lv_obj_set_style_bg_color(printer_btn, lv_color_hex(COLOR_CARD), 0);
+    lvgl_sys::lv_obj_set_style_bg_color(printer_btn, lv_color_hex(0x242424), 0);
     lvgl_sys::lv_obj_set_style_radius(printer_btn, 16, 0);
+    lvgl_sys::lv_obj_set_style_border_color(printer_btn, lv_color_hex(0x3D3D3D), 0);
+    lvgl_sys::lv_obj_set_style_border_width(printer_btn, 1, 0);
 
-    // Left status dot (green = connected)
+    // Left status dot (green = connected) with subtle glow
     let left_dot = lvgl_sys::lv_obj_create(printer_btn);
     lvgl_sys::lv_obj_set_size(left_dot, 8, 8);
     lvgl_sys::lv_obj_align(left_dot, lvgl_sys::LV_ALIGN_LEFT_MID as u8, 12, 0);
     lvgl_sys::lv_obj_set_style_bg_color(left_dot, lv_color_hex(COLOR_ACCENT), 0);
     lvgl_sys::lv_obj_set_style_radius(left_dot, 4, 0);
     lvgl_sys::lv_obj_set_style_border_width(left_dot, 0, 0);
+    lvgl_sys::lv_obj_set_style_shadow_color(left_dot, lv_color_hex(COLOR_ACCENT), 0);
+    lvgl_sys::lv_obj_set_style_shadow_width(left_dot, 6, 0);
+    lvgl_sys::lv_obj_set_style_shadow_spread(left_dot, 2, 0);
+    lvgl_sys::lv_obj_set_style_shadow_opa(left_dot, 150, 0);
 
     let printer_label = lvgl_sys::lv_label_create(printer_btn);
     let printer_text = CString::new("X1C-Studio").unwrap();
     lvgl_sys::lv_label_set_text(printer_label, printer_text.as_ptr());
     lvgl_sys::lv_obj_set_style_text_color(printer_label, lv_color_hex(COLOR_WHITE), 0);
-    lvgl_sys::lv_obj_align(printer_label, lvgl_sys::LV_ALIGN_CENTER as u8, 0, 0);
+    lvgl_sys::lv_obj_align(printer_label, lvgl_sys::LV_ALIGN_LEFT_MID as u8, 28, 0);
 
-    // Right status icon (power button, orange = printing)
+    // Power icon (orange = printing)
     POWER_IMG_DSC.header._bitfield_1 = lvgl_sys::lv_img_header_t::new_bitfield_1(
         lvgl_sys::LV_IMG_CF_TRUE_COLOR_ALPHA as u32,
         0, 0,
@@ -377,10 +389,16 @@ unsafe fn create_home_screen() {
 
     let power_img = lvgl_sys::lv_img_create(printer_btn);
     lvgl_sys::lv_img_set_src(power_img, &raw const POWER_IMG_DSC as *const _);
-    lvgl_sys::lv_obj_align(power_img, lvgl_sys::LV_ALIGN_RIGHT_MID as u8, -8, 0);
-    // Color it orange for "printing" state
+    lvgl_sys::lv_obj_align(power_img, lvgl_sys::LV_ALIGN_RIGHT_MID as u8, -24, 0);
     lvgl_sys::lv_obj_set_style_img_recolor(power_img, lv_color_hex(0xFFA500), 0);
     lvgl_sys::lv_obj_set_style_img_recolor_opa(power_img, 255, 0);
+
+    // Dropdown arrow - text-based "▼" symbol for visibility
+    let arrow_label = lvgl_sys::lv_label_create(printer_btn);
+    let arrow_text = CString::new("v").unwrap();
+    lvgl_sys::lv_label_set_text(arrow_label, arrow_text.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(arrow_label, lv_color_hex(COLOR_WHITE), 0);
+    lvgl_sys::lv_obj_align(arrow_label, lvgl_sys::LV_ALIGN_RIGHT_MID as u8, -8, 2);
 
     // Right side of status bar: Bell -> WiFi -> Time (from left to right)
     // Layout: [bell+badge] 12px [wifi] 12px [time]
@@ -473,21 +491,47 @@ unsafe fn create_home_screen() {
     let left_card_width = btn_start_x - 16 - card_gap; // Fill space up to buttons with gap
     let printer_card = create_card(scr, 16, content_y, left_card_width, 130);
 
-    // Print cover image placeholder (left side)
+    // Print thumbnail frame - polished with inner shadow and 3D cube icon
     let cover_size = 70;
     let cover_img = lvgl_sys::lv_obj_create(printer_card);
     lvgl_sys::lv_obj_set_size(cover_img, cover_size, cover_size);
     lvgl_sys::lv_obj_set_pos(cover_img, 12, 12);
-    lvgl_sys::lv_obj_set_style_bg_color(cover_img, lv_color_hex(0x404040), 0);
+    lvgl_sys::lv_obj_set_style_bg_color(cover_img, lv_color_hex(0x1A1A1A), 0);
     lvgl_sys::lv_obj_set_style_bg_opa(cover_img, 255, 0);
-    lvgl_sys::lv_obj_set_style_radius(cover_img, 8, 0);
-    lvgl_sys::lv_obj_set_style_border_width(cover_img, 0, 0);
-    // Placeholder icon (simple 3D cube representation)
-    let cube_label = lvgl_sys::lv_label_create(cover_img);
-    let cube_text = CString::new("3D").unwrap();
-    lvgl_sys::lv_label_set_text(cube_label, cube_text.as_ptr());
-    lvgl_sys::lv_obj_set_style_text_color(cube_label, lv_color_hex(COLOR_GRAY), 0);
-    lvgl_sys::lv_obj_align(cube_label, lvgl_sys::LV_ALIGN_CENTER as u8, 0, 0);
+    lvgl_sys::lv_obj_set_style_radius(cover_img, 10, 0);
+    lvgl_sys::lv_obj_set_style_border_color(cover_img, lv_color_hex(0x3A3A3A), 0);
+    lvgl_sys::lv_obj_set_style_border_width(cover_img, 1, 0);
+    set_style_pad_all(cover_img, 0);
+
+    // 3D cube icon - front face
+    let cube_front = lvgl_sys::lv_obj_create(cover_img);
+    lvgl_sys::lv_obj_set_size(cube_front, 24, 24);
+    lvgl_sys::lv_obj_set_pos(cube_front, 18, 26);
+    lvgl_sys::lv_obj_set_style_bg_opa(cube_front, 0, 0);
+    lvgl_sys::lv_obj_set_style_border_color(cube_front, lv_color_hex(0x505050), 0);
+    lvgl_sys::lv_obj_set_style_border_width(cube_front, 2, 0);
+    lvgl_sys::lv_obj_set_style_radius(cube_front, 2, 0);
+    set_style_pad_all(cube_front, 0);
+
+    // 3D cube icon - top face (parallelogram effect with offset rectangle)
+    let cube_top = lvgl_sys::lv_obj_create(cover_img);
+    lvgl_sys::lv_obj_set_size(cube_top, 24, 10);
+    lvgl_sys::lv_obj_set_pos(cube_top, 26, 18);
+    lvgl_sys::lv_obj_set_style_bg_opa(cube_top, 0, 0);
+    lvgl_sys::lv_obj_set_style_border_color(cube_top, lv_color_hex(0x505050), 0);
+    lvgl_sys::lv_obj_set_style_border_width(cube_top, 2, 0);
+    lvgl_sys::lv_obj_set_style_radius(cube_top, 2, 0);
+    set_style_pad_all(cube_top, 0);
+
+    // 3D cube icon - side face
+    let cube_side = lvgl_sys::lv_obj_create(cover_img);
+    lvgl_sys::lv_obj_set_size(cube_side, 10, 24);
+    lvgl_sys::lv_obj_set_pos(cube_side, 40, 26);
+    lvgl_sys::lv_obj_set_style_bg_opa(cube_side, 0, 0);
+    lvgl_sys::lv_obj_set_style_border_color(cube_side, lv_color_hex(0x505050), 0);
+    lvgl_sys::lv_obj_set_style_border_width(cube_side, 2, 0);
+    lvgl_sys::lv_obj_set_style_radius(cube_side, 2, 0);
+    set_style_pad_all(cube_side, 0);
 
     // Printer name (right of image)
     let text_x = 12 + cover_size + 12;
@@ -517,43 +561,40 @@ unsafe fn create_home_screen() {
     lvgl_sys::lv_obj_set_style_text_color(time_left, lv_color_hex(COLOR_GRAY), 0);
     lvgl_sys::lv_obj_align(time_left, lvgl_sys::LV_ALIGN_TOP_RIGHT as u8, -12, 88);
 
-    // Progress bar (full width at bottom) - enhanced with gradient effect
+    // Progress bar (full width at bottom) - vibrant gradient with glow
     let progress_width = left_card_width - 24;
     let progress_percent: f32 = 0.6;  // 60%
     let fill_width = (progress_width as f32 * progress_percent) as i16;
 
-    // Background track
+    // Background track with inner shadow effect
     let progress_bg = lvgl_sys::lv_obj_create(printer_card);
-    lvgl_sys::lv_obj_set_size(progress_bg, progress_width, 14);
-    lvgl_sys::lv_obj_set_pos(progress_bg, 12, 106);
-    lvgl_sys::lv_obj_set_style_bg_color(progress_bg, lv_color_hex(0x1A1A1A), 0);
-    lvgl_sys::lv_obj_set_style_radius(progress_bg, 7, 0);
-    lvgl_sys::lv_obj_set_style_border_color(progress_bg, lv_color_hex(COLOR_BORDER), 0);
+    lvgl_sys::lv_obj_set_size(progress_bg, progress_width, 16);
+    lvgl_sys::lv_obj_set_pos(progress_bg, 12, 104);
+    lvgl_sys::lv_obj_set_style_bg_color(progress_bg, lv_color_hex(0x0A0A0A), 0);
+    lvgl_sys::lv_obj_set_style_radius(progress_bg, 8, 0);
+    lvgl_sys::lv_obj_set_style_border_color(progress_bg, lv_color_hex(0x2A2A2A), 0);
     lvgl_sys::lv_obj_set_style_border_width(progress_bg, 1, 0);
     set_style_pad_all(progress_bg, 0);
 
-    // Gradient simulation: darker green base
-    let progress_base = lvgl_sys::lv_obj_create(progress_bg);
-    lvgl_sys::lv_obj_set_size(progress_base, fill_width, 14);
-    lvgl_sys::lv_obj_set_pos(progress_base, 0, 0);
-    lvgl_sys::lv_obj_set_style_bg_color(progress_base, lv_color_hex(0x00AA00), 0);  // Darker green
-    lvgl_sys::lv_obj_set_style_radius(progress_base, 7, 0);
-    lvgl_sys::lv_obj_set_style_border_width(progress_base, 0, 0);
-    set_style_pad_all(progress_base, 0);
-
-    // Highlight strip on top (lighter green, creates gradient illusion)
-    let progress_highlight = lvgl_sys::lv_obj_create(progress_bg);
-    lvgl_sys::lv_obj_set_size(progress_highlight, fill_width - 4, 5);
-    lvgl_sys::lv_obj_set_pos(progress_highlight, 2, 2);
-    lvgl_sys::lv_obj_set_style_bg_color(progress_highlight, lv_color_hex(0x44FF44), 0);  // Bright green
-    lvgl_sys::lv_obj_set_style_bg_opa(progress_highlight, 180, 0);
-    lvgl_sys::lv_obj_set_style_radius(progress_highlight, 3, 0);
-    lvgl_sys::lv_obj_set_style_border_width(progress_highlight, 0, 0);
+    // Solid fill with subtle glow (no gradient to avoid banding)
+    let progress_fill = lvgl_sys::lv_obj_create(progress_bg);
+    lvgl_sys::lv_obj_set_size(progress_fill, fill_width, 14);
+    lvgl_sys::lv_obj_set_pos(progress_fill, 1, 1);
+    lvgl_sys::lv_obj_set_style_bg_color(progress_fill, lv_color_hex(COLOR_ACCENT), 0);
+    lvgl_sys::lv_obj_set_style_radius(progress_fill, 7, 0);
+    lvgl_sys::lv_obj_set_style_border_width(progress_fill, 0, 0);
+    // Subtle glow - just enough to make it pop
+    lvgl_sys::lv_obj_set_style_shadow_color(progress_fill, lv_color_hex(COLOR_ACCENT), 0);
+    lvgl_sys::lv_obj_set_style_shadow_width(progress_fill, 8, 0);
+    lvgl_sys::lv_obj_set_style_shadow_spread(progress_fill, 0, 0);
+    lvgl_sys::lv_obj_set_style_shadow_opa(progress_fill, 80, 0);
+    set_style_pad_all(progress_fill, 0);
 
     // Left column - NFC/Weight scan area (expanded)
+    // Layout: NFC icon left | Center text (spool info area) | Weight right
     let scan_card = create_card(scr, 16, content_y + 138, left_card_width, 125);
 
-    // === LEFT SIDE: NFC Icon (64x64) ===
+    // NFC Icon (left side)
     NFC_IMG_DSC.header._bitfield_1 = lvgl_sys::lv_img_header_t::new_bitfield_1(
         lvgl_sys::LV_IMG_CF_TRUE_COLOR_ALPHA as u32,
         0, 0,
@@ -565,40 +606,31 @@ unsafe fn create_home_screen() {
 
     let nfc_img = lvgl_sys::lv_img_create(scan_card);
     lvgl_sys::lv_img_set_src(nfc_img, &raw const NFC_IMG_DSC as *const _);
-    lvgl_sys::lv_obj_set_pos(nfc_img, 16, 10);  // Adjusted for smaller card
-    // Apply gray tint to match scale icon (darker to compensate for lighter source)
-    lvgl_sys::lv_obj_set_style_img_recolor(nfc_img, lv_color_hex(0x999999), 0);
-    lvgl_sys::lv_obj_set_style_img_recolor_opa(nfc_img, 220, 0);
+    lvgl_sys::lv_obj_set_pos(nfc_img, 16, 16);
+    lvgl_sys::lv_obj_set_style_img_recolor(nfc_img, lv_color_hex(COLOR_ACCENT), 0);
+    lvgl_sys::lv_obj_set_style_img_recolor_opa(nfc_img, 255, 0);
 
-    // "Ready" text below NFC icon (with spacing)
+    // "Ready" status under NFC icon
     let nfc_status = lvgl_sys::lv_label_create(scan_card);
     let nfc_status_text = CString::new("Ready").unwrap();
     lvgl_sys::lv_label_set_text(nfc_status, nfc_status_text.as_ptr());
     lvgl_sys::lv_obj_set_style_text_color(nfc_status, lv_color_hex(COLOR_ACCENT), 0);
-    lvgl_sys::lv_obj_set_pos(nfc_status, 32, 90);  // Adjusted for smaller card
+    lvgl_sys::lv_obj_set_pos(nfc_status, 32, 92);
 
-    // === CENTER: Instruction text ===
-    let scan_hint = lvgl_sys::lv_label_create(scan_card);
-    let hint_text = CString::new("Place spool on scale\nto scan & weigh").unwrap();
-    lvgl_sys::lv_label_set_text(scan_hint, hint_text.as_ptr());
-    lvgl_sys::lv_obj_set_style_text_color(scan_hint, lv_color_hex(COLOR_GRAY), 0);
-    lvgl_sys::lv_obj_set_style_text_align(scan_hint, lvgl_sys::LV_TEXT_ALIGN_CENTER as u8, 0);
-    lvgl_sys::lv_obj_align(scan_hint, lvgl_sys::LV_ALIGN_CENTER as u8, 0, 0);
+    // Center text area - instruction or spool info (centered in card)
+    let center_text = lvgl_sys::lv_label_create(scan_card);
+    let center_str = CString::new("Place spool on scale\nto scan & weigh").unwrap();
+    lvgl_sys::lv_label_set_text(center_text, center_str.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(center_text, lv_color_hex(COLOR_GRAY), 0);
+    lvgl_sys::lv_obj_set_style_text_align(center_text, lvgl_sys::LV_TEXT_ALIGN_CENTER as u8, 0);
+    lvgl_sys::lv_obj_align(center_text, lvgl_sys::LV_ALIGN_CENTER as u8, 0, 0);
 
-    // === RIGHT SIDE: Weight display (icon + value + fill bar) ===
-    // Current weight value
-    let current_weight: f32 = 0.85;  // kg
-    let max_weight: f32 = 1.0;  // kg (full spool)
+    // Weight section (right side)
+    let current_weight: f32 = 0.85;
+    let max_weight: f32 = 1.0;
     let fill_percent = ((current_weight / max_weight) * 100.0).min(100.0) as i16;
-    let fill_color = if fill_percent > 50 {
-        COLOR_ACCENT  // Green - good
-    } else if fill_percent > 20 {
-        0xFFA500  // Orange - warning
-    } else {
-        0xFF4444  // Red - low
-    };
 
-    // Weight icon (64x64, white - no tint)
+    // Weight icon
     WEIGHT_IMG_DSC.header._bitfield_1 = lvgl_sys::lv_img_header_t::new_bitfield_1(
         lvgl_sys::LV_IMG_CF_TRUE_COLOR_ALPHA as u32,
         0, 0,
@@ -608,56 +640,43 @@ unsafe fn create_home_screen() {
     WEIGHT_IMG_DSC.data_size = (WEIGHT_WIDTH * WEIGHT_HEIGHT * 3) as u32;
     WEIGHT_IMG_DSC.data = WEIGHT_DATA.as_ptr();
 
+    // Scale icon - far right of card (card is ~492px wide)
     let weight_img = lvgl_sys::lv_img_create(scan_card);
     lvgl_sys::lv_img_set_src(weight_img, &raw const WEIGHT_IMG_DSC as *const _);
-    lvgl_sys::lv_obj_set_pos(weight_img, left_card_width - 84, 8);  // Adjusted for smaller card
-    // Apply gray-white tint to match NFC icon
+    lvgl_sys::lv_obj_set_pos(weight_img, 412, 8);  // Far right: 492 - 64 - 16
     lvgl_sys::lv_obj_set_style_img_recolor(weight_img, lv_color_hex(0xBBBBBB), 0);
     lvgl_sys::lv_obj_set_style_img_recolor_opa(weight_img, 200, 0);
 
-    // Weight value below icon (green)
+    // Weight value - under scale icon
     let weight_value = lvgl_sys::lv_label_create(scan_card);
     let weight_str = CString::new("0.85 kg").unwrap();
     lvgl_sys::lv_label_set_text(weight_value, weight_str.as_ptr());
     lvgl_sys::lv_obj_set_style_text_color(weight_value, lv_color_hex(COLOR_ACCENT), 0);
-    lvgl_sys::lv_obj_set_pos(weight_value, left_card_width - 80, 72);  // Adjusted for smaller card
+    lvgl_sys::lv_obj_set_pos(weight_value, 412, 74);
 
-    // Horizontal fill bar below value - enhanced with gradient
-    let bar_width: i16 = 70;
-    let bar_height: i16 = 14;
-    let bar_x = left_card_width - 87;
-    let bar_y: i16 = 93;  // Adjusted for smaller card
+    // Scale fill bar - under weight value
+    let bar_width: i16 = 80;
+    let bar_height: i16 = 12;
+    let bar_x: i16 = 404;  // Centered under scale icon
+    let bar_y: i16 = 98;
     let scale_fill_width = ((bar_width as f32) * (fill_percent as f32 / 100.0)) as i16;
 
-    // Bar background (dark with border)
     let bar_bg = lvgl_sys::lv_obj_create(scan_card);
     lvgl_sys::lv_obj_set_size(bar_bg, bar_width, bar_height);
     lvgl_sys::lv_obj_set_pos(bar_bg, bar_x, bar_y);
-    lvgl_sys::lv_obj_set_style_bg_color(bar_bg, lv_color_hex(0x1A1A1A), 0);
-    lvgl_sys::lv_obj_set_style_radius(bar_bg, 7, 0);
-    lvgl_sys::lv_obj_set_style_border_color(bar_bg, lv_color_hex(COLOR_BORDER), 0);
+    lvgl_sys::lv_obj_set_style_bg_color(bar_bg, lv_color_hex(0x0A0A0A), 0);
+    lvgl_sys::lv_obj_set_style_radius(bar_bg, 6, 0);
+    lvgl_sys::lv_obj_set_style_border_color(bar_bg, lv_color_hex(0x2A2A2A), 0);
     lvgl_sys::lv_obj_set_style_border_width(bar_bg, 1, 0);
     set_style_pad_all(bar_bg, 0);
 
-    // Bar fill base (darker green)
     let bar_fill = lvgl_sys::lv_obj_create(bar_bg);
-    lvgl_sys::lv_obj_set_size(bar_fill, scale_fill_width, bar_height);
-    lvgl_sys::lv_obj_set_pos(bar_fill, 0, 0);
-    lvgl_sys::lv_obj_set_style_bg_color(bar_fill, lv_color_hex(0x00AA00), 0);
-    lvgl_sys::lv_obj_set_style_radius(bar_fill, 7, 0);
+    lvgl_sys::lv_obj_set_size(bar_fill, scale_fill_width, bar_height - 2);
+    lvgl_sys::lv_obj_set_pos(bar_fill, 1, 1);
+    lvgl_sys::lv_obj_set_style_bg_color(bar_fill, lv_color_hex(COLOR_ACCENT), 0);
+    lvgl_sys::lv_obj_set_style_radius(bar_fill, 5, 0);
     lvgl_sys::lv_obj_set_style_border_width(bar_fill, 0, 0);
     set_style_pad_all(bar_fill, 0);
-
-    // Highlight strip (lighter green, gradient effect)
-    if scale_fill_width > 4 {
-        let bar_highlight = lvgl_sys::lv_obj_create(bar_bg);
-        lvgl_sys::lv_obj_set_size(bar_highlight, scale_fill_width - 4, 5);
-        lvgl_sys::lv_obj_set_pos(bar_highlight, 2, 2);
-        lvgl_sys::lv_obj_set_style_bg_color(bar_highlight, lv_color_hex(0x44FF44), 0);
-        lvgl_sys::lv_obj_set_style_bg_opa(bar_highlight, 180, 0);
-        lvgl_sys::lv_obj_set_style_radius(bar_highlight, 3, 0);
-        lvgl_sys::lv_obj_set_style_border_width(bar_highlight, 0, 0);
-    }
 
     // Action buttons (right side) - individual cards, aligned with left side cards
     // Top row aligns with printer card (height 130), bottom row aligns with scan card (height 125)
@@ -672,82 +691,109 @@ unsafe fn create_home_screen() {
     // === AMS STRIP ===
     let ams_y = content_y + 263 + card_gap;  // 52 + 263 + 8 = 323
 
-    // Left Nozzle card
-    let left_nozzle = create_card(scr, 16, ams_y, 380, 110);
+    // Left Nozzle card - taller for more spacing
+    let left_nozzle = create_card(scr, 16, ams_y, 380, 118);
 
-    // "L" badge (green circle)
+    // "L" badge (green circle) - smaller, moved down
     let l_badge = lvgl_sys::lv_obj_create(left_nozzle);
-    lvgl_sys::lv_obj_set_size(l_badge, 22, 22);
+    lvgl_sys::lv_obj_set_size(l_badge, 18, 18);
     lvgl_sys::lv_obj_set_pos(l_badge, 12, 10);
     lvgl_sys::lv_obj_set_style_bg_color(l_badge, lv_color_hex(COLOR_ACCENT), 0);
-    lvgl_sys::lv_obj_set_style_radius(l_badge, 11, 0);
+    lvgl_sys::lv_obj_set_style_radius(l_badge, 9, 0);
     lvgl_sys::lv_obj_set_style_border_width(l_badge, 0, 0);
     set_style_pad_all(l_badge, 0);
     let l_letter = lvgl_sys::lv_label_create(l_badge);
     let l_text = CString::new("L").unwrap();
     lvgl_sys::lv_label_set_text(l_letter, l_text.as_ptr());
     lvgl_sys::lv_obj_set_style_text_color(l_letter, lv_color_hex(COLOR_BG), 0);
+    lvgl_sys::lv_obj_set_style_text_font(l_letter, &lvgl_sys::lv_font_montserrat_12, 0);
     lvgl_sys::lv_obj_align(l_letter, lvgl_sys::LV_ALIGN_CENTER as u8, 0, 0);
 
     let left_label = lvgl_sys::lv_label_create(left_nozzle);
     let left_text = CString::new("Left Nozzle").unwrap();
     lvgl_sys::lv_label_set_text(left_label, left_text.as_ptr());
     lvgl_sys::lv_obj_set_style_text_color(left_label, lv_color_hex(COLOR_GRAY), 0);
-    lvgl_sys::lv_obj_set_pos(left_label, 40, 13);
+    lvgl_sys::lv_obj_set_style_text_font(left_label, &lvgl_sys::lv_font_montserrat_12, 0);
+    lvgl_sys::lv_obj_set_pos(left_label, 34, 12);
 
-    // AMS slots for left nozzle - row 1 (A, B, D with 4 color squares each)
-    // Slot A colors: red, yellow, green, salmon
-    create_ams_slot_4color(left_nozzle, 12, 38, "A", true, &[0xFF6B6B, 0xFFD93D, 0x6BCB77, 0xFFB5A7]);
-    // Slot B colors: blue, dark, light blue, empty (striped)
-    create_ams_slot_4color(left_nozzle, 92, 38, "B", false, &[0x4D96FF, 0x404040, 0x9ED5FF, 0]);
-    // Slot D colors: magenta, purple, light purple, empty
-    create_ams_slot_4color(left_nozzle, 172, 38, "D", false, &[0xFF6BD6, 0xC77DFF, 0xE5B8F4, 0]);
+    // AMS slots for left nozzle - row 1 (A, B, D with 4 color squares each) - moved down
+    // Slot A colors: red, yellow, green, salmon - slot 0 (red) is active
+    create_ams_slot_4color(left_nozzle, 12, 36, "A", 0, &[0xFF6B6B, 0xFFD93D, 0x6BCB77, 0xFFB5A7]);
+    // Slot B colors: blue, dark, light blue, empty - no active slot
+    create_ams_slot_4color(left_nozzle, 92, 36, "B", -1, &[0x4D96FF, 0x404040, 0x9ED5FF, 0]);
+    // Slot D colors: magenta, purple, light purple, empty - no active slot
+    create_ams_slot_4color(left_nozzle, 172, 36, "D", -1, &[0xFF6BD6, 0xC77DFF, 0xE5B8F4, 0]);
 
-    // AMS slots for left nozzle - row 2 (EXT and HT)
-    create_ams_slot_single(left_nozzle, 12, 82, "EXT-1", 0xFF6B6B);
-    create_ams_slot_single(left_nozzle, 92, 82, "HT-A", 0x9ED5FF);
+    // AMS slots for left nozzle - row 2 (HT then EXT) - swapped order, moved down
+    create_ams_slot_single(left_nozzle, 12, 92, "HT-A", 0x9ED5FF, false);
+    create_ams_slot_single(left_nozzle, 92, 92, "EXT-1", 0xFF6B6B, false);
 
-    // Right Nozzle card
-    let right_nozzle = create_card(scr, 404, ams_y, 380, 110);
+    // Right Nozzle card - taller for more spacing
+    let right_nozzle = create_card(scr, 404, ams_y, 380, 118);
 
-    // "R" badge (green circle)
+    // "R" badge (green circle) - smaller, moved down
     let r_badge = lvgl_sys::lv_obj_create(right_nozzle);
-    lvgl_sys::lv_obj_set_size(r_badge, 22, 22);
+    lvgl_sys::lv_obj_set_size(r_badge, 18, 18);
     lvgl_sys::lv_obj_set_pos(r_badge, 12, 10);
     lvgl_sys::lv_obj_set_style_bg_color(r_badge, lv_color_hex(COLOR_ACCENT), 0);
-    lvgl_sys::lv_obj_set_style_radius(r_badge, 11, 0);
+    lvgl_sys::lv_obj_set_style_radius(r_badge, 9, 0);
     lvgl_sys::lv_obj_set_style_border_width(r_badge, 0, 0);
     set_style_pad_all(r_badge, 0);
     let r_letter = lvgl_sys::lv_label_create(r_badge);
     let r_text = CString::new("R").unwrap();
     lvgl_sys::lv_label_set_text(r_letter, r_text.as_ptr());
     lvgl_sys::lv_obj_set_style_text_color(r_letter, lv_color_hex(COLOR_BG), 0);
+    lvgl_sys::lv_obj_set_style_text_font(r_letter, &lvgl_sys::lv_font_montserrat_12, 0);
     lvgl_sys::lv_obj_align(r_letter, lvgl_sys::LV_ALIGN_CENTER as u8, 0, 0);
 
     let right_label = lvgl_sys::lv_label_create(right_nozzle);
     let right_text = CString::new("Right Nozzle").unwrap();
     lvgl_sys::lv_label_set_text(right_label, right_text.as_ptr());
     lvgl_sys::lv_obj_set_style_text_color(right_label, lv_color_hex(COLOR_GRAY), 0);
-    lvgl_sys::lv_obj_set_pos(right_label, 40, 13);
+    lvgl_sys::lv_obj_set_style_text_font(right_label, &lvgl_sys::lv_font_montserrat_12, 0);
+    lvgl_sys::lv_obj_set_pos(right_label, 34, 12);
 
-    // AMS slots for right nozzle - row 1
-    // Slot C colors: yellow, green, cyan, teal
-    create_ams_slot_4color(right_nozzle, 12, 38, "C", false, &[0xFFD93D, 0x6BCB77, 0x4ECDC4, 0x45B7AA]);
+    // AMS slots for right nozzle - row 1 - moved down
+    // Slot C colors: yellow, green, cyan, teal - no active slot
+    create_ams_slot_4color(right_nozzle, 12, 36, "C", -1, &[0xFFD93D, 0x6BCB77, 0x4ECDC4, 0x45B7AA]);
 
-    // AMS slots for right nozzle - row 2 (HT and EXT)
-    create_ams_slot_single(right_nozzle, 12, 82, "HT-B", 0xFFA500);
-    create_ams_slot_single(right_nozzle, 92, 82, "EXT-2", 0);  // Empty (striped)
+    // AMS slots for right nozzle - row 2 (HT then EXT) - swapped order, moved down
+    create_ams_slot_single(right_nozzle, 12, 92, "HT-B", 0xFFA500, false);
+    create_ams_slot_single(right_nozzle, 92, 92, "EXT-2", 0, false);  // Empty (striped)
 
-    // === NOTIFICATION BAR ===
-    let notif_bar = create_card(scr, 16, ams_y + 110 + card_gap, 768, 30);  // Below AMS cards
+    // === NOTIFICATION BAR - Premium warning style ===
+    let notif_bar = lvgl_sys::lv_obj_create(scr);
+    lvgl_sys::lv_obj_set_size(notif_bar, 768, 30);
+    lvgl_sys::lv_obj_set_pos(notif_bar, 16, ams_y + 118 + card_gap);
+    lvgl_sys::lv_obj_set_style_bg_color(notif_bar, lv_color_hex(0x262626), 0);
+    lvgl_sys::lv_obj_set_style_bg_opa(notif_bar, 255, 0);
+    lvgl_sys::lv_obj_set_style_radius(notif_bar, 8, 0);  // Smaller radius for compact bar
+    lvgl_sys::lv_obj_set_style_border_color(notif_bar, lv_color_hex(0x3D3D3D), 0);
+    lvgl_sys::lv_obj_set_style_border_width(notif_bar, 1, 0);
+    set_style_pad_all(notif_bar, 0);
 
-    // Warning dot
+    // Subtle orange top accent line
+    let top_accent = lvgl_sys::lv_obj_create(notif_bar);
+    lvgl_sys::lv_obj_set_size(top_accent, 760, 2);
+    lvgl_sys::lv_obj_set_pos(top_accent, 4, 0);
+    lvgl_sys::lv_obj_set_style_bg_color(top_accent, lv_color_hex(0xFFA500), 0);  // Orange
+    lvgl_sys::lv_obj_set_style_bg_opa(top_accent, 180, 0);
+    lvgl_sys::lv_obj_set_style_radius(top_accent, 1, 0);
+    lvgl_sys::lv_obj_set_style_border_width(top_accent, 0, 0);
+    set_style_pad_all(top_accent, 0);
+
+    // Warning dot with glow
     let dot = lvgl_sys::lv_obj_create(notif_bar);
     lvgl_sys::lv_obj_set_size(dot, 10, 10);
     lvgl_sys::lv_obj_set_pos(dot, 12, 10);
     lvgl_sys::lv_obj_set_style_bg_color(dot, lv_color_hex(0xFFA500), 0); // Orange
     lvgl_sys::lv_obj_set_style_radius(dot, 5, 0);
     lvgl_sys::lv_obj_set_style_border_width(dot, 0, 0);
+    // Subtle orange glow for warning emphasis
+    lvgl_sys::lv_obj_set_style_shadow_color(dot, lv_color_hex(0xFFA500), 0);
+    lvgl_sys::lv_obj_set_style_shadow_width(dot, 8, 0);
+    lvgl_sys::lv_obj_set_style_shadow_spread(dot, 2, 0);
+    lvgl_sys::lv_obj_set_style_shadow_opa(dot, 150, 0);
 
     let notif_text = lvgl_sys::lv_label_create(notif_bar);
     let notif_str = CString::new("Low filament: PLA Black (A2) - 15% remaining").unwrap();
@@ -762,17 +808,58 @@ unsafe fn create_home_screen() {
     lvgl_sys::lv_obj_set_pos(view_log, 680, 8);
 }
 
-/// Create a card with standard styling
+/// Create a card with glossy styling - shiny highlights and depth
 unsafe fn create_card(parent: *mut lvgl_sys::lv_obj_t, x: i16, y: i16, w: i16, h: i16) -> *mut lvgl_sys::lv_obj_t {
     let card = lvgl_sys::lv_obj_create(parent);
     lvgl_sys::lv_obj_set_size(card, w, h);
     lvgl_sys::lv_obj_set_pos(card, x, y);
-    lvgl_sys::lv_obj_set_style_bg_color(card, lv_color_hex(COLOR_CARD), 0);
+
+    // Brighter card background for glossy look
+    lvgl_sys::lv_obj_set_style_bg_color(card, lv_color_hex(0x3A3A3A), 0);
     lvgl_sys::lv_obj_set_style_bg_opa(card, 255, 0);
-    lvgl_sys::lv_obj_set_style_border_color(card, lv_color_hex(COLOR_BORDER), 0);
+
+    // Bright border for glossy edge
+    lvgl_sys::lv_obj_set_style_border_color(card, lv_color_hex(0x707070), 0);
     lvgl_sys::lv_obj_set_style_border_width(card, 1, 0);
-    lvgl_sys::lv_obj_set_style_radius(card, 12, 0);
+    lvgl_sys::lv_obj_set_style_radius(card, 14, 0);
+
+    // Sharp shadow for depth
+    lvgl_sys::lv_obj_set_style_shadow_color(card, lv_color_hex(0x000000), 0);
+    lvgl_sys::lv_obj_set_style_shadow_width(card, 1, 0);
+    lvgl_sys::lv_obj_set_style_shadow_ofs_x(card, 2, 0);
+    lvgl_sys::lv_obj_set_style_shadow_ofs_y(card, 3, 0);
+    lvgl_sys::lv_obj_set_style_shadow_spread(card, 4, 0);
+    lvgl_sys::lv_obj_set_style_shadow_opa(card, 200, 0);
+
     set_style_pad_all(card, 0);
+
+    // Glossy highlight line at top (simulates light reflection) - BRIGHT
+    let gloss = lvgl_sys::lv_obj_create(card);
+    lvgl_sys::lv_obj_set_size(gloss, w - 28, 2);  // Thicker highlight
+    lvgl_sys::lv_obj_set_pos(gloss, 14, 1);
+    lvgl_sys::lv_obj_set_style_bg_color(gloss, lv_color_hex(0xFFFFFF), 0);  // Pure white
+    lvgl_sys::lv_obj_set_style_bg_opa(gloss, 60, 0);  // Semi-transparent white
+    lvgl_sys::lv_obj_set_style_radius(gloss, 1, 0);
+    lvgl_sys::lv_obj_set_style_border_width(gloss, 0, 0);
+    set_style_pad_all(gloss, 0);
+
+    card
+}
+
+/// Create a card with accent glow (for highlighted/active cards)
+unsafe fn create_card_glow(parent: *mut lvgl_sys::lv_obj_t, x: i16, y: i16, w: i16, h: i16) -> *mut lvgl_sys::lv_obj_t {
+    let card = create_card(parent, x, y, w, h);
+
+    // Add green accent glow
+    lvgl_sys::lv_obj_set_style_shadow_color(card, lv_color_hex(COLOR_ACCENT), 0);
+    lvgl_sys::lv_obj_set_style_shadow_width(card, 25, 0);
+    lvgl_sys::lv_obj_set_style_shadow_spread(card, 2, 0);
+    lvgl_sys::lv_obj_set_style_shadow_opa(card, 100, 0);
+
+    // Accent border
+    lvgl_sys::lv_obj_set_style_border_color(card, lv_color_hex(COLOR_ACCENT), 0);
+    lvgl_sys::lv_obj_set_style_border_opa(card, 150, 0);
+
     card
 }
 
@@ -794,12 +881,26 @@ unsafe fn create_action_button_inner(parent: *mut lvgl_sys::lv_obj_t, x: i16, y:
     create_action_button_content(btn, title, subtitle, icon_type);
 }
 
-/// Common content for action buttons
+/// Common content for action buttons - polished version
 unsafe fn create_action_button_content(btn: *mut lvgl_sys::lv_obj_t, title: &str, subtitle: &str, icon_type: &str) {
-    // Icon container (transparent, for positioning) - centered vertically with offset for title
+    // Subtle glow layer behind icon (creates depth)
+    let glow_layer = lvgl_sys::lv_obj_create(btn);
+    lvgl_sys::lv_obj_set_size(glow_layer, 60, 60);
+    lvgl_sys::lv_obj_align(glow_layer, lvgl_sys::LV_ALIGN_CENTER as u8, 0, -15);
+    lvgl_sys::lv_obj_set_style_bg_color(glow_layer, lv_color_hex(COLOR_ACCENT), 0);
+    lvgl_sys::lv_obj_set_style_bg_opa(glow_layer, 15, 0);  // Very subtle
+    lvgl_sys::lv_obj_set_style_radius(glow_layer, 30, 0);  // Circular
+    lvgl_sys::lv_obj_set_style_border_width(glow_layer, 0, 0);
+    lvgl_sys::lv_obj_set_style_shadow_color(glow_layer, lv_color_hex(COLOR_ACCENT), 0);
+    lvgl_sys::lv_obj_set_style_shadow_width(glow_layer, 20, 0);
+    lvgl_sys::lv_obj_set_style_shadow_spread(glow_layer, 0, 0);
+    lvgl_sys::lv_obj_set_style_shadow_opa(glow_layer, 40, 0);
+    set_style_pad_all(glow_layer, 0);
+
+    // Icon container - positioned on top of glow
     let icon_container = lvgl_sys::lv_obj_create(btn);
     lvgl_sys::lv_obj_set_size(icon_container, 50, 50);
-    lvgl_sys::lv_obj_align(icon_container, lvgl_sys::LV_ALIGN_CENTER as u8, 0, -15);  // Center with offset up for title
+    lvgl_sys::lv_obj_align(icon_container, lvgl_sys::LV_ALIGN_CENTER as u8, 0, -15);
     lvgl_sys::lv_obj_set_style_bg_opa(icon_container, 0, 0);
     lvgl_sys::lv_obj_set_style_border_width(icon_container, 0, 0);
     set_style_pad_all(icon_container, 0);
@@ -812,12 +913,13 @@ unsafe fn create_action_button_content(btn: *mut lvgl_sys::lv_obj_t, title: &str
         _ => {}
     }
 
-    // Title - positioned below center
+    // Title - slightly larger font, positioned below icon
     let title_label = lvgl_sys::lv_label_create(btn);
     let title_cstr = CString::new(title).unwrap();
     lvgl_sys::lv_label_set_text(title_label, title_cstr.as_ptr());
     lvgl_sys::lv_obj_set_style_text_color(title_label, lv_color_hex(COLOR_WHITE), 0);
-    lvgl_sys::lv_obj_align(title_label, lvgl_sys::LV_ALIGN_CENTER as u8, 0, 35);  // Below icon
+    lvgl_sys::lv_obj_set_style_text_font(title_label, &lvgl_sys::lv_font_montserrat_14, 0);
+    lvgl_sys::lv_obj_align(title_label, lvgl_sys::LV_ALIGN_CENTER as u8, 0, 38);
 
     // Subtitle
     if !subtitle.is_empty() {
@@ -951,23 +1053,35 @@ unsafe fn draw_settings_icon(parent: *mut lvgl_sys::lv_obj_t) {
 }
 
 /// Create an AMS slot with 4 color squares (for regular AMS units A, B, C, D)
-unsafe fn create_ams_slot_4color(parent: *mut lvgl_sys::lv_obj_t, x: i16, y: i16, label: &str, selected: bool, colors: &[u32; 4]) {
+/// active_slot: -1 for none, 0-3 for which color slot is currently in use
+unsafe fn create_ams_slot_4color(parent: *mut lvgl_sys::lv_obj_t, x: i16, y: i16, label: &str, active_slot: i8, colors: &[u32; 4]) {
+    let has_active = active_slot >= 0 && active_slot < 4;
+
     let slot = lvgl_sys::lv_obj_create(parent);
     lvgl_sys::lv_obj_set_size(slot, 72, 42);
     lvgl_sys::lv_obj_set_pos(slot, x, y);
-    lvgl_sys::lv_obj_set_style_bg_color(slot, lv_color_hex(COLOR_BORDER), 0);
+    lvgl_sys::lv_obj_set_style_bg_color(slot, lv_color_hex(if has_active { 0x1A2A1A } else { 0x2A2A2A }), 0);
     lvgl_sys::lv_obj_set_style_radius(slot, 8, 0);
-    lvgl_sys::lv_obj_set_style_border_color(slot, lv_color_hex(if selected { COLOR_ACCENT } else { COLOR_BORDER }), 0);
-    lvgl_sys::lv_obj_set_style_border_width(slot, if selected { 2 } else { 1 }, 0);
+    lvgl_sys::lv_obj_set_style_border_color(slot, lv_color_hex(if has_active { COLOR_ACCENT } else { 0x3D3D3D }), 0);
+    lvgl_sys::lv_obj_set_style_border_width(slot, if has_active { 2 } else { 1 }, 0);
+
+    // Strong glow for active AMS unit
+    if has_active {
+        lvgl_sys::lv_obj_set_style_shadow_color(slot, lv_color_hex(COLOR_ACCENT), 0);
+        lvgl_sys::lv_obj_set_style_shadow_width(slot, 20, 0);
+        lvgl_sys::lv_obj_set_style_shadow_spread(slot, 2, 0);
+        lvgl_sys::lv_obj_set_style_shadow_opa(slot, 150, 0);
+    }
+
     set_style_pad_all(slot, 0);
 
-    // Slot label (A, B, C, D) - small, at top
+    // Slot label (A, B, C, D) - prominent, at top
     let slot_label = lvgl_sys::lv_label_create(slot);
     let slot_text = CString::new(label).unwrap();
     lvgl_sys::lv_label_set_text(slot_label, slot_text.as_ptr());
-    lvgl_sys::lv_obj_set_style_text_color(slot_label, lv_color_hex(COLOR_WHITE), 0);
-    lvgl_sys::lv_obj_set_style_text_font(slot_label, &lvgl_sys::lv_font_montserrat_12, 0);
-    lvgl_sys::lv_obj_align(slot_label, lvgl_sys::LV_ALIGN_TOP_MID as u8, 0, 2);
+    lvgl_sys::lv_obj_set_style_text_color(slot_label, lv_color_hex(if has_active { COLOR_ACCENT } else { COLOR_WHITE }), 0);
+    lvgl_sys::lv_obj_set_style_text_font(slot_label, &lvgl_sys::lv_font_montserrat_14, 0);
+    lvgl_sys::lv_obj_align(slot_label, lvgl_sys::LV_ALIGN_TOP_MID as u8, 0, 0);
 
     // 4 color squares in a row
     let square_size: i16 = 14;
@@ -976,58 +1090,105 @@ unsafe fn create_ams_slot_4color(parent: *mut lvgl_sys::lv_obj_t, x: i16, y: i16
     let start_x = (72 - total_width) / 2;
 
     for (i, &color) in colors.iter().enumerate() {
+        let is_active_color = has_active && i as i8 == active_slot;
+
         let sq = lvgl_sys::lv_obj_create(slot);
         lvgl_sys::lv_obj_set_size(sq, square_size, square_size);
         lvgl_sys::lv_obj_set_pos(sq, start_x + (i as i16) * (square_size + square_gap), 22);
-        lvgl_sys::lv_obj_set_style_radius(sq, 2, 0);
-        lvgl_sys::lv_obj_set_style_border_width(sq, 0, 0);
+        lvgl_sys::lv_obj_set_style_radius(sq, 3, 0);
         set_style_pad_all(sq, 0);
 
         if color == 0 {
-            // Empty slot - gray background for empty
-            lvgl_sys::lv_obj_set_style_bg_color(sq, lv_color_hex(0x505050), 0);
+            // Empty slot - gray background
+            lvgl_sys::lv_obj_set_style_bg_color(sq, lv_color_hex(0x404040), 0);
+            lvgl_sys::lv_obj_set_style_border_width(sq, 0, 0);
         } else {
             lvgl_sys::lv_obj_set_style_bg_color(sq, lv_color_hex(color), 0);
+
+            if is_active_color {
+                // Active color slot - bright green border and strong glow
+                lvgl_sys::lv_obj_set_style_border_color(sq, lv_color_hex(COLOR_ACCENT), 0);
+                lvgl_sys::lv_obj_set_style_border_width(sq, 2, 0);
+                lvgl_sys::lv_obj_set_style_shadow_color(sq, lv_color_hex(COLOR_ACCENT), 0);
+                lvgl_sys::lv_obj_set_style_shadow_width(sq, 10, 0);
+                lvgl_sys::lv_obj_set_style_shadow_spread(sq, 2, 0);
+                lvgl_sys::lv_obj_set_style_shadow_opa(sq, 200, 0);
+            } else {
+                // Inactive color slot - subtle glow
+                lvgl_sys::lv_obj_set_style_border_width(sq, 0, 0);
+                lvgl_sys::lv_obj_set_style_shadow_color(sq, lv_color_hex(color), 0);
+                lvgl_sys::lv_obj_set_style_shadow_width(sq, 4, 0);
+                lvgl_sys::lv_obj_set_style_shadow_spread(sq, 0, 0);
+                lvgl_sys::lv_obj_set_style_shadow_opa(sq, 80, 0);
+            }
         }
     }
 }
 
 /// Create a single-color AMS slot for EXT and HT slots
-unsafe fn create_ams_slot_single(parent: *mut lvgl_sys::lv_obj_t, x: i16, y: i16, label: &str, color: u32) {
+/// active: whether this slot is currently in use
+unsafe fn create_ams_slot_single(parent: *mut lvgl_sys::lv_obj_t, x: i16, y: i16, label: &str, color: u32, active: bool) {
     let slot = lvgl_sys::lv_obj_create(parent);
     lvgl_sys::lv_obj_set_size(slot, 72, 22);
     lvgl_sys::lv_obj_set_pos(slot, x, y);
-    lvgl_sys::lv_obj_set_style_bg_color(slot, lv_color_hex(COLOR_BORDER), 0);
+    // Visible background and border for all slots
+    lvgl_sys::lv_obj_set_style_bg_color(slot, lv_color_hex(if active { 0x1A2A1A } else { 0x2A2A2A }), 0);
+    lvgl_sys::lv_obj_set_style_bg_opa(slot, 255, 0);
     lvgl_sys::lv_obj_set_style_radius(slot, 6, 0);
-    lvgl_sys::lv_obj_set_style_border_width(slot, 0, 0);
+    lvgl_sys::lv_obj_set_style_border_color(slot, lv_color_hex(if active { COLOR_ACCENT } else { 0x4A4A4A }), 0);
+    lvgl_sys::lv_obj_set_style_border_width(slot, if active { 2 } else { 1 }, 0);
     set_style_pad_all(slot, 0);
+
+    // Active glow
+    if active {
+        lvgl_sys::lv_obj_set_style_shadow_color(slot, lv_color_hex(COLOR_ACCENT), 0);
+        lvgl_sys::lv_obj_set_style_shadow_width(slot, 12, 0);
+        lvgl_sys::lv_obj_set_style_shadow_spread(slot, 1, 0);
+        lvgl_sys::lv_obj_set_style_shadow_opa(slot, 120, 0);
+    }
 
     // Slot label
     let slot_label = lvgl_sys::lv_label_create(slot);
     let slot_text = CString::new(label).unwrap();
     lvgl_sys::lv_label_set_text(slot_label, slot_text.as_ptr());
-    lvgl_sys::lv_obj_set_style_text_color(slot_label, lv_color_hex(COLOR_GRAY), 0);
+    lvgl_sys::lv_obj_set_style_text_color(slot_label, lv_color_hex(if active { COLOR_ACCENT } else { COLOR_GRAY }), 0);
     lvgl_sys::lv_obj_align(slot_label, lvgl_sys::LV_ALIGN_LEFT_MID as u8, 8, 0);
 
     // Color indicator (small square)
     let color_sq = lvgl_sys::lv_obj_create(slot);
     lvgl_sys::lv_obj_set_size(color_sq, 14, 14);
     lvgl_sys::lv_obj_align(color_sq, lvgl_sys::LV_ALIGN_RIGHT_MID as u8, -6, 0);
-    lvgl_sys::lv_obj_set_style_radius(color_sq, 2, 0);
-    lvgl_sys::lv_obj_set_style_border_width(color_sq, 0, 0);
+    lvgl_sys::lv_obj_set_style_radius(color_sq, 3, 0);
     set_style_pad_all(color_sq, 0);
 
     if color == 0 {
         // Empty slot - diagonal stripe
-        lvgl_sys::lv_obj_set_style_bg_color(color_sq, lv_color_hex(0x505050), 0);
+        lvgl_sys::lv_obj_set_style_bg_color(color_sq, lv_color_hex(0x404040), 0);
+        lvgl_sys::lv_obj_set_style_border_width(color_sq, 0, 0);
         let stripe = lvgl_sys::lv_obj_create(color_sq);
         lvgl_sys::lv_obj_set_size(stripe, 18, 2);
         lvgl_sys::lv_obj_align(stripe, lvgl_sys::LV_ALIGN_CENTER as u8, 0, 0);
-        lvgl_sys::lv_obj_set_style_bg_color(stripe, lv_color_hex(0x707070), 0);
+        lvgl_sys::lv_obj_set_style_bg_color(stripe, lv_color_hex(0x606060), 0);
         lvgl_sys::lv_obj_set_style_border_width(stripe, 0, 0);
         lvgl_sys::lv_obj_set_style_transform_angle(stripe, 450, 0);
     } else {
         lvgl_sys::lv_obj_set_style_bg_color(color_sq, lv_color_hex(color), 0);
+        if active {
+            // Active - green border and strong glow
+            lvgl_sys::lv_obj_set_style_border_color(color_sq, lv_color_hex(COLOR_ACCENT), 0);
+            lvgl_sys::lv_obj_set_style_border_width(color_sq, 2, 0);
+            lvgl_sys::lv_obj_set_style_shadow_color(color_sq, lv_color_hex(COLOR_ACCENT), 0);
+            lvgl_sys::lv_obj_set_style_shadow_width(color_sq, 8, 0);
+            lvgl_sys::lv_obj_set_style_shadow_spread(color_sq, 2, 0);
+            lvgl_sys::lv_obj_set_style_shadow_opa(color_sq, 180, 0);
+        } else {
+            // Inactive - subtle glow
+            lvgl_sys::lv_obj_set_style_border_width(color_sq, 0, 0);
+            lvgl_sys::lv_obj_set_style_shadow_color(color_sq, lv_color_hex(color), 0);
+            lvgl_sys::lv_obj_set_style_shadow_width(color_sq, 4, 0);
+            lvgl_sys::lv_obj_set_style_shadow_spread(color_sq, 0, 0);
+            lvgl_sys::lv_obj_set_style_shadow_opa(color_sq, 80, 0);
+        }
     }
 }
 

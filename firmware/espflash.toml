@@ -1,0 +1,11 @@
+[connection]
+serial = "/dev/ttyUSB0"
+baud = 921600
+
+[flash]
+mode = "dio"
+size = "8MB"
+frequency = "80MHz"
+
+[monitor]
+baud = 921600

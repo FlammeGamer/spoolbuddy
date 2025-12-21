@@ -1,0 +1,25 @@
+[package]
+name = "spoolbuddy-simulator"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Shared UI crate
+spoolbuddy-ui = { path = "../ui" }
+
+# Graphics - embedded-graphics (same as firmware)
+embedded-graphics = "0.8"
+embedded-graphics-core = "0.4.0"
+
+# SDL2-based simulator for embedded-graphics
+embedded-graphics-simulator = "0.6"
+
+# Threading/sync (std-compatible critical-section)
+critical-section = { version = "1.1", features = ["std"] }
+
+# Heapless strings (same as firmware)
+heapless = "0.8"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"

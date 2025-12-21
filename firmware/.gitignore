@@ -2,6 +2,9 @@
 target/
 **/target/
 
+# ESP-IDF build environment (downloaded toolchain/SDK)
+.embuild/
+
 # Cargo lock for binaries is usually committed, but not for libraries
 # Cargo.lock
 

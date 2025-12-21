@@ -1,0 +1,14 @@
+/opt/claude/projects/SpoolStation/simulator/target/debug/deps/png-2efa67a6a63ddb84.d: /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/lib.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/chunk.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/common.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/decoder/mod.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/decoder/stream.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/decoder/zlib.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/encoder.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/filter.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/traits.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/utils.rs
+
+/opt/claude/projects/SpoolStation/simulator/target/debug/deps/libpng-2efa67a6a63ddb84.rmeta: /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/lib.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/chunk.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/common.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/decoder/mod.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/decoder/stream.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/decoder/zlib.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/encoder.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/filter.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/traits.rs /opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/utils.rs
+
+/opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/lib.rs:
+/opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/chunk.rs:
+/opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/common.rs:
+/opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/decoder/mod.rs:
+/opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/decoder/stream.rs:
+/opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/decoder/zlib.rs:
+/opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/encoder.rs:
+/opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/filter.rs:
+/opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/traits.rs:
+/opt/claude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/png-0.16.8/src/utils.rs:

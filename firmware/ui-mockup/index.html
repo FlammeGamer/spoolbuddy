@@ -1038,6 +1038,242 @@
     }
     .settings-section-title:first-child { margin-top: 0; }
 
+    /* Settings Sub-pages Components */
+    .settings-subpage-content {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .settings-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .settings-input-group label {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .settings-input {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 15px;
+      color: var(--text);
+      outline: none;
+    }
+    .settings-input:focus {
+      border-color: var(--accent);
+    }
+    .settings-status-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--card);
+      border-radius: 10px;
+    }
+    .settings-status-box .status-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .settings-status-box .status-icon.success { background: rgba(0, 255, 0, 0.15); }
+    .settings-status-box .status-icon.success svg { fill: #00FF00; }
+    .settings-status-box .status-icon.warning { background: rgba(255, 180, 0, 0.15); }
+    .settings-status-box .status-icon.warning svg { fill: #FFB400; }
+    .settings-status-box .status-icon.error { background: rgba(255, 68, 68, 0.15); }
+    .settings-status-box .status-icon.error svg { fill: #FF4444; }
+    .settings-status-box .status-info { flex: 1; }
+    .settings-status-box .status-title { font-size: 15px; font-weight: 500; color: var(--text); }
+    .settings-status-box .status-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .settings-slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+      background: var(--card);
+      border-radius: 10px;
+    }
+    .settings-slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .settings-slider-header .label { font-size: 15px; color: var(--text); }
+    .settings-slider-header .value { font-size: 15px; color: var(--accent); font-weight: 500; }
+    .settings-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: var(--bg);
+      border-radius: 3px;
+      outline: none;
+    }
+    .settings-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+    }
+    .wifi-network-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      background: var(--card);
+      cursor: pointer;
+    }
+    .wifi-network-item:first-child { border-radius: 10px 10px 0 0; }
+    .wifi-network-item:last-child { border-radius: 0 0 10px 10px; }
+    .wifi-network-item:hover { background: #3D3D3D; }
+    .wifi-network-item.connected { border-left: 3px solid var(--accent); }
+    .wifi-network-item .wifi-icon { width: 22px; height: 22px; margin-right: 14px; fill: var(--text-muted); }
+    .wifi-network-item.connected .wifi-icon { fill: var(--accent); }
+    .wifi-network-item .network-name { flex: 1; font-size: 15px; color: var(--text); }
+    .wifi-network-item .signal-strength { font-size: 12px; color: var(--text-muted); margin-right: 8px; }
+    .wifi-network-item .check-mark { fill: var(--accent); }
+    .settings-toggle-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      background: var(--card);
+    }
+    .settings-toggle-item:first-child { border-radius: 10px 10px 0 0; }
+    .settings-toggle-item:last-child { border-radius: 0 0 10px 10px; }
+    .settings-toggle-item .label { flex: 1; font-size: 15px; color: var(--text); }
+    .settings-toggle-item .toggle {
+      width: 44px;
+      height: 24px;
+      background: #555;
+      border-radius: 12px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .settings-toggle-item .toggle.on { background: var(--accent); }
+    .settings-toggle-item .toggle::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: left 0.2s;
+    }
+    .settings-toggle-item .toggle.on::after { left: 22px; }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-row .info-label { font-size: 14px; color: var(--text-muted); }
+    .info-row .info-value { font-size: 14px; color: var(--text); }
+    .calibration-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      background: var(--card);
+      border-radius: 8px;
+    }
+    .calibration-step .step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .calibration-step .step-text {
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.4;
+    }
+    .printer-discovery-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      background: var(--card);
+      cursor: pointer;
+    }
+    .printer-discovery-item:first-child { border-radius: 10px 10px 0 0; }
+    .printer-discovery-item:last-child { border-radius: 0 0 10px 10px; }
+    .printer-discovery-item:hover { background: #3D3D3D; }
+    .printer-discovery-item .printer-icon { width: 32px; height: 32px; margin-right: 14px; fill: var(--accent); }
+    .printer-discovery-item .printer-info { flex: 1; }
+    .printer-discovery-item .printer-name { font-size: 15px; color: var(--text); }
+    .printer-discovery-item .printer-model { font-size: 12px; color: var(--text-muted); }
+
+    /* Log/Alarm Viewer */
+    .log-filters {
+      display: flex;
+      gap: 8px;
+      padding-bottom: 8px;
+    }
+    .log-filter {
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 12px;
+      background: var(--card);
+      color: var(--text-muted);
+      border: none;
+      cursor: pointer;
+    }
+    .log-filter.active {
+      background: var(--accent);
+      color: #000;
+    }
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      overflow-y: auto;
+    }
+    .log-entry {
+      display: flex;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--card);
+      border-radius: 8px;
+      border-left: 3px solid var(--border);
+    }
+    .log-entry.error { border-left-color: #FF4444; }
+    .log-entry.warning { border-left-color: #FFB400; }
+    .log-entry.info { border-left-color: #2196F3; }
+    .log-entry.success { border-left-color: #00FF00; }
+    .log-entry .log-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+    .log-entry.error .log-icon { fill: #FF4444; }
+    .log-entry.warning .log-icon { fill: #FFB400; }
+    .log-entry.info .log-icon { fill: #2196F3; }
+    .log-entry.success .log-icon { fill: #00FF00; }
+    .log-entry .log-content { flex: 1; min-width: 0; }
+    .log-entry .log-message { font-size: 13px; color: var(--text); }
+    .log-entry .log-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
     /* ==================== SCAN RESULT SCREEN ==================== */
     .scan-result-content {
       flex: 1;
@@ -1045,6 +1281,11 @@
       flex-direction: column;
       padding: 16px;
       gap: 16px;
+    }
+
+    .scan-result-content.compact {
+      padding: 10px 12px;
+      gap: 10px;
     }
 
     .scan-success-header {
@@ -1055,6 +1296,29 @@
       background: rgba(0, 255, 0, 0.1);
       border: 1px solid rgba(0, 255, 0, 0.3);
       border-radius: 10px;
+    }
+
+    .compact .scan-success-header {
+      padding: 8px 12px;
+      gap: 10px;
+    }
+
+    .compact .scan-success-header .check-icon {
+      width: 28px;
+      height: 28px;
+    }
+
+    .compact .scan-success-header .check-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .compact .scan-success-header .success-text h3 {
+      font-size: 14px;
+    }
+
+    .compact .scan-success-header .success-text p {
+      font-size: 11px;
     }
 
     .scan-success-header .check-icon {
@@ -1096,6 +1360,11 @@
       gap: 16px;
     }
 
+    .compact .spool-result-card {
+      padding: 10px;
+      gap: 12px;
+    }
+
     .spool-result-visual {
       width: 80px;
       display: flex;
@@ -1104,10 +1373,20 @@
       gap: 8px;
     }
 
+    .compact .spool-result-visual {
+      width: 60px;
+      gap: 4px;
+    }
+
     .spool-result-visual .big-spool {
       width: 70px;
       height: 90px;
       position: relative;
+    }
+
+    .compact .spool-result-visual .big-spool {
+      width: 55px;
+      height: 70px;
     }
 
     .spool-result-visual .big-spool img {
@@ -1146,6 +1425,35 @@
       font-size: 20px;
       font-weight: 600;
       color: var(--text);
+    }
+
+    .compact .spool-result-info {
+      gap: 4px;
+    }
+
+    .compact .spool-result-info .material-name {
+      font-size: 16px;
+    }
+
+    .compact .spool-result-info .color-name {
+      font-size: 12px;
+    }
+
+    .compact .spool-result-info .brand {
+      font-size: 11px;
+    }
+
+    .compact .spool-result-details {
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .compact .spool-result-details .detail-label {
+      font-size: 9px;
+    }
+
+    .compact .spool-result-details .detail-value {
+      font-size: 11px;
     }
 
     .spool-result-info .color-name {
@@ -1208,16 +1516,39 @@
       padding: 12px;
     }
 
+    .compact .assign-slot-section {
+      padding: 8px 10px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
     .assign-slot-section h4 {
       font-size: 13px;
       color: var(--text);
       margin-bottom: 10px;
     }
 
+    .compact .assign-slot-section h4 {
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .slot-options-scroll {
+      flex: 1;
+    }
+
     .slot-options {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
+    }
+
+    .slot-options-scroll .slot-options {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 4px;
     }
 
     .slot-option {
@@ -1230,6 +1561,15 @@
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .compact .slot-option {
+      padding: 4px 2px;
+      font-size: 10px;
+      text-align: center;
+      border-width: 1px;
+      border-radius: 4px;
     }
 
     .slot-option:hover {
@@ -1253,33 +1593,115 @@
       display: block;
     }
 
+    .compact .slot-option .slot-current {
+      display: none;
+    }
+
+    /* Grouped AMS slots with mini spool icons */
+    .ams-slot-groups {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .ams-slot-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--bg);
+      padding: 6px 8px;
+      border-radius: 8px;
+    }
+
+    .ams-slot-group .group-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      min-width: 20px;
+    }
+
+    .ams-slot-group .group-slots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .mini-slot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--slot-color, #444);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .mini-slot span {
+      font-size: 9px;
+      font-weight: 600;
+      color: #000;
+      text-shadow: 0 0 2px rgba(255,255,255,0.8);
+    }
+
+    .mini-slot.empty {
+      background: transparent;
+      border-style: dashed;
+    }
+
+    .mini-slot.empty span {
+      color: var(--text-muted);
+      text-shadow: none;
+    }
+
+    .mini-slot:hover {
+      border-color: var(--text-secondary);
+      transform: scale(1.1);
+    }
+
+    .mini-slot.selected {
+      border-color: var(--accent);
+      border-width: 3px;
+      box-shadow: 0 0 8px rgba(0, 255, 0, 0.4);
+    }
+
+    .compact .spool-result-actions {
+      padding-top: 8px;
+    }
+
+    .compact .spool-result-actions .btn {
+      padding: 10px 16px;
+      font-size: 13px;
+    }
+
     /* ==================== SPOOL DETAIL SCREEN ==================== */
     .spool-detail-content {
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 16px;
-      gap: 16px;
-      overflow-y: auto;
+      padding: 10px 12px;
+      gap: 8px;
     }
 
     .spool-detail-header {
       display: flex;
-      gap: 16px;
+      gap: 12px;
       align-items: flex-start;
     }
 
     .spool-detail-visual {
-      width: 100px;
+      width: 70px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
+      gap: 4px;
     }
 
     .spool-detail-visual .big-spool {
-      width: 90px;
-      height: 115px;
+      width: 65px;
+      height: 85px;
       position: relative;
     }
 
@@ -1302,9 +1724,9 @@
     .spool-detail-visual .slot-badge {
       background: var(--accent);
       color: var(--bg);
-      padding: 4px 12px;
+      padding: 3px 10px;
       border-radius: 6px;
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 700;
     }
 
@@ -1312,76 +1734,76 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 2px;
     }
 
     .spool-detail-info .material-name {
-      font-size: 22px;
+      font-size: 18px;
       font-weight: 600;
       color: var(--text);
     }
 
     .spool-detail-info .color-name {
-      font-size: 14px;
+      font-size: 12px;
       color: var(--text-secondary);
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
     .spool-detail-info .color-name .color-dot {
-      width: 16px;
-      height: 16px;
-      border-radius: 4px;
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
       border: 1px solid rgba(255,255,255,0.2);
     }
 
     .spool-detail-info .brand {
-      font-size: 13px;
+      font-size: 11px;
       color: var(--text-muted);
-      margin-bottom: 8px;
+      margin-bottom: 4px;
     }
 
     .spool-detail-info .weight-display {
       display: flex;
       align-items: baseline;
-      gap: 6px;
+      gap: 4px;
     }
 
     .spool-detail-info .weight-display .value {
-      font-size: 28px;
+      font-size: 22px;
       font-weight: 700;
       color: var(--text);
     }
 
     .spool-detail-info .weight-display .unit {
-      font-size: 14px;
+      font-size: 12px;
       color: var(--text-muted);
     }
 
     .spool-detail-info .weight-display .pct {
-      font-size: 14px;
+      font-size: 12px;
       color: var(--accent);
-      margin-left: 8px;
+      margin-left: 6px;
     }
 
     .spool-detail-section {
       background: var(--card);
-      border-radius: 12px;
-      padding: 12px;
+      border-radius: 10px;
+      padding: 8px 10px;
     }
 
     .spool-detail-section h4 {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-muted);
       text-transform: uppercase;
-      margin-bottom: 10px;
+      margin-bottom: 6px;
     }
 
     .detail-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
     }
 
     .detail-grid .detail-item {
@@ -1391,22 +1813,22 @@
     }
 
     .detail-grid .detail-label {
-      font-size: 10px;
+      font-size: 9px;
       color: var(--text-muted);
       text-transform: uppercase;
     }
 
     .detail-grid .detail-value {
-      font-size: 14px;
+      font-size: 12px;
       color: var(--text);
       font-weight: 500;
     }
 
     .spool-detail-actions {
       display: flex;
-      gap: 12px;
+      gap: 8px;
       margin-top: auto;
-      padding-top: 8px;
+      padding-top: 6px;
     }
 
     .spool-detail-actions .btn {
@@ -1419,8 +1841,1101 @@
     }
 
     .btn-sm {
-      padding: 8px 16px;
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+
+    /* ==================== NEW HOME DASHBOARD ==================== */
+    .dashboard {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    /* New two-column layout */
+    .main-content {
+      display: flex;
+      gap: 10px;
+      flex: 0 0 170px;
+    }
+
+    .left-column {
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .right-column {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    /* Scan Station - Large prominent area */
+    .scan-station {
+      flex: 1;
+      background: var(--card);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 2px solid var(--border);
+    }
+
+    .scan-station.active {
+      border-color: var(--accent);
+      background: rgba(0, 255, 0, 0.05);
+    }
+
+    .scan-station .scan-indicators {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .scan-station .indicator {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .scan-station .indicator-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .scan-station .indicator-icon svg {
+      width: 24px;
+      height: 24px;
+      fill: var(--text-secondary);
+    }
+
+    .scan-station .indicator-icon.ready {
+      background: rgba(0, 255, 0, 0.15);
+    }
+
+    .scan-station .indicator-icon.ready svg {
+      fill: var(--accent);
+    }
+
+    .scan-station .indicator-label {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .scan-station .indicator-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .scan-station .indicator-value.highlight {
+      color: var(--accent);
+    }
+
+    .scan-station .scan-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Quick Action Buttons - 2x2 grid */
+    .action-btn-large {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+
+    .action-btn-large:hover {
+      background: #3D3D3D;
+      border-color: #505050;
+    }
+
+    .action-btn-large .action-icon-large {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .action-btn-large .action-icon-large svg {
+      width: 28px;
+      height: 28px;
+      fill: var(--accent);
+    }
+
+    .action-btn-large .action-label-large {
       font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .action-btn-large .action-sublabel-large {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: -4px;
+    }
+
+    .dashboard-top {
+      display: flex;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    /* Status Card - Context aware */
+    .status-card {
+      flex: 1;
+      background: var(--card);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      border: 2px solid var(--border);
+      transition: border-color 0.2s;
+    }
+
+    .status-card:hover {
+      border-color: #505050;
+    }
+
+    .status-card.highlight {
+      border-color: var(--accent);
+      background: rgba(0, 255, 0, 0.05);
+    }
+
+    .status-card .icon-circle {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .status-card .icon-circle svg {
+      width: 22px;
+      height: 22px;
+      fill: var(--text-secondary);
+    }
+
+    .status-card.highlight .icon-circle {
+      background: var(--accent);
+    }
+
+    .status-card.highlight .icon-circle svg {
+      fill: var(--bg);
+    }
+
+    .status-card .status-info {
+      flex: 1;
+    }
+
+    .status-card .status-info h3 {
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    .status-card .status-info p {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .status-card .status-info .weight-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .status-card .status-info .weight-unit {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+
+    .status-card .action-hint {
+      color: var(--accent);
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Printer Status Card */
+    .printer-card {
+      width: 180px;
+      background: var(--card);
+      border-radius: 10px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .printer-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .printer-card-header .printer-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--bg);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .printer-card-header .printer-icon svg {
+      width: 16px;
+      height: 16px;
+      fill: var(--text-secondary);
+    }
+
+    .printer-card-header .printer-info {
+      flex: 1;
+    }
+
+    .printer-card-header .printer-info .name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .printer-card-header .printer-info .status {
+      font-size: 10px;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .printer-card-header .printer-info .status::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      background: var(--accent);
+      border-radius: 50%;
+    }
+
+    .printer-card .print-progress {
+      background: var(--bg);
+      border-radius: 6px;
+      padding: 6px;
+    }
+
+    .printer-card .print-progress .progress-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .printer-card .print-progress .progress-header span {
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+
+    .printer-card .print-progress .progress-bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .printer-card .print-progress .progress-bar .fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+      display: flex;
+      gap: 6px;
+      flex: 0 0 auto;
+    }
+
+    .action-btn {
+      flex: 1 1 0;
+      background: var(--card);
+      border-radius: 8px;
+      padding: 8px 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+      max-height: 70px;
+    }
+
+    .action-btn:hover {
+      border-color: var(--border);
+      background: #353535;
+    }
+
+    .action-btn:active {
+      transform: scale(0.98);
+    }
+
+    .action-btn .action-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .action-btn .action-icon svg {
+      width: 16px;
+      height: 16px;
+      fill: var(--accent);
+    }
+
+    .action-btn .action-label {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .action-btn .action-sublabel {
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-top: -2px;
+    }
+
+    /* Alerts Section */
+    .alerts-section {
+      flex: 1;
+      background: var(--card);
+      border-radius: 10px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .alerts-section h4 {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      flex-shrink: 0;
+    }
+
+    .alerts-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .alert-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      background: var(--bg);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .alert-item:hover {
+      background: #252525;
+    }
+
+    .alert-item .alert-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .alert-item .alert-icon.warning {
+      background: rgba(255, 152, 0, 0.2);
+    }
+
+    .alert-item .alert-icon.warning svg {
+      fill: #FF9800;
+    }
+
+    .alert-item .alert-icon.info {
+      background: rgba(33, 150, 243, 0.2);
+    }
+
+    .alert-item .alert-icon.info svg {
+      fill: #2196F3;
+    }
+
+    .alert-item .alert-icon.success {
+      background: rgba(0, 255, 0, 0.15);
+    }
+
+    .alert-item .alert-icon.success svg {
+      fill: var(--accent);
+    }
+
+    .alert-item .alert-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .alert-item .alert-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .alert-item .alert-content .alert-title {
+      font-size: 13px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .alert-item .alert-content .alert-time {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .alert-item .alert-action {
+      font-size: 12px;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    /* ==================== CATALOG SCREEN ==================== */
+    .catalog-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    .catalog-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .catalog-search {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--card);
+      border-radius: 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+    }
+
+    .catalog-search svg {
+      width: 18px;
+      height: 18px;
+      fill: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .catalog-search input {
+      flex: 1;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+    }
+
+    .catalog-search input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .catalog-filters {
+      display: flex;
+      gap: 8px;
+    }
+
+    .filter-btn {
+      padding: 8px 14px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .filter-btn:hover {
+      background: #353535;
+    }
+
+    .filter-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .filter-btn svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+
+    .catalog-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .catalog-item {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 10px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .catalog-item:hover {
+      border-color: var(--border);
+    }
+
+    .catalog-item .spool-icon {
+      width: 50px;
+      height: 65px;
+      position: relative;
+    }
+
+    .catalog-item .spool-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .catalog-item .spool-icon .color-tint {
+      position: absolute;
+      top: 12%;
+      left: 27%;
+      right: 22%;
+      bottom: 12%;
+      border-radius: 2px;
+      opacity: 0.85;
+    }
+
+    .catalog-item .item-info {
+      text-align: center;
+      width: 100%;
+    }
+
+    .catalog-item .item-info .material {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .catalog-item .item-info .color-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      margin-top: 2px;
+    }
+
+    .catalog-item .item-info .color-row .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+    }
+
+    .catalog-item .item-info .color-row .name {
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+
+    .catalog-item .item-info .weight {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .catalog-item .slot-tag {
+      font-size: 9px;
+      background: var(--accent);
+      color: var(--bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    /* ==================== AMS NOZZLE LAYOUT ==================== */
+    .ams-strip-section {
+      flex: 0 0 auto;
+      display: flex;
+      gap: 8px;
+      padding: 4px 0;
+    }
+
+    .nozzle-group {
+      flex: 1;
+      background: var(--card);
+      border-radius: 8px;
+      padding: 6px 8px;
+    }
+
+    .nozzle-group-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .nozzle-badge {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      background: var(--accent);
+      color: var(--bg);
+      font-size: 10px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nozzle-badge.right {
+      background: #ff6b35;
+    }
+
+    .nozzle-group-header span {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .nozzle-devices {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .device-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .device-row.ams-row .ams-device {
+      width: 80px;
+      flex-shrink: 0;
+    }
+
+    .ams-device {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 8px;
+      background: var(--card);
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid #3a3a3a;
+      min-width: 0;
+      transition: all 0.15s;
+    }
+
+    .ams-device:hover {
+      border-color: #505050;
+      background: #2a2a2a;
+    }
+
+    .ams-device.active {
+      border-color: var(--accent);
+      background: rgba(0, 120, 212, 0.1);
+    }
+
+    .ams-device .device-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ams-device .device-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .ams-device.active .device-label {
+      color: var(--accent);
+    }
+
+    .ams-device .device-slots {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      width: 100%;
+    }
+
+    .ams-device .device-slots .slot-colors {
+      display: flex;
+      width: 100%;
+      height: 10px;
+      border-radius: 2px;
+      overflow: hidden;
+      background: #222;
+    }
+
+    .ams-device .slot {
+      flex: 1;
+      height: 100%;
+    }
+
+    .ams-device .slot .slot-fill {
+      width: 100%;
+      height: 100%;
+    }
+
+    .ams-device .slot.empty {
+      background: var(--bg);
+      position: relative;
+    }
+
+    .ams-device .slot.empty::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(
+        -45deg,
+        transparent 45%,
+        #555 45%,
+        #555 55%,
+        transparent 55%
+      );
+    }
+
+    .ams-device .slot.empty .slot-fill {
+      display: none;
+    }
+
+    /* Single-slot devices (EXT, HT) */
+    .ams-device.single-slot {
+      flex-direction: row;
+      align-items: center;
+      padding: 6px 10px;
+      gap: 6px;
+    }
+
+    .ams-device.single-slot .device-header {
+      flex: 1;
+    }
+
+    .ams-device.single-slot .device-label {
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .ams-device.single-slot .device-slots {
+      margin-left: auto;
+      padding: 0;
+      width: 16px;
+      height: 16px;
+    }
+
+    .ams-device.single-slot .device-slots .slot {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .ams-device.single-slot .device-slots .slot .slot-fill {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Bottom Section - Single row for last alert/activity */
+    .bottom-section {
+      flex: 0 0 auto;
+      background: var(--card);
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+    }
+
+    .bottom-section:hover {
+      background: #3D3D3D;
+    }
+
+    .bottom-section .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .bottom-section .status-indicator.alarm {
+      background: #F44336;
+    }
+
+    .bottom-section .status-indicator.activity {
+      background: var(--accent);
+    }
+
+    .bottom-section .status-indicator.info {
+      background: #2196F3;
+    }
+
+    .bottom-section .message-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .bottom-section .message-title {
+      font-size: 13px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bottom-section .message-time {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .bottom-section .view-log {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .bottom-section .view-log svg {
+      width: 14px;
+      height: 14px;
+      fill: var(--text-muted);
+    }
+
+    /* Legacy activity-section for other screens */
+    .activity-section {
+      flex: 1 1 0;
+      background: var(--card);
+      border-radius: 8px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 60px;
+      max-height: 120px;
+    }
+
+    .activity-section h4 {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      flex-shrink: 0;
+    }
+
+    .activity-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      background: var(--bg);
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .activity-item:hover {
+      background: #252525;
+    }
+
+    .activity-item .activity-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .activity-item .activity-icon svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .activity-item .activity-icon.warning {
+      background: rgba(255, 152, 0, 0.2);
+    }
+
+    .activity-item .activity-icon.warning svg {
+      fill: #FF9800;
+    }
+
+    .activity-item .activity-icon.success {
+      background: rgba(0, 255, 0, 0.15);
+    }
+
+    .activity-item .activity-icon.success svg {
+      fill: var(--accent);
+    }
+
+    .activity-item .activity-icon.info {
+      background: rgba(33, 150, 243, 0.2);
+    }
+
+    .activity-item .activity-icon.info svg {
+      fill: #2196F3;
+    }
+
+    .activity-item .activity-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .activity-item .activity-title {
+      font-size: 10px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .activity-item .activity-time {
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+
+    .activity-item .activity-action {
+      font-size: 9px;
+      color: var(--accent);
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    /* Alert-style icons within activity items */
+    .activity-item .alert-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: rgba(100, 100, 100, 0.2);
+    }
+
+    .activity-item .alert-icon svg {
+      width: 14px;
+      height: 14px;
+      fill: var(--text-muted);
+    }
+
+    .activity-item .alert-icon.warning {
+      background: rgba(255, 152, 0, 0.2);
+    }
+
+    .activity-item .alert-icon.warning svg {
+      fill: #FF9800;
+    }
+
+    .activity-item .alert-icon.success {
+      background: rgba(0, 255, 0, 0.15);
+    }
+
+    .activity-item .alert-icon.success svg {
+      fill: var(--accent);
+    }
+
+    .activity-item .alert-icon.info {
+      background: rgba(33, 150, 243, 0.2);
+    }
+
+    .activity-item .alert-icon.info svg {
+      fill: #2196F3;
+    }
+
+    .activity-item .alert-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .activity-item .alert-title {
+      font-size: 11px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .activity-item .alert-time {
+      font-size: 9px;
+      color: var(--text-muted);
     }
   </style>
 </head>
@@ -1429,16 +2944,17 @@
 
   <div class="nav">
     <button class="active" onclick="showScreen('home')">Home</button>
-    <button onclick="showScreen('ams-detail')">AMS Detail</button>
+    <button onclick="showScreen('ams-overview')">AMS Overview</button>
     <button onclick="showScreen('scan')">NFC Scan</button>
     <button onclick="showScreen('scan-result')">Scan Result</button>
     <button onclick="showScreen('spool-detail')">Spool Detail</button>
+    <button onclick="showScreen('catalog')">Catalog</button>
     <button onclick="showScreen('settings')">Settings</button>
   </div>
 
   <div class="display">
 
-    <!-- HOME SCREEN -->
+    <!-- HOME SCREEN - Dashboard -->
     <div id="home" class="screen active">
       <div class="status-bar">
         <div class="status-left">
@@ -1451,11 +2967,239 @@
           <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
         </div>
         <div class="status-right">
-          <div class="notification-bell">
+          <div class="notification-bell" onclick="showScreen('logs')">
             <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
             <span class="badge">3</span>
           </div>
           <svg width="18" height="18" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z" fill="#00FF00"/></svg>
+          <span class="time">14:23</span>
+        </div>
+      </div>
+
+      <div class="dashboard">
+        <!-- Main Content: Left Column (Printer + Scan Station) + Right Column (Buttons) -->
+        <div class="main-content">
+          <!-- Left Column -->
+          <div class="left-column">
+            <!-- Printer Card - Compact -->
+            <div class="printer-card" style="width: 100%;">
+              <div class="printer-card-header">
+                <div class="printer-icon">
+                  <svg viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
+                </div>
+                <div class="printer-info">
+                  <span class="name">X1C-Studio</span>
+                  <span class="status">Printing</span>
+                </div>
+              </div>
+              <div class="print-progress">
+                <div class="progress-header">
+                  <span>Benchy.3mf</span>
+                  <span>1h 23m left</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="fill" style="width: 67%;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Scan Station - NFC + Scale -->
+            <div class="scan-station" onclick="showScreen('scan')">
+              <div class="scan-indicators">
+                <!-- NFC Indicator -->
+                <div class="indicator">
+                  <div class="indicator-icon ready">
+                    <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.38-1-1.72V8h3v8H8V8h2V6H6v12h12V6z"/></svg>
+                  </div>
+                  <span class="indicator-label">NFC</span>
+                  <span class="indicator-value highlight">Ready</span>
+                </div>
+                <!-- Scale Indicator -->
+                <div class="indicator">
+                  <div class="indicator-icon">
+                    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/></svg>
+                  </div>
+                  <span class="indicator-label">Weight</span>
+                  <span class="indicator-value">0.000 kg</span>
+                </div>
+              </div>
+              <span class="scan-hint">Place spool on scale to scan</span>
+            </div>
+          </div>
+
+          <!-- Right Column - 2x2 Button Grid -->
+          <div class="right-column">
+            <div class="action-btn-large" onclick="showScreen('ams-overview')">
+              <div class="action-icon-large">
+                <svg viewBox="0 0 24 24"><path d="M2 20h20v-4H2v4zm2-3h2v2H4v-2zM2 4v4h20V4H2zm4 3H4V5h2v2zm-4 7h20v-4H2v4zm2-3h2v2H4v-2z"/></svg>
+              </div>
+              <span class="action-label-large">AMS Setup</span>
+              <span class="action-sublabel-large">6 Loaded</span>
+            </div>
+            <div class="action-btn-large" onclick="showScreen('encode-tag')">
+              <div class="action-icon-large">
+                <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.38-1-1.72V8h3v8H8V8h2V6H6v12h12V6z"/></svg>
+              </div>
+              <span class="action-label-large">Encode Tag</span>
+              <span class="action-sublabel-large">Write NFC</span>
+            </div>
+            <div class="action-btn-large" onclick="showScreen('catalog')">
+              <div class="action-icon-large">
+                <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM8 20H4v-4h4v4zm0-6H4v-4h4v4zm0-6H4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4z"/></svg>
+              </div>
+              <span class="action-label-large">Catalog</span>
+              <span class="action-sublabel-large">24 Spools</span>
+            </div>
+            <div class="action-btn-large" onclick="showScreen('settings')">
+              <div class="action-icon-large">
+                <svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
+              </div>
+              <span class="action-label-large">Settings</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- AMS Left/Right Nozzle Layout -->
+        <div class="ams-strip-section" onclick="showScreen('ams-overview')">
+          <!-- Left Nozzle -->
+          <div class="nozzle-group">
+            <div class="nozzle-group-header">
+              <div class="nozzle-badge">L</div>
+              <span>Left Nozzle</span>
+            </div>
+            <div class="nozzle-devices">
+              <div class="device-row ams-row">
+                <div class="ams-device active" title="AMS A - Active">
+                  <div class="device-header">
+                    <span class="device-label">A</span>
+                  </div>
+                  <div class="device-slots">
+                    <div class="slot-colors">
+                      <div class="slot"><div class="slot-fill" style="background: #1a1a1a;"></div></div>
+                      <div class="slot"><div class="slot-fill" style="background: #e63946;"></div></div>
+                      <div class="slot"><div class="slot-fill" style="background: #2a9d8f;"></div></div>
+                      <div class="slot"><div class="slot-fill" style="background: #f4a261;"></div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="ams-device" title="AMS B">
+                  <div class="device-header">
+                    <span class="device-label">B</span>
+                  </div>
+                  <div class="device-slots">
+                    <div class="slot-colors">
+                      <div class="slot"><div class="slot-fill" style="background: #ffffff;"></div></div>
+                      <div class="slot"><div class="slot-fill" style="background: #3a86ff;"></div></div>
+                      <div class="slot empty"></div>
+                      <div class="slot"><div class="slot-fill" style="background: #9b5de5;"></div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="ams-device" title="AMS D">
+                  <div class="device-header">
+                    <span class="device-label">D</span>
+                  </div>
+                  <div class="device-slots">
+                    <div class="slot-colors">
+                      <div class="slot"><div class="slot-fill" style="background: #ff006e;"></div></div>
+                      <div class="slot"><div class="slot-fill" style="background: #8338ec;"></div></div>
+                      <div class="slot"><div class="slot-fill" style="background: #3a86ff;"></div></div>
+                      <div class="slot empty"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="device-row">
+                <div class="ams-device single-slot" title="External 1">
+                  <div class="device-header">
+                    <span class="device-label">EXT-1</span>
+                  </div>
+                  <div class="device-slots"><div class="slot"><div class="slot-fill" style="background: #e63946;"></div></div></div>
+                </div>
+                <div class="ams-device single-slot" title="HT-A">
+                  <div class="device-header">
+                    <span class="device-label">HT-A</span>
+                  </div>
+                  <div class="device-slots"><div class="slot"><div class="slot-fill" style="background: #adb5bd;"></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Right Nozzle -->
+          <div class="nozzle-group">
+            <div class="nozzle-group-header">
+              <div class="nozzle-badge right">R</div>
+              <span>Right Nozzle</span>
+            </div>
+            <div class="nozzle-devices">
+              <div class="device-row ams-row">
+                <div class="ams-device" title="AMS C">
+                  <div class="device-header">
+                    <span class="device-label">C</span>
+                  </div>
+                  <div class="device-slots">
+                    <div class="slot-colors">
+                      <div class="slot"><div class="slot-fill" style="background: #ffd60a;"></div></div>
+                      <div class="slot"><div class="slot-fill" style="background: #06d6a0;"></div></div>
+                      <div class="slot"><div class="slot-fill" style="background: #ef476f;"></div></div>
+                      <div class="slot"><div class="slot-fill" style="background: #118ab2;"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="device-row">
+                <div class="ams-device single-slot" title="HT-B">
+                  <div class="device-header">
+                    <span class="device-label">HT-B</span>
+                  </div>
+                  <div class="device-slots"><div class="slot"><div class="slot-fill" style="background: #fb5607;"></div></div></div>
+                </div>
+                <div class="ams-device single-slot" title="External 2">
+                  <div class="device-header">
+                    <span class="device-label">EXT-2</span>
+                  </div>
+                  <div class="device-slots"><div class="slot empty"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Section - Last alert/activity with link to log -->
+        <div class="bottom-section" onclick="showScreen('log-viewer')">
+          <div class="status-indicator alarm"></div>
+          <div class="message-content">
+            <div class="message-title">Low filament: PLA Black (A2) - 15% remaining</div>
+            <div class="message-time">5 min ago</div>
+          </div>
+          <div class="view-log">
+            View Log
+            <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AMS OVERVIEW SCREEN (formerly home content) -->
+    <div id="ams-overview" class="screen">
+      <div class="status-bar">
+        <div class="status-left">
+          <button class="back-btn" onclick="showScreen('home')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          </button>
+          <img class="logo" src="assets/spoolbuddy_logo_dark_transp.png" alt="SpoolBuddy">
+        </div>
+        <div class="printer-selector">
+          <span class="printer-status connected"></span>
+          <span class="printer-name">X1C-Studio</span>
+          <span class="alert-badge"></span>
+          <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+        <div class="status-right">
+          <div class="notification-bell" onclick="showScreen('logs')">
+            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+            <span class="badge">3</span>
+          </div>
           <span class="time">14:23</span>
         </div>
       </div>
@@ -1466,11 +3210,10 @@
             <div class="ams-panel">
               <div class="ams-panel-header">
                 <h3>AMS Units</h3>
-                <button class="more-btn" onclick="showScreen('ams-detail')">Details ></button>
               </div>
               <div class="ams-grid">
                 <!-- AMS A - 4 slot unit -->
-                <div class="ams-unit ams-4slot active" onclick="showScreen('ams-detail')">
+                <div class="ams-unit ams-4slot active" onclick="showScreen('spool-detail')">
                   <div class="ams-unit-header">
                     <div class="ams-unit-header-left">
                       <span class="ams-unit-label">AMS A</span>
@@ -1526,7 +3269,7 @@
                 </div>
 
                 <!-- AMS B - 4 slot unit with 1 empty -->
-                <div class="ams-unit ams-4slot" onclick="showScreen('ams-detail')">
+                <div class="ams-unit ams-4slot" onclick="showScreen('spool-detail')">
                   <div class="ams-unit-header">
                     <div class="ams-unit-header-left">
                       <span class="ams-unit-label">AMS B</span>
@@ -1581,7 +3324,7 @@
                 </div>
 
                 <!-- AMS C - 4 slot unit with 2 empty -->
-                <div class="ams-unit ams-4slot" onclick="showScreen('ams-detail')">
+                <div class="ams-unit ams-4slot" onclick="showScreen('spool-detail')">
                   <div class="ams-unit-header">
                     <div class="ams-unit-header-left">
                       <span class="ams-unit-label">AMS C</span>
@@ -1635,7 +3378,7 @@
                 </div>
 
                 <!-- AMS D - 4 slot unit (row 2) -->
-                <div class="ams-unit ams-4slot row2" onclick="showScreen('ams-detail')">
+                <div class="ams-unit ams-4slot row2" onclick="showScreen('spool-detail')">
                   <div class="ams-unit-header">
                     <div class="ams-unit-header-left">
                       <span class="ams-unit-label">AMS D</span>
@@ -1689,7 +3432,7 @@
                 </div>
 
                 <!-- HT-A - Single slot high-temp -->
-                <div class="ams-unit single-slot" onclick="showScreen('ams-detail')">
+                <div class="ams-unit single-slot" onclick="showScreen('spool-detail')">
                   <div class="ams-unit-header">
                     <div class="ams-unit-header-left">
                       <span class="ams-unit-label">HT-A</span>
@@ -1718,7 +3461,7 @@
                 </div>
 
                 <!-- HT-B - Single slot high-temp -->
-                <div class="ams-unit single-slot" onclick="showScreen('ams-detail')">
+                <div class="ams-unit single-slot" onclick="showScreen('spool-detail')">
                   <div class="ams-unit-header">
                     <div class="ams-unit-header-left">
                       <span class="ams-unit-label">HT-B</span>
@@ -1747,7 +3490,7 @@
                 </div>
 
                 <!-- EXT 1 - External spool -->
-                <div class="ams-unit single-slot external" onclick="showScreen('ams-detail')">
+                <div class="ams-unit single-slot external" onclick="showScreen('spool-detail')">
                   <div class="ams-unit-header">
                     <div class="ams-unit-header-left">
                       <span class="ams-unit-label">Ext 1</span>
@@ -1772,7 +3515,7 @@
                 </div>
 
                 <!-- EXT 2 - External spool -->
-                <div class="ams-unit single-slot external" onclick="showScreen('ams-detail')">
+                <div class="ams-unit single-slot external" onclick="showScreen('spool-detail')">
                   <div class="ams-unit-header">
                     <div class="ams-unit-header-left">
                       <span class="ams-unit-label">Ext 2</span>
@@ -1812,15 +3555,14 @@
                 <span class="label">Scan</span>
               </div>
 
-              <div class="action-btn" onclick="showScreen('ams-detail')">
-                <svg class="icon" viewBox="0 0 32 32" fill="none">
-                  <rect x="4" y="8" width="24" height="16" rx="2" stroke="#00FF00" stroke-width="1.5"/>
-                  <rect x="6" y="10" width="4" height="12" rx="1" fill="#F44336"/>
-                  <rect x="11" y="10" width="4" height="12" rx="1" fill="#4CAF50"/>
-                  <rect x="16" y="10" width="4" height="12" rx="1" fill="#2196F3"/>
-                  <rect x="21" y="10" width="4" height="12" rx="1" fill="#FFEB3B"/>
+              <div class="action-btn" onclick="showScreen('catalog')">
+                <svg class="icon" viewBox="0 0 32 32" fill="#00FF00">
+                  <rect x="4" y="4" width="10" height="10" rx="2"/>
+                  <rect x="18" y="4" width="10" height="10" rx="2"/>
+                  <rect x="4" y="18" width="10" height="10" rx="2"/>
+                  <rect x="18" y="18" width="10" height="10" rx="2"/>
                 </svg>
-                <span class="label">AMS</span>
+                <span class="label">Catalog</span>
               </div>
 
               <div class="action-btn">
@@ -1859,15 +3601,6 @@
           <button class="tare-btn">TARE</button>
         </div>
 
-        <!-- Current spool on scale -->
-        <div class="spool-section">
-          <div class="spool-color" style="background: #F5C518;"></div>
-          <div class="spool-info">
-            <span class="material">PLA Basic</span>
-            <span class="color-name">Yellow</span>
-          </div>
-        </div>
-
         <!-- NFC status -->
         <div class="nfc-section ready">
           <svg viewBox="0 0 24 24">
@@ -1890,178 +3623,13 @@
           </div>
           <span class="scan-time">2m ago</span>
         </div>
-      </div>
-    </div>
 
-    <!-- AMS DETAIL SCREEN -->
-    <div id="ams-detail" class="screen">
-      <div class="status-bar">
-        <div class="status-left">
-          <button class="back-btn" onclick="showScreen('home')">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-          </button>
-          <img class="logo" src="assets/spoolbuddy_logo_dark_transp.png" alt="SpoolBuddy">
-        </div>
-        <div class="printer-selector">
-          <span class="printer-status connected"></span>
-          <span class="printer-name">X1C-Studio</span>
-          <span class="alert-badge"></span>
-          <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
-        </div>
-        <div class="status-right">
-          <div class="notification-bell">
-            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
-            <span class="badge">3</span>
-          </div>
-          <span class="time">14:23</span>
-        </div>
-      </div>
-
-      <div class="content">
-        <div class="ams-detail-scroll">
-          <div class="ams-detail-grid">
-            <!-- AMS A Detail -->
-            <div class="ams-card">
-              <div class="ams-card-header">
-                <div class="ams-card-title">
-                  <h4>AMS A</h4>
-                  <span class="type-badge">Standard</span>
-                  <span class="nozzle-badge">Left</span>
-                </div>
-                <div class="ams-card-stats">
-                  <span>32%</span>
-                  <span>25°C</span>
-                </div>
-              </div>
-              <div class="slot-row">
-                <div class="slot-detail active" onclick="showScreen('spool-detail')">
-                  <div class="slot-spool">
-                    <svg viewBox="0 0 24 32">
-                      <ellipse cx="12" cy="4" rx="11" ry="3" fill="#333" stroke="#222" stroke-width="0.5"/>
-                      <ellipse cx="12" cy="28" rx="11" ry="3" fill="#2a2a2a" stroke="#222" stroke-width="0.5"/>
-                      <rect x="1" y="4" width="22" height="24" fill="#F44336"/>
-                      <ellipse cx="12" cy="16" rx="4" ry="8" fill="#1a1a1a"/>
-                    </svg>
-                  </div>
-                  <div class="slot-info">
-                    <div class="material">PLA Basic</div>
-                    <div class="color-name">Red</div>
-                    <div class="stats"><span>85%</span><span>K: 0.024</span></div>
-                    <div class="fill-level"><div class="bar" style="width: 85%;"></div></div>
-                  </div>
-                </div>
-                <div class="slot-detail" onclick="showScreen('spool-detail')">
-                  <div class="slot-spool">
-                    <svg viewBox="0 0 24 32">
-                      <ellipse cx="12" cy="4" rx="11" ry="3" fill="#333" stroke="#222" stroke-width="0.5"/>
-                      <ellipse cx="12" cy="28" rx="11" ry="3" fill="#2a2a2a" stroke="#222" stroke-width="0.5"/>
-                      <rect x="1" y="4" width="22" height="24" fill="#4CAF50"/>
-                      <ellipse cx="12" cy="16" rx="4" ry="8" fill="#1a1a1a"/>
-                    </svg>
-                  </div>
-                  <div class="slot-info">
-                    <div class="material">PLA Matte</div>
-                    <div class="color-name">Green</div>
-                    <div class="stats"><span>62%</span><span>K: 0.022</span></div>
-                    <div class="fill-level"><div class="bar" style="width: 62%;"></div></div>
-                  </div>
-                </div>
-                <div class="slot-detail" onclick="showScreen('spool-detail')">
-                  <div class="slot-spool">
-                    <svg viewBox="0 0 24 32">
-                      <ellipse cx="12" cy="4" rx="11" ry="3" fill="#333" stroke="#222" stroke-width="0.5"/>
-                      <ellipse cx="12" cy="28" rx="11" ry="3" fill="#2a2a2a" stroke="#222" stroke-width="0.5"/>
-                      <rect x="1" y="4" width="22" height="24" fill="#2196F3"/>
-                      <ellipse cx="12" cy="16" rx="4" ry="8" fill="#1a1a1a"/>
-                    </svg>
-                  </div>
-                  <div class="slot-info">
-                    <div class="material">PETG HF</div>
-                    <div class="color-name">Blue</div>
-                    <div class="stats"><span>45%</span><span>K: 0.032</span></div>
-                    <div class="fill-level"><div class="bar" style="width: 45%;"></div></div>
-                  </div>
-                </div>
-                <div class="slot-detail" onclick="showScreen('spool-detail')">
-                  <div class="slot-spool">
-                    <svg viewBox="0 0 24 32">
-                      <ellipse cx="12" cy="4" rx="11" ry="3" fill="#333" stroke="#222" stroke-width="0.5"/>
-                      <ellipse cx="12" cy="28" rx="11" ry="3" fill="#2a2a2a" stroke="#222" stroke-width="0.5"/>
-                      <rect x="1" y="4" width="22" height="24" fill="#FFEB3B"/>
-                      <ellipse cx="12" cy="16" rx="4" ry="8" fill="#1a1a1a"/>
-                    </svg>
-                  </div>
-                  <div class="slot-info">
-                    <div class="material">PLA Silk</div>
-                    <div class="color-name">Yellow</div>
-                    <div class="stats"><span>90%</span><span>K: 0.020</span></div>
-                    <div class="fill-level"><div class="bar" style="width: 90%;"></div></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- AMS-HT 1 Detail -->
-            <div class="ams-card">
-              <div class="ams-card-header">
-                <div class="ams-card-title">
-                  <h4>AMS-HT 1</h4>
-                  <span class="type-badge">High Temp</span>
-                  <span class="nozzle-badge">Left</span>
-                </div>
-                <div class="ams-card-stats">
-                  <span>65°C</span>
-                  <span style="color: var(--accent);">Heating</span>
-                </div>
-              </div>
-              <div class="slot-row">
-                <div class="slot-detail" style="max-width: 200px;" onclick="showScreen('spool-detail')">
-                  <div class="slot-spool">
-                    <svg viewBox="0 0 24 32">
-                      <ellipse cx="12" cy="4" rx="11" ry="3" fill="#333" stroke="#222" stroke-width="0.5"/>
-                      <ellipse cx="12" cy="28" rx="11" ry="3" fill="#2a2a2a" stroke="#222" stroke-width="0.5"/>
-                      <rect x="1" y="4" width="22" height="24" fill="#673AB7"/>
-                      <ellipse cx="12" cy="16" rx="4" ry="8" fill="#1a1a1a"/>
-                    </svg>
-                  </div>
-                  <div class="slot-info">
-                    <div class="material">ABS</div>
-                    <div class="color-name">Purple</div>
-                    <div class="stats"><span>78%</span><span>K: 0.045</span></div>
-                    <div class="fill-level"><div class="bar" style="width: 78%;"></div></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- External 1 Detail -->
-            <div class="ams-card">
-              <div class="ams-card-header">
-                <div class="ams-card-title">
-                  <h4>External 1</h4>
-                  <span class="type-badge">External</span>
-                  <span class="nozzle-badge">Left</span>
-                </div>
-              </div>
-              <div class="slot-row">
-                <div class="slot-detail" style="max-width: 200px;" onclick="showScreen('spool-detail')">
-                  <div class="slot-spool">
-                    <svg viewBox="0 0 24 32">
-                      <ellipse cx="12" cy="4" rx="11" ry="3" fill="#333" stroke="#222" stroke-width="0.5"/>
-                      <ellipse cx="12" cy="28" rx="11" ry="3" fill="#2a2a2a" stroke="#222" stroke-width="0.5"/>
-                      <rect x="1" y="4" width="22" height="24" fill="#CDDC39"/>
-                      <ellipse cx="12" cy="16" rx="4" ry="8" fill="#1a1a1a"/>
-                    </svg>
-                  </div>
-                  <div class="slot-info">
-                    <div class="material">TPU 95A</div>
-                    <div class="color-name">Lime</div>
-                    <div class="stats"><span>92%</span><span>K: 0.12</span></div>
-                    <div class="fill-level"><div class="bar" style="width: 92%;"></div></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <!-- Current spool on scale -->
+        <div class="spool-section">
+          <div class="spool-color" style="background: #F5C518;"></div>
+          <div class="spool-info">
+            <span class="material">PLA Basic</span>
+            <span class="color-name">Yellow</span>
           </div>
         </div>
       </div>
@@ -2083,7 +3651,7 @@
           <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
         </div>
         <div class="status-right">
-          <div class="notification-bell">
+          <div class="notification-bell" onclick="showScreen('logs')">
             <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
             <span class="badge">3</span>
           </div>
@@ -2121,7 +3689,7 @@
         </div>
       </div>
 
-      <div class="scan-result-content">
+      <div class="scan-result-content compact">
         <!-- Success Header -->
         <div class="scan-success-header">
           <div class="check-icon">
@@ -2151,20 +3719,20 @@
             <div class="brand">Bambu Lab</div>
             <div class="spool-result-details">
               <div class="detail-item">
-                <span class="detail-label">Nozzle Temp</span>
+                <span class="detail-label">Nozzle</span>
                 <span class="detail-value">190-220°C</span>
               </div>
               <div class="detail-item">
-                <span class="detail-label">Bed Temp</span>
+                <span class="detail-label">Bed</span>
                 <span class="detail-value">45-65°C</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">K Factor</span>
+                <span class="detail-value">0.020</span>
               </div>
               <div class="detail-item">
                 <span class="detail-label">Diameter</span>
                 <span class="detail-value">1.75mm</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">Tag ID</span>
-                <span class="detail-value">A4B7C912</span>
               </div>
             </div>
           </div>
@@ -2172,42 +3740,81 @@
 
         <!-- Slot Assignment -->
         <div class="assign-slot-section">
-          <h4>Assign to AMS Slot (Optional)</h4>
-          <div class="slot-options">
-            <div class="slot-option">
-              <span>A1</span>
-              <span class="slot-current">PLA Yellow</span>
+          <h4>Assign to AMS Slot</h4>
+          <div class="ams-slot-groups">
+            <!-- AMS A -->
+            <div class="ams-slot-group">
+              <span class="group-label">A</span>
+              <div class="group-slots">
+                <div class="mini-slot" style="--slot-color: #F5C518;"><span>1</span></div>
+                <div class="mini-slot" style="--slot-color: #333;"><span>2</span></div>
+                <div class="mini-slot" style="--slot-color: #FF9800;"><span>3</span></div>
+                <div class="mini-slot" style="--slot-color: #9E9E9E;"><span>4</span></div>
+              </div>
             </div>
-            <div class="slot-option">
-              <span>A2</span>
-              <span class="slot-current">PETG Black</span>
+            <!-- AMS B -->
+            <div class="ams-slot-group">
+              <span class="group-label">B</span>
+              <div class="group-slots">
+                <div class="mini-slot" style="--slot-color: #E91E63;"><span>1</span></div>
+                <div class="mini-slot" style="--slot-color: #2196F3;"><span>2</span></div>
+                <div class="mini-slot" style="--slot-color: #4CAF50;"><span>3</span></div>
+                <div class="mini-slot selected empty"><span>4</span></div>
+              </div>
             </div>
-            <div class="slot-option">
-              <span>A3</span>
-              <span class="slot-current">PETG Orange</span>
+            <!-- AMS C -->
+            <div class="ams-slot-group">
+              <span class="group-label">C</span>
+              <div class="group-slots">
+                <div class="mini-slot" style="--slot-color: #FFF;"><span>1</span></div>
+                <div class="mini-slot" style="--slot-color: #212121;"><span>2</span></div>
+                <div class="mini-slot empty"><span>3</span></div>
+                <div class="mini-slot empty"><span>4</span></div>
+              </div>
             </div>
-            <div class="slot-option">
-              <span>A4</span>
-              <span class="slot-current">PLA Gray</span>
+            <!-- AMS D -->
+            <div class="ams-slot-group">
+              <span class="group-label">D</span>
+              <div class="group-slots">
+                <div class="mini-slot" style="--slot-color: #00BCD4;"><span>1</span></div>
+                <div class="mini-slot" style="--slot-color: #FF5722;"><span>2</span></div>
+                <div class="mini-slot empty"><span>3</span></div>
+                <div class="mini-slot empty"><span>4</span></div>
+              </div>
             </div>
-            <div class="slot-option selected">
-              <span>B4</span>
-              <span class="slot-current">Empty</span>
+            <!-- HT-A -->
+            <div class="ams-slot-group single">
+              <span class="group-label">HT-A</span>
+              <div class="group-slots">
+                <div class="mini-slot" style="--slot-color: #673AB7;"></div>
+              </div>
             </div>
-            <div class="slot-option">
-              <span>Ext L</span>
-              <span class="slot-current">External</span>
+            <!-- HT-B -->
+            <div class="ams-slot-group single">
+              <span class="group-label">HT-B</span>
+              <div class="group-slots">
+                <div class="mini-slot" style="--slot-color: #ECEFF1;"></div>
+              </div>
             </div>
-            <div class="slot-option">
-              <span>Ext R</span>
-              <span class="slot-current">External</span>
+            <!-- Ext 1 -->
+            <div class="ams-slot-group single">
+              <span class="group-label">Ext 1</span>
+              <div class="group-slots">
+                <div class="mini-slot" style="--slot-color: #607D8B;"></div>
+              </div>
+            </div>
+            <!-- Ext 2 -->
+            <div class="ams-slot-group single">
+              <span class="group-label">Ext 2</span>
+              <div class="group-slots">
+                <div class="mini-slot" style="--slot-color: #8BC34A;"></div>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Actions -->
         <div class="spool-result-actions">
-          <button class="btn btn-secondary" onclick="showScreen('home')">Save to Catalog</button>
           <button class="btn btn-primary" onclick="showScreen('home')">Assign & Save</button>
         </div>
       </div>
@@ -2217,7 +3824,7 @@
     <div id="spool-detail" class="screen">
       <div class="status-bar">
         <div class="status-left">
-          <button class="back-btn" onclick="showScreen('ams-detail')">
+          <button class="back-btn" onclick="showScreen('ams-overview')">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
           </button>
           <span class="title">Spool Details</span>
@@ -2257,12 +3864,16 @@
           <h4>Print Settings</h4>
           <div class="detail-grid">
             <div class="detail-item">
-              <span class="detail-label">Nozzle Temp</span>
+              <span class="detail-label">Nozzle</span>
               <span class="detail-value">190-220°C</span>
             </div>
             <div class="detail-item">
-              <span class="detail-label">Bed Temp</span>
+              <span class="detail-label">Bed</span>
               <span class="detail-value">45-65°C</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">K Factor</span>
+              <span class="detail-value">0.020</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">Max Speed</span>
@@ -2304,9 +3915,226 @@
 
         <!-- Actions -->
         <div class="spool-detail-actions">
-          <button class="btn btn-secondary btn-sm" onclick="showScreen('ams-detail')">Move Slot</button>
+          <button class="btn btn-primary btn-sm" onclick="showScreen('ams-overview')">Assign Slot</button>
           <button class="btn btn-secondary btn-sm">Edit Info</button>
           <button class="btn btn-danger btn-sm">Remove</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CATALOG SCREEN -->
+    <div id="catalog" class="screen">
+      <div class="status-bar">
+        <div class="status-left">
+          <button class="back-btn" onclick="showScreen('home')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          </button>
+          <span class="title">Spool Catalog</span>
+        </div>
+        <div class="status-right">
+          <span class="time">14:23</span>
+        </div>
+      </div>
+
+      <div class="catalog-content">
+        <!-- Search and Filters -->
+        <div class="catalog-header">
+          <div class="catalog-search">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <input type="text" placeholder="Search spools...">
+          </div>
+          <div class="catalog-filters">
+            <button class="filter-btn active">All (24)</button>
+            <button class="filter-btn">
+              <svg viewBox="0 0 24 24"><path d="M2 20h20v-4H2v4zm2-3h2v2H4v-2zM2 4v4h20V4H2zm4 3H4V5h2v2zm-4 7h20v-4H2v4zm2-3h2v2H4v-2z"/></svg>
+              In AMS (6)
+            </button>
+            <button class="filter-btn">PLA</button>
+            <button class="filter-btn">PETG</button>
+          </div>
+        </div>
+
+        <!-- Catalog Grid -->
+        <div class="catalog-grid">
+          <!-- Row 1 -->
+          <div class="catalog-item" onclick="showScreen('spool-detail')">
+            <div class="spool-icon">
+              <img src="assets/spool_clean.svg" alt="">
+              <div class="color-tint" style="background: #F5C518;"></div>
+            </div>
+            <div class="item-info">
+              <div class="material">PLA Basic</div>
+              <div class="color-row">
+                <span class="dot" style="background: #F5C518;"></span>
+                <span class="name">Yellow</span>
+              </div>
+              <div class="weight">847g (85%)</div>
+            </div>
+            <span class="slot-tag">A1</span>
+          </div>
+          <div class="catalog-item" onclick="showScreen('spool-detail')">
+            <div class="spool-icon">
+              <img src="assets/spool_clean.svg" alt="">
+              <div class="color-tint" style="background: #333;"></div>
+            </div>
+            <div class="item-info">
+              <div class="material">PETG HF</div>
+              <div class="color-row">
+                <span class="dot" style="background: #333;"></span>
+                <span class="name">Black</span>
+              </div>
+              <div class="weight">620g (62%)</div>
+            </div>
+            <span class="slot-tag">A2</span>
+          </div>
+          <div class="catalog-item" onclick="showScreen('spool-detail')">
+            <div class="spool-icon">
+              <img src="assets/spool_clean.svg" alt="">
+              <div class="color-tint" style="background: #FF9800;"></div>
+            </div>
+            <div class="item-info">
+              <div class="material">PETG Basic</div>
+              <div class="color-row">
+                <span class="dot" style="background: #FF9800;"></span>
+                <span class="name">Orange</span>
+              </div>
+              <div class="weight">450g (45%)</div>
+            </div>
+            <span class="slot-tag">A3</span>
+          </div>
+          <div class="catalog-item" onclick="showScreen('spool-detail')">
+            <div class="spool-icon">
+              <img src="assets/spool_clean.svg" alt="">
+              <div class="color-tint" style="background: #9E9E9E;"></div>
+            </div>
+            <div class="item-info">
+              <div class="material">PLA Matte</div>
+              <div class="color-row">
+                <span class="dot" style="background: #9E9E9E;"></span>
+                <span class="name">Gray</span>
+              </div>
+              <div class="weight">900g (90%)</div>
+            </div>
+            <span class="slot-tag">A4</span>
+          </div>
+
+          <!-- Row 2 -->
+          <div class="catalog-item" onclick="showScreen('spool-detail')">
+            <div class="spool-icon">
+              <img src="assets/spool_clean.svg" alt="">
+              <div class="color-tint" style="background: #E91E63;"></div>
+            </div>
+            <div class="item-info">
+              <div class="material">PLA Silk</div>
+              <div class="color-row">
+                <span class="dot" style="background: #E91E63;"></span>
+                <span class="name">Pink</span>
+              </div>
+              <div class="weight">720g (72%)</div>
+            </div>
+            <span class="slot-tag">B1</span>
+          </div>
+          <div class="catalog-item" onclick="showScreen('spool-detail')">
+            <div class="spool-icon">
+              <img src="assets/spool_clean.svg" alt="">
+              <div class="color-tint" style="background: #2196F3;"></div>
+            </div>
+            <div class="item-info">
+              <div class="material">PLA Basic</div>
+              <div class="color-row">
+                <span class="dot" style="background: #2196F3;"></span>
+                <span class="name">Blue</span>
+              </div>
+              <div class="weight">550g (55%)</div>
+            </div>
+            <span class="slot-tag">B2</span>
+          </div>
+          <div class="catalog-item" onclick="showScreen('spool-detail')">
+            <div class="spool-icon">
+              <img src="assets/spool_clean.svg" alt="">
+              <div class="color-tint" style="background: #F44336;"></div>
+            </div>
+            <div class="item-info">
+              <div class="material">PLA Basic</div>
+              <div class="color-row">
+                <span class="dot" style="background: #F44336;"></span>
+                <span class="name">Red</span>
+              </div>
+              <div class="weight">1000g (100%)</div>
+            </div>
+          </div>
+          <div class="catalog-item" onclick="showScreen('spool-detail')">
+            <div class="spool-icon">
+              <img src="assets/spool_clean.svg" alt="">
+              <div class="color-tint" style="background: #4CAF50;"></div>
+            </div>
+            <div class="item-info">
+              <div class="material">PETG HF</div>
+              <div class="color-row">
+                <span class="dot" style="background: #4CAF50;"></span>
+                <span class="name">Green</span>
+              </div>
+              <div class="weight">880g (88%)</div>
+            </div>
+          </div>
+
+          <!-- Row 3 -->
+          <div class="catalog-item" onclick="showScreen('spool-detail')">
+            <div class="spool-icon">
+              <img src="assets/spool_clean.svg" alt="">
+              <div class="color-tint" style="background: #fff;"></div>
+            </div>
+            <div class="item-info">
+              <div class="material">PLA Basic</div>
+              <div class="color-row">
+                <span class="dot" style="background: #fff; border: 1px solid #555;"></span>
+                <span class="name">White</span>
+              </div>
+              <div class="weight">750g (75%)</div>
+            </div>
+          </div>
+          <div class="catalog-item" onclick="showScreen('spool-detail')">
+            <div class="spool-icon">
+              <img src="assets/spool_clean.svg" alt="">
+              <div class="color-tint" style="background: #673AB7;"></div>
+            </div>
+            <div class="item-info">
+              <div class="material">ABS</div>
+              <div class="color-row">
+                <span class="dot" style="background: #673AB7;"></span>
+                <span class="name">Purple</span>
+              </div>
+              <div class="weight">780g (78%)</div>
+            </div>
+          </div>
+          <div class="catalog-item" onclick="showScreen('spool-detail')">
+            <div class="spool-icon">
+              <img src="assets/spool_clean.svg" alt="">
+              <div class="color-tint" style="background: #CDDC39;"></div>
+            </div>
+            <div class="item-info">
+              <div class="material">TPU 95A</div>
+              <div class="color-row">
+                <span class="dot" style="background: #CDDC39;"></span>
+                <span class="name">Lime</span>
+              </div>
+              <div class="weight">920g (92%)</div>
+            </div>
+          </div>
+          <div class="catalog-item" onclick="showScreen('spool-detail')">
+            <div class="spool-icon">
+              <img src="assets/spool_clean.svg" alt="">
+              <div class="color-tint" style="background: #00BCD4;"></div>
+            </div>
+            <div class="item-info">
+              <div class="material">PETG Basic</div>
+              <div class="color-row">
+                <span class="dot" style="background: #00BCD4;"></span>
+                <span class="name">Cyan</span>
+              </div>
+              <div class="weight">650g (65%)</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -2327,7 +4155,7 @@
           <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
         </div>
         <div class="status-right">
-          <div class="notification-bell">
+          <div class="notification-bell" onclick="showScreen('logs')">
             <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
             <span class="badge">3</span>
           </div>
@@ -2339,13 +4167,13 @@
         <!-- Network Section -->
         <div class="settings-section-title">Network</div>
         <div class="settings-list">
-          <div class="settings-item">
+          <div class="settings-item" onclick="showScreen('settings-wifi')">
             <svg class="icon" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
             <span class="label">WiFi</span>
             <span class="value">SpoolBuddy-Net</span>
             <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="#707070"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
           </div>
-          <div class="settings-item">
+          <div class="settings-item" onclick="showScreen('settings-backend')">
             <svg class="icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/></svg>
             <span class="label">Backend Server</span>
             <span class="value">192.168.1.100:3000</span>
@@ -2356,19 +4184,19 @@
         <!-- Printers Section -->
         <div class="settings-section-title">Printers</div>
         <div class="settings-list">
-          <div class="settings-item">
+          <div class="settings-item" onclick="showScreen('settings-printer-detail')">
             <svg class="icon" viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
             <span class="label">X1C-Studio</span>
             <span class="value" style="color: #00FF00;">● Connected</span>
             <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="#707070"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
           </div>
-          <div class="settings-item">
+          <div class="settings-item" onclick="showScreen('settings-printer-detail')">
             <svg class="icon" viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
             <span class="label">P1S-Garage</span>
             <span class="value" style="color: #707070;">● Offline</span>
             <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="#707070"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
           </div>
-          <div class="settings-item">
+          <div class="settings-item" onclick="showScreen('settings-add-printer')">
             <svg class="icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
             <span class="label">Add Printer</span>
             <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="#707070"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
@@ -2378,19 +4206,19 @@
         <!-- Hardware Section -->
         <div class="settings-section-title">Hardware</div>
         <div class="settings-list">
-          <div class="settings-item">
+          <div class="settings-item" onclick="showScreen('settings-scale')">
             <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v9.28c-.47-.17-.97-.28-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>
             <span class="label">Scale Calibration</span>
             <span class="value">Last: 2d ago</span>
             <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="#707070"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
           </div>
-          <div class="settings-item">
+          <div class="settings-item" onclick="showScreen('settings-nfc')">
             <svg class="icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.38-1-1.72V8h3v8H8V8h2V6H6v12h12V6z"/></svg>
             <span class="label">NFC Reader</span>
             <span class="value" style="color: #00FF00;">● Ready</span>
             <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="#707070"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
           </div>
-          <div class="settings-item">
+          <div class="settings-item" onclick="showScreen('settings-brightness')">
             <svg class="icon" viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"/></svg>
             <span class="label">Display Brightness</span>
             <span class="value">80%</span>
@@ -2401,23 +4229,744 @@
         <!-- System Section -->
         <div class="settings-section-title">System</div>
         <div class="settings-list">
-          <div class="settings-item">
+          <div class="settings-item" onclick="showScreen('settings-updates')">
             <svg class="icon" viewBox="0 0 24 24"><path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58s9.14-3.47 12.65 0L21 3v7.12z"/></svg>
             <span class="label">Check for Updates</span>
             <span class="value">v1.0.2</span>
             <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="#707070"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
           </div>
-          <div class="settings-item">
+          <div class="settings-item" onclick="showScreen('settings-advanced')">
             <svg class="icon" viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
             <span class="label">Advanced Settings</span>
             <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="#707070"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
           </div>
-          <div class="settings-item">
+          <div class="settings-item" onclick="showScreen('settings-about')">
             <svg class="icon" viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
             <span class="label">About SpoolBuddy</span>
             <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="#707070"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- WIFI SETTINGS SCREEN -->
+    <div id="settings-wifi" class="screen">
+      <div class="status-bar">
+        <div class="status-left">
+          <button class="back-btn" onclick="showScreen('settings')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          </button>
+          <span class="page-title">WiFi</span>
+        </div>
+        <div class="printer-selector">
+          <span class="printer-status connected"></span>
+          <span class="printer-name">X1C-Studio</span>
+          <span class="alert-badge"></span>
+          <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+        <div class="status-right">
+          <div class="notification-bell" onclick="showScreen('logs')">
+            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+            <span class="badge">3</span>
+          </div>
+          <span class="time">14:23</span>
+        </div>
+      </div>
+
+      <div class="content settings-subpage-content">
+        <div class="settings-status-box">
+          <div class="status-icon success">
+            <svg width="24" height="24" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+          </div>
+          <div class="status-info">
+            <div class="status-title">Connected to SpoolBuddy-Net</div>
+            <div class="status-subtitle">Signal: Excellent · IP: 192.168.1.42</div>
+          </div>
+        </div>
+
+        <div class="settings-section-title">Available Networks</div>
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <div class="wifi-network-item connected">
+            <svg class="wifi-icon" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+            <span class="network-name">SpoolBuddy-Net</span>
+            <span class="signal-strength">-42 dBm</span>
+            <svg class="check-mark" width="20" height="20" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </div>
+          <div class="wifi-network-item">
+            <svg class="wifi-icon" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+            <span class="network-name">HomeNetwork_5G</span>
+            <span class="signal-strength">-58 dBm</span>
+          </div>
+          <div class="wifi-network-item">
+            <svg class="wifi-icon" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+            <span class="network-name">Neighbor_Guest</span>
+            <span class="signal-strength">-71 dBm</span>
+          </div>
+        </div>
+
+        <button class="btn btn-secondary" style="margin-top: auto;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px;"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+          Scan for Networks
+        </button>
+      </div>
+    </div>
+
+    <!-- BACKEND SERVER SETTINGS SCREEN -->
+    <div id="settings-backend" class="screen">
+      <div class="status-bar">
+        <div class="status-left">
+          <button class="back-btn" onclick="showScreen('settings')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          </button>
+          <span class="page-title">Backend Server</span>
+        </div>
+        <div class="printer-selector">
+          <span class="printer-status connected"></span>
+          <span class="printer-name">X1C-Studio</span>
+          <span class="alert-badge"></span>
+          <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+        <div class="status-right">
+          <div class="notification-bell" onclick="showScreen('logs')">
+            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+            <span class="badge">3</span>
+          </div>
+          <span class="time">14:23</span>
+        </div>
+      </div>
+
+      <div class="content settings-subpage-content">
+        <div class="settings-status-box">
+          <div class="status-icon success">
+            <svg width="24" height="24" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/></svg>
+          </div>
+          <div class="status-info">
+            <div class="status-title">Connected</div>
+            <div class="status-subtitle">Latency: 12ms · Last sync: 2s ago</div>
+          </div>
+        </div>
+
+        <div class="settings-input-group">
+          <label>Server Address</label>
+          <input type="text" class="settings-input" value="192.168.1.100:3000" placeholder="IP:Port or hostname">
+        </div>
+
+        <div style="display: flex; gap: 12px;">
+          <button class="btn btn-secondary" style="flex: 1;">Test Connection</button>
+          <button class="btn btn-primary" style="flex: 1;">Save</button>
+        </div>
+
+        <div style="padding: 16px; background: var(--card); border-radius: 10px;">
+          <div class="info-row">
+            <span class="info-label">Protocol</span>
+            <span class="info-value">WebSocket</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Server Version</span>
+            <span class="info-value">v1.2.0</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Spools Synced</span>
+            <span class="info-value">24</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRINTER DETAIL SETTINGS SCREEN -->
+    <div id="settings-printer-detail" class="screen">
+      <div class="status-bar">
+        <div class="status-left">
+          <button class="back-btn" onclick="showScreen('settings')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          </button>
+          <span class="page-title">X1C-Studio</span>
+        </div>
+        <div class="printer-selector">
+          <span class="printer-status connected"></span>
+          <span class="printer-name">X1C-Studio</span>
+          <span class="alert-badge"></span>
+          <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+        <div class="status-right">
+          <div class="notification-bell" onclick="showScreen('logs')">
+            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+            <span class="badge">3</span>
+          </div>
+          <span class="time">14:23</span>
+        </div>
+      </div>
+
+      <div class="content settings-subpage-content">
+        <div class="settings-status-box">
+          <div class="status-icon success">
+            <svg width="24" height="24" viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
+          </div>
+          <div class="status-info">
+            <div class="status-title">Connected</div>
+            <div class="status-subtitle">Printing · 45% complete</div>
+          </div>
+        </div>
+
+        <div style="padding: 16px; background: var(--card); border-radius: 10px;">
+          <div class="info-row">
+            <span class="info-label">Model</span>
+            <span class="info-value">X1 Carbon</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Serial Number</span>
+            <span class="info-value">00M09A321234567</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">IP Address</span>
+            <span class="info-value">192.168.1.50</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Firmware</span>
+            <span class="info-value">01.07.00.00</span>
+          </div>
+        </div>
+
+        <div class="settings-input-group">
+          <label>Access Code</label>
+          <input type="password" class="settings-input" value="12345678" placeholder="8-digit access code">
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: auto;">
+          <button class="btn btn-danger" style="flex: 1;">Disconnect</button>
+          <button class="btn btn-secondary" style="flex: 1;">Forget Printer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADD PRINTER SETTINGS SCREEN -->
+    <div id="settings-add-printer" class="screen">
+      <div class="status-bar">
+        <div class="status-left">
+          <button class="back-btn" onclick="showScreen('settings')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          </button>
+          <span class="page-title">Add Printer</span>
+        </div>
+        <div class="printer-selector">
+          <span class="printer-status connected"></span>
+          <span class="printer-name">X1C-Studio</span>
+          <span class="alert-badge"></span>
+          <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+        <div class="status-right">
+          <div class="notification-bell" onclick="showScreen('logs')">
+            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+            <span class="badge">3</span>
+          </div>
+          <span class="time">14:23</span>
+        </div>
+      </div>
+
+      <div class="content settings-subpage-content">
+        <div class="settings-status-box">
+          <div class="status-icon warning">
+            <svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          </div>
+          <div class="status-info">
+            <div class="status-title">Scanning for printers...</div>
+            <div class="status-subtitle">Found 2 printers on network</div>
+          </div>
+        </div>
+
+        <div class="settings-section-title">Discovered Printers</div>
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <div class="printer-discovery-item" onclick="showScreen('settings-printer-detail')">
+            <svg class="printer-icon" viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
+            <div class="printer-info">
+              <div class="printer-name">X1C-Workshop</div>
+              <div class="printer-model">X1 Carbon · 192.168.1.51</div>
+            </div>
+            <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="#707070"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+          </div>
+          <div class="printer-discovery-item" onclick="showScreen('settings-printer-detail')">
+            <svg class="printer-icon" viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
+            <div class="printer-info">
+              <div class="printer-name">P1S-Bedroom</div>
+              <div class="printer-model">P1S · 192.168.1.52</div>
+            </div>
+            <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="#707070"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+          </div>
+        </div>
+
+        <div class="settings-section-title">Manual Setup</div>
+        <div class="settings-input-group">
+          <label>Printer IP Address</label>
+          <input type="text" class="settings-input" placeholder="192.168.1.xxx">
+        </div>
+
+        <button class="btn btn-primary" style="margin-top: auto;">Add Printer</button>
+      </div>
+    </div>
+
+    <!-- SCALE CALIBRATION SETTINGS SCREEN -->
+    <div id="settings-scale" class="screen">
+      <div class="status-bar">
+        <div class="status-left">
+          <button class="back-btn" onclick="showScreen('settings')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          </button>
+          <span class="page-title">Scale Calibration</span>
+        </div>
+        <div class="printer-selector">
+          <span class="printer-status connected"></span>
+          <span class="printer-name">X1C-Studio</span>
+          <span class="alert-badge"></span>
+          <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+        <div class="status-right">
+          <div class="notification-bell" onclick="showScreen('logs')">
+            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+            <span class="badge">3</span>
+          </div>
+          <span class="time">14:23</span>
+        </div>
+      </div>
+
+      <div class="content settings-subpage-content" style="padding: 12px; gap: 10px;">
+        <div class="settings-status-box" style="padding: 10px 14px;">
+          <div class="status-icon success" style="width: 32px; height: 32px;">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 3v9.28c-.47-.17-.97-.28-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>
+          </div>
+          <div class="status-info">
+            <div class="status-title" style="font-size: 14px;">Scale Calibrated</div>
+            <div class="status-subtitle">Last calibration: 2 days ago</div>
+          </div>
+        </div>
+
+        <div class="settings-section-title" style="margin: 8px 0 4px 4px;">Calibration Steps</div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div class="calibration-step" style="padding: 8px 10px;">
+            <div class="step-number" style="width: 22px; height: 22px; font-size: 12px;">1</div>
+            <div class="step-text" style="font-size: 13px;">Remove all items from the scale and press "Tare"</div>
+          </div>
+          <div class="calibration-step" style="padding: 8px 10px;">
+            <div class="step-number" style="width: 22px; height: 22px; font-size: 12px;">2</div>
+            <div class="step-text" style="font-size: 13px;">Place a known weight (500g recommended) on scale</div>
+          </div>
+          <div class="calibration-step" style="padding: 8px 10px;">
+            <div class="step-number" style="width: 22px; height: 22px; font-size: 12px;">3</div>
+            <div class="step-text" style="font-size: 13px;">Enter the exact weight and press "Calibrate"</div>
+          </div>
+        </div>
+
+        <div class="settings-input-group" style="gap: 4px;">
+          <label>Calibration Weight (grams)</label>
+          <input type="number" class="settings-input" value="500" placeholder="Weight in grams" style="padding: 10px 12px;">
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: auto;">
+          <button class="btn btn-secondary" style="flex: 1;">Tare</button>
+          <button class="btn btn-primary" style="flex: 1;">Calibrate</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- NFC READER SETTINGS SCREEN -->
+    <div id="settings-nfc" class="screen">
+      <div class="status-bar">
+        <div class="status-left">
+          <button class="back-btn" onclick="showScreen('settings')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          </button>
+          <span class="page-title">NFC Reader</span>
+        </div>
+        <div class="printer-selector">
+          <span class="printer-status connected"></span>
+          <span class="printer-name">X1C-Studio</span>
+          <span class="alert-badge"></span>
+          <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+        <div class="status-right">
+          <div class="notification-bell" onclick="showScreen('logs')">
+            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+            <span class="badge">3</span>
+          </div>
+          <span class="time">14:23</span>
+        </div>
+      </div>
+
+      <div class="content settings-subpage-content">
+        <div class="settings-status-box">
+          <div class="status-icon success">
+            <svg width="24" height="24" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.38-1-1.72V8h3v8H8V8h2V6H6v12h12V6z"/></svg>
+          </div>
+          <div class="status-info">
+            <div class="status-title">NFC Reader Ready</div>
+            <div class="status-subtitle">PN532 · Firmware v1.6</div>
+          </div>
+        </div>
+
+        <div style="padding: 16px; background: var(--card); border-radius: 10px;">
+          <div class="info-row">
+            <span class="info-label">Reader Type</span>
+            <span class="info-value">PN532 NFC/RFID</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Connection</span>
+            <span class="info-value">I2C (0x24)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Tags Read</span>
+            <span class="info-value">147 total</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Last Read</span>
+            <span class="info-value">5 minutes ago</span>
+          </div>
+        </div>
+
+        <button class="btn btn-secondary" style="margin-top: auto;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px;"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16z"/></svg>
+          Test NFC Reader
+        </button>
+      </div>
+    </div>
+
+    <!-- DISPLAY BRIGHTNESS SETTINGS SCREEN -->
+    <div id="settings-brightness" class="screen">
+      <div class="status-bar">
+        <div class="status-left">
+          <button class="back-btn" onclick="showScreen('settings')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          </button>
+          <span class="page-title">Display Brightness</span>
+        </div>
+        <div class="printer-selector">
+          <span class="printer-status connected"></span>
+          <span class="printer-name">X1C-Studio</span>
+          <span class="alert-badge"></span>
+          <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+        <div class="status-right">
+          <div class="notification-bell" onclick="showScreen('logs')">
+            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+            <span class="badge">3</span>
+          </div>
+          <span class="time">14:23</span>
+        </div>
+      </div>
+
+      <div class="content settings-subpage-content">
+        <div class="settings-slider-group">
+          <div class="settings-slider-header">
+            <span class="label">Brightness</span>
+            <span class="value">80%</span>
+          </div>
+          <input type="range" class="settings-slider" min="10" max="100" value="80">
+        </div>
+
+        <div class="settings-section-title">Options</div>
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <div class="settings-toggle-item">
+            <span class="label">Auto Brightness</span>
+            <div class="toggle" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="settings-toggle-item">
+            <span class="label">Screen Timeout</span>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+
+        <div class="settings-input-group">
+          <label>Timeout Duration</label>
+          <input type="text" class="settings-input" value="5 minutes" placeholder="Duration">
+        </div>
+      </div>
+    </div>
+
+    <!-- CHECK FOR UPDATES SETTINGS SCREEN -->
+    <div id="settings-updates" class="screen">
+      <div class="status-bar">
+        <div class="status-left">
+          <button class="back-btn" onclick="showScreen('settings')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          </button>
+          <span class="page-title">Updates</span>
+        </div>
+        <div class="printer-selector">
+          <span class="printer-status connected"></span>
+          <span class="printer-name">X1C-Studio</span>
+          <span class="alert-badge"></span>
+          <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+        <div class="status-right">
+          <div class="notification-bell" onclick="showScreen('logs')">
+            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+            <span class="badge">3</span>
+          </div>
+          <span class="time">14:23</span>
+        </div>
+      </div>
+
+      <div class="content settings-subpage-content">
+        <div class="settings-status-box">
+          <div class="status-icon success">
+            <svg width="24" height="24" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </div>
+          <div class="status-info">
+            <div class="status-title">Up to Date</div>
+            <div class="status-subtitle">Last checked: 1 hour ago</div>
+          </div>
+        </div>
+
+        <div style="padding: 16px; background: var(--card); border-radius: 10px;">
+          <div class="info-row">
+            <span class="info-label">Current Version</span>
+            <span class="info-value">v1.0.2</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Build Date</span>
+            <span class="info-value">Dec 15, 2025</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Update Channel</span>
+            <span class="info-value">Stable</span>
+          </div>
+        </div>
+
+        <div class="settings-section-title">Options</div>
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <div class="settings-toggle-item">
+            <span class="label">Auto-update</span>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="settings-toggle-item">
+            <span class="label">Beta Updates</span>
+            <div class="toggle" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+
+        <button class="btn btn-secondary" style="margin-top: auto;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px;"><path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58s9.14-3.47 12.65 0L21 3v7.12z"/></svg>
+          Check for Updates
+        </button>
+      </div>
+    </div>
+
+    <!-- ADVANCED SETTINGS SCREEN -->
+    <div id="settings-advanced" class="screen">
+      <div class="status-bar">
+        <div class="status-left">
+          <button class="back-btn" onclick="showScreen('settings')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          </button>
+          <span class="page-title">Advanced Settings</span>
+        </div>
+        <div class="printer-selector">
+          <span class="printer-status connected"></span>
+          <span class="printer-name">X1C-Studio</span>
+          <span class="alert-badge"></span>
+          <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+        <div class="status-right">
+          <div class="notification-bell" onclick="showScreen('logs')">
+            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+            <span class="badge">3</span>
+          </div>
+          <span class="time">14:23</span>
+        </div>
+      </div>
+
+      <div class="content settings-subpage-content">
+        <div class="settings-section-title">Developer Options</div>
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <div class="settings-toggle-item">
+            <span class="label">Debug Logging</span>
+            <div class="toggle" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="settings-toggle-item">
+            <span class="label">Show FPS Counter</span>
+            <div class="toggle" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="settings-toggle-item">
+            <span class="label">Serial Console</span>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+
+        <div class="settings-section-title">Data Management</div>
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <div class="settings-item" style="border-radius: 10px 10px 0 0;">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            <span class="label">Export Data</span>
+            <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="#707070"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+          </div>
+          <div class="settings-item">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+            <span class="label">Import Data</span>
+            <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="#707070"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+          </div>
+          <div class="settings-item" style="border-radius: 0 0 10px 10px;">
+            <svg class="icon" style="fill: #FF4444;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            <span class="label" style="color: #FF4444;">Factory Reset</span>
+            <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="#707070"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABOUT SPOOLBUDDY SETTINGS SCREEN -->
+    <div id="settings-about" class="screen">
+      <div class="status-bar">
+        <div class="status-left">
+          <button class="back-btn" onclick="showScreen('settings')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          </button>
+          <span class="page-title">About</span>
+        </div>
+        <div class="printer-selector">
+          <span class="printer-status connected"></span>
+          <span class="printer-name">X1C-Studio</span>
+          <span class="alert-badge"></span>
+          <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+        <div class="status-right">
+          <div class="notification-bell" onclick="showScreen('logs')">
+            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+            <span class="badge">3</span>
+          </div>
+          <span class="time">14:23</span>
+        </div>
+      </div>
+
+      <div class="content settings-subpage-content" style="align-items: center; padding: 12px; gap: 12px;">
+        <div style="text-align: center; padding: 12px 0;">
+          <img src="assets/spoolbuddy_logo_dark_transp.png" alt="SpoolBuddy" style="height: 40px;">
+        </div>
+
+        <div style="padding: 12px 16px; background: var(--card); border-radius: 10px; width: 100%;">
+          <div class="info-row" style="padding: 8px 0;">
+            <span class="info-label">Version</span>
+            <span class="info-value">v1.0.2</span>
+          </div>
+          <div class="info-row" style="padding: 8px 0;">
+            <span class="info-label">Build</span>
+            <span class="info-value">2025.12.15.1423</span>
+          </div>
+          <div class="info-row" style="padding: 8px 0;">
+            <span class="info-label">Hardware</span>
+            <span class="info-value">ESP32-S3 + ELECROW 7"</span>
+          </div>
+          <div class="info-row" style="padding: 8px 0;">
+            <span class="info-label">Memory</span>
+            <span class="info-value">4.2 MB / 8 MB</span>
+          </div>
+          <div class="info-row" style="padding: 8px 0;">
+            <span class="info-label">License</span>
+            <span class="info-value">MIT</span>
+          </div>
+          <div class="info-row" style="padding: 8px 0;">
+            <span class="info-label">Author</span>
+            <span class="info-value">SpoolBuddy Team</span>
+          </div>
+        </div>
+
+        <div style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: auto;">
+          Made with care for the 3D printing community
+        </div>
+      </div>
+    </div>
+
+    <!-- LOGS & ALARMS SCREEN -->
+    <div id="logs" class="screen">
+      <div class="status-bar">
+        <div class="status-left">
+          <button class="back-btn" onclick="showScreen('ams-overview')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          </button>
+          <span class="page-title">Logs & Alarms</span>
+        </div>
+        <div class="printer-selector">
+          <span class="printer-status connected"></span>
+          <span class="printer-name">X1C-Studio</span>
+          <span class="alert-badge"></span>
+          <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+        <div class="status-right">
+          <div class="notification-bell" onclick="showScreen('logs')">
+            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+            <span class="badge">3</span>
+          </div>
+          <span class="time">14:23</span>
+        </div>
+      </div>
+
+      <div class="content settings-subpage-content" style="padding: 12px; gap: 10px;">
+        <div class="log-filters">
+          <button class="log-filter active">All</button>
+          <button class="log-filter">Errors</button>
+          <button class="log-filter">Warnings</button>
+          <button class="log-filter">Info</button>
+        </div>
+
+        <div class="log-list">
+          <div class="log-entry error">
+            <svg class="log-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            <div class="log-content">
+              <div class="log-message">AMS A Slot 2: Filament runout detected</div>
+              <div class="log-time">2 minutes ago · X1C-Studio</div>
+            </div>
+          </div>
+
+          <div class="log-entry warning">
+            <svg class="log-icon" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+            <div class="log-content">
+              <div class="log-message">Spool "PLA White" is running low (15% remaining)</div>
+              <div class="log-time">15 minutes ago</div>
+            </div>
+          </div>
+
+          <div class="log-entry warning">
+            <svg class="log-icon" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+            <div class="log-content">
+              <div class="log-message">Scale calibration recommended (last: 7 days ago)</div>
+              <div class="log-time">1 hour ago</div>
+            </div>
+          </div>
+
+          <div class="log-entry success">
+            <svg class="log-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            <div class="log-content">
+              <div class="log-message">Connected to printer X1C-Studio</div>
+              <div class="log-time">2 hours ago</div>
+            </div>
+          </div>
+
+          <div class="log-entry info">
+            <svg class="log-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+            <div class="log-content">
+              <div class="log-message">NFC tag scanned: Bambu PLA Basic Black</div>
+              <div class="log-time">3 hours ago</div>
+            </div>
+          </div>
+
+          <div class="log-entry info">
+            <svg class="log-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+            <div class="log-content">
+              <div class="log-message">Spool weight updated: 847g → 823g</div>
+              <div class="log-time">3 hours ago</div>
+            </div>
+          </div>
+
+          <div class="log-entry success">
+            <svg class="log-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            <div class="log-content">
+              <div class="log-message">Backend server sync completed (24 spools)</div>
+              <div class="log-time">4 hours ago</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-secondary" style="flex-shrink: 0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px;"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          Clear All Logs
+        </button>
       </div>
     </div>
 
