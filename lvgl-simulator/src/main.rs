@@ -2295,39 +2295,8 @@ unsafe fn create_scan_result_screen() {
     let scr = lvgl_sys::lv_disp_get_scr_act(disp);
     lvgl_sys::lv_obj_set_style_bg_color(scr, lv_color_hex(COLOR_BG), 0);
 
-    // Header bar
-    let header = lvgl_sys::lv_obj_create(scr);
-    lvgl_sys::lv_obj_set_size(header, 800, 44);
-    lvgl_sys::lv_obj_set_pos(header, 0, 0);
-    lvgl_sys::lv_obj_clear_flag(header, lvgl_sys::LV_OBJ_FLAG_SCROLLABLE);
-    lvgl_sys::lv_obj_set_style_bg_color(header, lv_color_hex(COLOR_BG), 0);
-    lvgl_sys::lv_obj_set_style_border_width(header, 0, 0);
-    lvgl_sys::lv_obj_set_style_radius(header, 0, 0);
-    set_style_pad_all(header, 0);
-
-    // Back button
-    let back_lbl = lvgl_sys::lv_label_create(header);
-    let back_txt = CString::new("<").unwrap();
-    lvgl_sys::lv_label_set_text(back_lbl, back_txt.as_ptr());
-    lvgl_sys::lv_obj_set_style_text_color(back_lbl, lv_color_hex(COLOR_WHITE), 0);
-    lvgl_sys::lv_obj_set_style_text_font(back_lbl, &lvgl_sys::lv_font_montserrat_20, 0);
-    lvgl_sys::lv_obj_set_pos(back_lbl, 16, 10);
-
-    // Title
-    let title_lbl = lvgl_sys::lv_label_create(header);
-    let title_txt = CString::new("Scan Result").unwrap();
-    lvgl_sys::lv_label_set_text(title_lbl, title_txt.as_ptr());
-    lvgl_sys::lv_obj_set_style_text_color(title_lbl, lv_color_hex(COLOR_WHITE), 0);
-    lvgl_sys::lv_obj_set_style_text_font(title_lbl, &lvgl_sys::lv_font_montserrat_16, 0);
-    lvgl_sys::lv_obj_set_pos(title_lbl, 46, 12);
-
-    // Time
-    let time_lbl = lvgl_sys::lv_label_create(header);
-    let time_txt = CString::new("14:23").unwrap();
-    lvgl_sys::lv_label_set_text(time_lbl, time_txt.as_ptr());
-    lvgl_sys::lv_obj_set_style_text_color(time_lbl, lv_color_hex(COLOR_TEXT_MUTED), 0);
-    lvgl_sys::lv_obj_set_style_text_font(time_lbl, &lvgl_sys::lv_font_montserrat_14, 0);
-    lvgl_sys::lv_obj_align(time_lbl, lvgl_sys::LV_ALIGN_TOP_RIGHT as u8, -16, 14);
+    // Full status bar
+    create_status_bar(scr);
 
     // Success banner
     let banner = lvgl_sys::lv_obj_create(scr);
@@ -2661,39 +2630,8 @@ unsafe fn create_spool_detail_screen() {
     let scr = lvgl_sys::lv_disp_get_scr_act(disp);
     lvgl_sys::lv_obj_set_style_bg_color(scr, lv_color_hex(COLOR_BG), 0);
 
-    // Header bar
-    let header = lvgl_sys::lv_obj_create(scr);
-    lvgl_sys::lv_obj_set_size(header, 800, 44);
-    lvgl_sys::lv_obj_set_pos(header, 0, 0);
-    lvgl_sys::lv_obj_clear_flag(header, lvgl_sys::LV_OBJ_FLAG_SCROLLABLE);
-    lvgl_sys::lv_obj_set_style_bg_color(header, lv_color_hex(COLOR_BG), 0);
-    lvgl_sys::lv_obj_set_style_border_width(header, 0, 0);
-    lvgl_sys::lv_obj_set_style_radius(header, 0, 0);
-    set_style_pad_all(header, 0);
-
-    // Back button
-    let back_lbl = lvgl_sys::lv_label_create(header);
-    let back_txt = CString::new("<").unwrap();
-    lvgl_sys::lv_label_set_text(back_lbl, back_txt.as_ptr());
-    lvgl_sys::lv_obj_set_style_text_color(back_lbl, lv_color_hex(COLOR_WHITE), 0);
-    lvgl_sys::lv_obj_set_style_text_font(back_lbl, &lvgl_sys::lv_font_montserrat_20, 0);
-    lvgl_sys::lv_obj_set_pos(back_lbl, 16, 10);
-
-    // Title
-    let title_lbl = lvgl_sys::lv_label_create(header);
-    let title_txt = CString::new("Spool Details").unwrap();
-    lvgl_sys::lv_label_set_text(title_lbl, title_txt.as_ptr());
-    lvgl_sys::lv_obj_set_style_text_color(title_lbl, lv_color_hex(COLOR_WHITE), 0);
-    lvgl_sys::lv_obj_set_style_text_font(title_lbl, &lvgl_sys::lv_font_montserrat_16, 0);
-    lvgl_sys::lv_obj_set_pos(title_lbl, 46, 12);
-
-    // Time
-    let time_lbl = lvgl_sys::lv_label_create(header);
-    let time_txt = CString::new("14:23").unwrap();
-    lvgl_sys::lv_label_set_text(time_lbl, time_txt.as_ptr());
-    lvgl_sys::lv_obj_set_style_text_color(time_lbl, lv_color_hex(COLOR_TEXT_MUTED), 0);
-    lvgl_sys::lv_obj_set_style_text_font(time_lbl, &lvgl_sys::lv_font_montserrat_14, 0);
-    lvgl_sys::lv_obj_align(time_lbl, lvgl_sys::LV_ALIGN_TOP_RIGHT as u8, -16, 14);
+    // Full status bar
+    create_status_bar(scr);
 
     // Main spool info card
     let card = lvgl_sys::lv_obj_create(scr);
@@ -3149,57 +3087,8 @@ unsafe fn create_settings_screen() {
     let scr = lvgl_sys::lv_disp_get_scr_act(disp);
     lvgl_sys::lv_obj_set_style_bg_color(scr, lv_color_hex(COLOR_BG), 0);
 
-    // Status bar (same as home screen style)
-    let status_bar = lvgl_sys::lv_obj_create(scr);
-    lvgl_sys::lv_obj_set_size(status_bar, 800, 44);
-    lvgl_sys::lv_obj_set_pos(status_bar, 0, 0);
-    lvgl_sys::lv_obj_clear_flag(status_bar, lvgl_sys::LV_OBJ_FLAG_SCROLLABLE);
-    lvgl_sys::lv_obj_set_style_bg_color(status_bar, lv_color_hex(COLOR_BG), 0);
-    lvgl_sys::lv_obj_set_style_border_width(status_bar, 0, 0);
-    lvgl_sys::lv_obj_set_style_radius(status_bar, 0, 0);
-    set_style_pad_all(status_bar, 0);
-
-    // SpoolBuddy logo/text
-    let logo_lbl = lvgl_sys::lv_label_create(status_bar);
-    let logo_txt = CString::new("SpoolBuddy").unwrap();
-    lvgl_sys::lv_label_set_text(logo_lbl, logo_txt.as_ptr());
-    lvgl_sys::lv_obj_set_style_text_color(logo_lbl, lv_color_hex(COLOR_ACCENT), 0);
-    lvgl_sys::lv_obj_set_style_text_font(logo_lbl, &lvgl_sys::lv_font_montserrat_14, 0);
-    lvgl_sys::lv_obj_set_pos(logo_lbl, 16, 14);
-
-    // Printer dropdown
-    let printer_btn = lvgl_sys::lv_obj_create(status_bar);
-    lvgl_sys::lv_obj_set_size(printer_btn, 150, 30);
-    lvgl_sys::lv_obj_align(printer_btn, lvgl_sys::LV_ALIGN_TOP_MID as u8, 0, 7);
-    lvgl_sys::lv_obj_clear_flag(printer_btn, lvgl_sys::LV_OBJ_FLAG_SCROLLABLE);
-    lvgl_sys::lv_obj_set_style_bg_color(printer_btn, lv_color_hex(0x2D2D2D), 0);
-    lvgl_sys::lv_obj_set_style_radius(printer_btn, 15, 0);
-    lvgl_sys::lv_obj_set_style_border_width(printer_btn, 0, 0);
-    set_style_pad_all(printer_btn, 0);
-
-    let printer_dot = lvgl_sys::lv_obj_create(printer_btn);
-    lvgl_sys::lv_obj_set_size(printer_dot, 8, 8);
-    lvgl_sys::lv_obj_set_pos(printer_dot, 12, 11);
-    lvgl_sys::lv_obj_clear_flag(printer_dot, lvgl_sys::LV_OBJ_FLAG_SCROLLABLE);
-    lvgl_sys::lv_obj_set_style_bg_color(printer_dot, lv_color_hex(COLOR_ACCENT), 0);
-    lvgl_sys::lv_obj_set_style_radius(printer_dot, 4, 0);
-    lvgl_sys::lv_obj_set_style_border_width(printer_dot, 0, 0);
-    set_style_pad_all(printer_dot, 0);
-
-    let printer_lbl = lvgl_sys::lv_label_create(printer_btn);
-    let printer_txt = CString::new("X1C-Studio").unwrap();
-    lvgl_sys::lv_label_set_text(printer_lbl, printer_txt.as_ptr());
-    lvgl_sys::lv_obj_set_style_text_color(printer_lbl, lv_color_hex(COLOR_WHITE), 0);
-    lvgl_sys::lv_obj_set_style_text_font(printer_lbl, &lvgl_sys::lv_font_montserrat_12, 0);
-    lvgl_sys::lv_obj_set_pos(printer_lbl, 28, 7);
-
-    // Status icons on right
-    let time_lbl = lvgl_sys::lv_label_create(status_bar);
-    let time_txt = CString::new("14:23").unwrap();
-    lvgl_sys::lv_label_set_text(time_lbl, time_txt.as_ptr());
-    lvgl_sys::lv_obj_set_style_text_color(time_lbl, lv_color_hex(COLOR_WHITE), 0);
-    lvgl_sys::lv_obj_set_style_text_font(time_lbl, &lvgl_sys::lv_font_montserrat_14, 0);
-    lvgl_sys::lv_obj_align(time_lbl, lvgl_sys::LV_ALIGN_TOP_RIGHT as u8, -16, 14);
+    // Full status bar
+    create_status_bar(scr);
 
     // Content area
     let content_y: i16 = 52;
@@ -3214,8 +3103,8 @@ unsafe fn create_settings_screen() {
     let printers_y = content_y + 130;
     create_section_header(scr, 16, printers_y, "Printers");
 
-    create_settings_row(scr, 16, printers_y + 24, "X1C-Studio", "* Connected", "green", true);
-    create_settings_row(scr, 16, printers_y + 68, "P1S-Garage", "* Offline", "gray", true);
+    create_settings_row(scr, 16, printers_y + 24, "X1C-Studio", "Connected", "green", true);
+    create_settings_row(scr, 16, printers_y + 68, "P1S-Garage", "Offline", "gray", true);
     create_settings_row(scr, 16, printers_y + 112, "Add Printer", "", "", true);
 
     // Hardware section
@@ -3223,7 +3112,7 @@ unsafe fn create_settings_screen() {
     create_section_header(scr, 16, hardware_y, "Hardware");
 
     create_settings_row(scr, 16, hardware_y + 24, "Scale Calibration", "Last: 2d ago", "", true);
-    create_settings_row(scr, 16, hardware_y + 68, "NFC Reader", "* Ready", "green", true);
+    create_settings_row(scr, 16, hardware_y + 68, "NFC Reader", "Ready", "green", true);
     create_settings_row(scr, 16, hardware_y + 112, "Display Brightness", "80%", "", true);
 }
 
@@ -3266,17 +3155,29 @@ unsafe fn create_settings_row(parent: *mut lvgl_sys::lv_obj_t, x: i16, y: i16, t
     lvgl_sys::lv_obj_set_style_text_font(title_lbl, &lvgl_sys::lv_font_montserrat_14, 0);
     lvgl_sys::lv_obj_set_pos(title_lbl, 16, 11);
 
-    // Value/status
+    // Value/status with optional colored dot
     if !value.is_empty() {
-        let value_lbl = lvgl_sys::lv_label_create(row);
-        let value_txt = CString::new(value).unwrap();
-        lvgl_sys::lv_label_set_text(value_lbl, value_txt.as_ptr());
-
         let color = match status_color {
             "green" => COLOR_ACCENT,
             "gray" => COLOR_TEXT_MUTED,
             _ => COLOR_TEXT_MUTED,
         };
+
+        // Add status dot if we have a status color
+        if !status_color.is_empty() {
+            let dot = lvgl_sys::lv_obj_create(row);
+            lvgl_sys::lv_obj_set_size(dot, 8, 8);
+            lvgl_sys::lv_obj_align(dot, lvgl_sys::LV_ALIGN_RIGHT_MID as u8, -115, 0);
+            lvgl_sys::lv_obj_clear_flag(dot, lvgl_sys::LV_OBJ_FLAG_SCROLLABLE);
+            lvgl_sys::lv_obj_set_style_bg_color(dot, lv_color_hex(color), 0);
+            lvgl_sys::lv_obj_set_style_radius(dot, 4, 0);
+            lvgl_sys::lv_obj_set_style_border_width(dot, 0, 0);
+            set_style_pad_all(dot, 0);
+        }
+
+        let value_lbl = lvgl_sys::lv_label_create(row);
+        let value_txt = CString::new(value).unwrap();
+        lvgl_sys::lv_label_set_text(value_lbl, value_txt.as_ptr());
         lvgl_sys::lv_obj_set_style_text_color(value_lbl, lv_color_hex(color), 0);
         lvgl_sys::lv_obj_set_style_text_font(value_lbl, &lvgl_sys::lv_font_montserrat_12, 0);
         lvgl_sys::lv_obj_align(value_lbl, lvgl_sys::LV_ALIGN_RIGHT_MID as u8, -30, 0);
@@ -3300,7 +3201,7 @@ unsafe fn create_scale_calibration_screen() {
     lvgl_sys::lv_obj_set_style_bg_color(scr, lv_color_hex(COLOR_BG), 0);
 
     // Header with back button
-    create_subpage_header(scr, "Scale Calibration");
+    create_status_bar(scr);
 
     // Status card
     let status_card = lvgl_sys::lv_obj_create(scr);
@@ -3400,7 +3301,7 @@ unsafe fn create_nfc_reader_screen() {
     let scr = lvgl_sys::lv_disp_get_scr_act(disp);
     lvgl_sys::lv_obj_set_style_bg_color(scr, lv_color_hex(COLOR_BG), 0);
 
-    create_subpage_header(scr, "NFC Reader");
+    create_status_bar(scr);
 
     // Status card
     let status_card = lvgl_sys::lv_obj_create(scr);
@@ -3483,7 +3384,7 @@ unsafe fn create_display_brightness_screen() {
     let scr = lvgl_sys::lv_disp_get_scr_act(disp);
     lvgl_sys::lv_obj_set_style_bg_color(scr, lv_color_hex(COLOR_BG), 0);
 
-    create_subpage_header(scr, "Display Brightness");
+    create_status_bar(scr);
 
     // Brightness slider card
     let brightness_card = lvgl_sys::lv_obj_create(scr);
@@ -3573,46 +3474,94 @@ unsafe fn create_about_screen() {
     let scr = lvgl_sys::lv_disp_get_scr_act(disp);
     lvgl_sys::lv_obj_set_style_bg_color(scr, lv_color_hex(COLOR_BG), 0);
 
-    create_subpage_header(scr, "About");
+    // Full status bar like home screen
+    create_status_bar(scr);
 
-    // Logo and title
-    let title_lbl = lvgl_sys::lv_label_create(scr);
-    let title_txt = CString::new("SpoolBuddy").unwrap();
-    lvgl_sys::lv_label_set_text(title_lbl, title_txt.as_ptr());
-    lvgl_sys::lv_obj_set_style_text_color(title_lbl, lv_color_hex(COLOR_WHITE), 0);
-    lvgl_sys::lv_obj_set_style_text_font(title_lbl, &lvgl_sys::lv_font_montserrat_24, 0);
-    lvgl_sys::lv_obj_align(title_lbl, lvgl_sys::LV_ALIGN_TOP_MID as u8, 0, 60);
+    // Large logo directly (3x scale)
+    let logo_img = lvgl_sys::lv_img_create(scr);
+    lvgl_sys::lv_img_set_src(logo_img, &raw const LOGO_IMG_DSC as *const _);
+    lvgl_sys::lv_obj_align(logo_img, lvgl_sys::LV_ALIGN_TOP_MID as u8, 0, 65);
+    lvgl_sys::lv_img_set_zoom(logo_img, 768); // 3x zoom (256 = 1x)
 
-    let subtitle_lbl = lvgl_sys::lv_label_create(scr);
-    let subtitle_txt = CString::new("Filament Management System").unwrap();
-    lvgl_sys::lv_label_set_text(subtitle_lbl, subtitle_txt.as_ptr());
-    lvgl_sys::lv_obj_set_style_text_color(subtitle_lbl, lv_color_hex(COLOR_TEXT_MUTED), 0);
-    lvgl_sys::lv_obj_set_style_text_font(subtitle_lbl, &lvgl_sys::lv_font_montserrat_12, 0);
-    lvgl_sys::lv_obj_align(subtitle_lbl, lvgl_sys::LV_ALIGN_TOP_MID as u8, 0, 92);
-
-    // Info card
+    // Main info card - clean design
     let info_card = lvgl_sys::lv_obj_create(scr);
-    lvgl_sys::lv_obj_set_size(info_card, 768, 180);
-    lvgl_sys::lv_obj_set_pos(info_card, 16, 128);
+    lvgl_sys::lv_obj_set_size(info_card, 760, 230);
+    lvgl_sys::lv_obj_align(info_card, lvgl_sys::LV_ALIGN_TOP_MID as u8, 0, 185);
     lvgl_sys::lv_obj_clear_flag(info_card, lvgl_sys::LV_OBJ_FLAG_SCROLLABLE);
-    lvgl_sys::lv_obj_set_style_bg_color(info_card, lv_color_hex(0x2D2D2D), 0);
-    lvgl_sys::lv_obj_set_style_radius(info_card, 8, 0);
-    lvgl_sys::lv_obj_set_style_border_width(info_card, 0, 0);
+    lvgl_sys::lv_obj_set_style_bg_color(info_card, lv_color_hex(0x222222), 0);
+    lvgl_sys::lv_obj_set_style_radius(info_card, 12, 0);
+    lvgl_sys::lv_obj_set_style_border_color(info_card, lv_color_hex(0x333333), 0);
+    lvgl_sys::lv_obj_set_style_border_width(info_card, 1, 0);
+    lvgl_sys::lv_obj_set_style_shadow_color(info_card, lv_color_hex(0x000000), 0);
+    lvgl_sys::lv_obj_set_style_shadow_width(info_card, 20, 0);
+    lvgl_sys::lv_obj_set_style_shadow_ofs_y(info_card, 5, 0);
+    lvgl_sys::lv_obj_set_style_shadow_opa(info_card, 80, 0);
     set_style_pad_all(info_card, 0);
 
-    create_info_row(info_card, 0, "Version", "v1.0.2");
-    create_info_row(info_card, 36, "Build", "2025.12.15.1423");
-    create_info_row(info_card, 72, "Hardware", "ESP32-S3 + ELECROW 7\"");
-    create_info_row(info_card, 108, "Memory", "4.2 MB / 8 MB");
-    create_info_row(info_card, 144, "License", "MIT");
+    // Clean info rows with green left accent
+    create_about_row(info_card, 8, "Version", "v1.0.2", true);
+    create_about_row(info_card, 52, "Build", "2025.12.15.1423", true);
+    create_about_row(info_card, 96, "Hardware", "ESP32-S3 + ELECROW 7\"", true);
+    create_about_row(info_card, 140, "Memory", "4.2 MB / 8 MB", true);
+    create_about_row(info_card, 184, "License", "MIT License", false);
 
     // Footer
     let footer_lbl = lvgl_sys::lv_label_create(scr);
     let footer_txt = CString::new("Made with care for the 3D printing community").unwrap();
     lvgl_sys::lv_label_set_text(footer_lbl, footer_txt.as_ptr());
-    lvgl_sys::lv_obj_set_style_text_color(footer_lbl, lv_color_hex(COLOR_TEXT_MUTED), 0);
+    lvgl_sys::lv_obj_set_style_text_color(footer_lbl, lv_color_hex(0x555555), 0);
     lvgl_sys::lv_obj_set_style_text_font(footer_lbl, &lvgl_sys::lv_font_montserrat_12, 0);
-    lvgl_sys::lv_obj_align(footer_lbl, lvgl_sys::LV_ALIGN_BOTTOM_MID as u8, 0, -30);
+    lvgl_sys::lv_obj_align(footer_lbl, lvgl_sys::LV_ALIGN_BOTTOM_MID as u8, 0, -16);
+}
+
+/// Helper: Create clean About page row with green accent
+unsafe fn create_about_row(parent: *mut lvgl_sys::lv_obj_t, y: i16, label: &str, value: &str, show_separator: bool) {
+    // Row container
+    let row = lvgl_sys::lv_obj_create(parent);
+    lvgl_sys::lv_obj_set_size(row, 728, 40);
+    lvgl_sys::lv_obj_set_pos(row, 16, y);
+    lvgl_sys::lv_obj_clear_flag(row, lvgl_sys::LV_OBJ_FLAG_SCROLLABLE);
+    lvgl_sys::lv_obj_set_style_bg_opa(row, 0, 0);
+    lvgl_sys::lv_obj_set_style_border_width(row, 0, 0);
+    set_style_pad_all(row, 0);
+
+    // Green accent bar on left
+    let accent = lvgl_sys::lv_obj_create(row);
+    lvgl_sys::lv_obj_set_size(accent, 3, 24);
+    lvgl_sys::lv_obj_align(accent, lvgl_sys::LV_ALIGN_LEFT_MID as u8, 0, 0);
+    lvgl_sys::lv_obj_clear_flag(accent, lvgl_sys::LV_OBJ_FLAG_SCROLLABLE);
+    lvgl_sys::lv_obj_set_style_bg_color(accent, lv_color_hex(COLOR_ACCENT), 0);
+    lvgl_sys::lv_obj_set_style_radius(accent, 2, 0);
+    lvgl_sys::lv_obj_set_style_border_width(accent, 0, 0);
+    set_style_pad_all(accent, 0);
+
+    // Label on left
+    let label_lbl = lvgl_sys::lv_label_create(row);
+    let label_txt = CString::new(label).unwrap();
+    lvgl_sys::lv_label_set_text(label_lbl, label_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(label_lbl, lv_color_hex(0x888888), 0);
+    lvgl_sys::lv_obj_set_style_text_font(label_lbl, &lvgl_sys::lv_font_montserrat_14, 0);
+    lvgl_sys::lv_obj_align(label_lbl, lvgl_sys::LV_ALIGN_LEFT_MID as u8, 16, 0);
+
+    // Value on right
+    let value_lbl = lvgl_sys::lv_label_create(row);
+    let value_txt = CString::new(value).unwrap();
+    lvgl_sys::lv_label_set_text(value_lbl, value_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(value_lbl, lv_color_hex(COLOR_WHITE), 0);
+    lvgl_sys::lv_obj_set_style_text_font(value_lbl, &lvgl_sys::lv_font_montserrat_14, 0);
+    lvgl_sys::lv_obj_align(value_lbl, lvgl_sys::LV_ALIGN_RIGHT_MID as u8, 0, 0);
+
+    // Separator line
+    if show_separator {
+        let line = lvgl_sys::lv_obj_create(parent);
+        lvgl_sys::lv_obj_set_size(line, 712, 1);
+        lvgl_sys::lv_obj_set_pos(line, 24, y + 42);
+        lvgl_sys::lv_obj_clear_flag(line, lvgl_sys::LV_OBJ_FLAG_SCROLLABLE);
+        lvgl_sys::lv_obj_set_style_bg_color(line, lv_color_hex(0x333333), 0);
+        lvgl_sys::lv_obj_set_style_border_width(line, 0, 0);
+        lvgl_sys::lv_obj_set_style_radius(line, 0, 0);
+        set_style_pad_all(line, 0);
+    }
 }
 
 /// Create Advanced Settings screen
@@ -3621,7 +3570,8 @@ unsafe fn create_advanced_settings_screen() {
     let scr = lvgl_sys::lv_disp_get_scr_act(disp);
     lvgl_sys::lv_obj_set_style_bg_color(scr, lv_color_hex(COLOR_BG), 0);
 
-    create_subpage_header(scr, "Advanced Settings");
+    // Full status bar like home screen
+    create_status_bar(scr);
 
     // Developer Options section
     let dev_y: i16 = 52;
