@@ -148,6 +148,10 @@ fn run_headless(screen: &str) {
                 create_scan_result_screen();
                 "scan_result"
             }
+            "spool-detail" => {
+                create_spool_detail_screen();
+                "spool_detail"
+            }
             _ => {
                 create_home_screen();
                 "home"
@@ -2621,6 +2625,270 @@ unsafe fn create_single_slot(parent: *mut lvgl_sys::lv_obj_t, x: i16, y: i16, la
     } else {
         lvgl_sys::lv_obj_set_style_border_width(slot, 2, 0);
     }
+}
+
+/// Create Spool Detail screen
+unsafe fn create_spool_detail_screen() {
+    let disp = lvgl_sys::lv_disp_get_default();
+    let scr = lvgl_sys::lv_disp_get_scr_act(disp);
+    lvgl_sys::lv_obj_set_style_bg_color(scr, lv_color_hex(COLOR_BG), 0);
+
+    // Header bar
+    let header = lvgl_sys::lv_obj_create(scr);
+    lvgl_sys::lv_obj_set_size(header, 800, 44);
+    lvgl_sys::lv_obj_set_pos(header, 0, 0);
+    lvgl_sys::lv_obj_clear_flag(header, lvgl_sys::LV_OBJ_FLAG_SCROLLABLE);
+    lvgl_sys::lv_obj_set_style_bg_color(header, lv_color_hex(COLOR_BG), 0);
+    lvgl_sys::lv_obj_set_style_border_width(header, 0, 0);
+    lvgl_sys::lv_obj_set_style_radius(header, 0, 0);
+    set_style_pad_all(header, 0);
+
+    // Back button
+    let back_lbl = lvgl_sys::lv_label_create(header);
+    let back_txt = CString::new("<").unwrap();
+    lvgl_sys::lv_label_set_text(back_lbl, back_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(back_lbl, lv_color_hex(COLOR_WHITE), 0);
+    lvgl_sys::lv_obj_set_style_text_font(back_lbl, &lvgl_sys::lv_font_montserrat_20, 0);
+    lvgl_sys::lv_obj_set_pos(back_lbl, 16, 10);
+
+    // Title
+    let title_lbl = lvgl_sys::lv_label_create(header);
+    let title_txt = CString::new("Spool Details").unwrap();
+    lvgl_sys::lv_label_set_text(title_lbl, title_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(title_lbl, lv_color_hex(COLOR_WHITE), 0);
+    lvgl_sys::lv_obj_set_style_text_font(title_lbl, &lvgl_sys::lv_font_montserrat_16, 0);
+    lvgl_sys::lv_obj_set_pos(title_lbl, 46, 12);
+
+    // Time
+    let time_lbl = lvgl_sys::lv_label_create(header);
+    let time_txt = CString::new("14:23").unwrap();
+    lvgl_sys::lv_label_set_text(time_lbl, time_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(time_lbl, lv_color_hex(COLOR_TEXT_MUTED), 0);
+    lvgl_sys::lv_obj_set_style_text_font(time_lbl, &lvgl_sys::lv_font_montserrat_14, 0);
+    lvgl_sys::lv_obj_align(time_lbl, lvgl_sys::LV_ALIGN_TOP_RIGHT as u8, -16, 14);
+
+    // Main spool info card
+    let card = lvgl_sys::lv_obj_create(scr);
+    lvgl_sys::lv_obj_set_size(card, 768, 120);
+    lvgl_sys::lv_obj_set_pos(card, 16, 52);
+    lvgl_sys::lv_obj_clear_flag(card, lvgl_sys::LV_OBJ_FLAG_SCROLLABLE);
+    lvgl_sys::lv_obj_set_style_bg_color(card, lv_color_hex(0x2D2D2D), 0);
+    lvgl_sys::lv_obj_set_style_radius(card, 8, 0);
+    lvgl_sys::lv_obj_set_style_border_width(card, 0, 0);
+    set_style_pad_all(card, 16);
+
+    // Spool image container
+    let spool_container = lvgl_sys::lv_obj_create(card);
+    lvgl_sys::lv_obj_set_size(spool_container, 70, 90);
+    lvgl_sys::lv_obj_set_pos(spool_container, 0, 0);
+    lvgl_sys::lv_obj_clear_flag(spool_container, lvgl_sys::LV_OBJ_FLAG_SCROLLABLE);
+    lvgl_sys::lv_obj_set_style_bg_opa(spool_container, 0, 0);
+    lvgl_sys::lv_obj_set_style_border_width(spool_container, 0, 0);
+    set_style_pad_all(spool_container, 0);
+
+    create_spool_large(spool_container, 15, 0, 0xF5C518);
+
+    // A1 badge
+    let slot_badge = lvgl_sys::lv_obj_create(spool_container);
+    lvgl_sys::lv_obj_set_size(slot_badge, 28, 18);
+    lvgl_sys::lv_obj_set_pos(slot_badge, 20, 60);
+    lvgl_sys::lv_obj_clear_flag(slot_badge, lvgl_sys::LV_OBJ_FLAG_SCROLLABLE);
+    lvgl_sys::lv_obj_set_style_bg_color(slot_badge, lv_color_hex(0x424242), 0);
+    lvgl_sys::lv_obj_set_style_radius(slot_badge, 9, 0);
+    lvgl_sys::lv_obj_set_style_border_width(slot_badge, 0, 0);
+    set_style_pad_all(slot_badge, 0);
+
+    let slot_lbl = lvgl_sys::lv_label_create(slot_badge);
+    let slot_txt = CString::new("A1").unwrap();
+    lvgl_sys::lv_label_set_text(slot_lbl, slot_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(slot_lbl, lv_color_hex(COLOR_WHITE), 0);
+    lvgl_sys::lv_obj_set_style_text_font(slot_lbl, &lvgl_sys::lv_font_montserrat_10, 0);
+    lvgl_sys::lv_obj_align(slot_lbl, lvgl_sys::LV_ALIGN_CENTER as u8, 0, 0);
+
+    // Spool info
+    let info_x: i16 = 90;
+
+    let name_lbl = lvgl_sys::lv_label_create(card);
+    let name_txt = CString::new("PLA Basic").unwrap();
+    lvgl_sys::lv_label_set_text(name_lbl, name_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(name_lbl, lv_color_hex(COLOR_WHITE), 0);
+    lvgl_sys::lv_obj_set_style_text_font(name_lbl, &lvgl_sys::lv_font_montserrat_20, 0);
+    lvgl_sys::lv_obj_set_pos(name_lbl, info_x, 0);
+
+    // Color indicator
+    let color_dot = lvgl_sys::lv_obj_create(card);
+    lvgl_sys::lv_obj_set_size(color_dot, 12, 12);
+    lvgl_sys::lv_obj_set_pos(color_dot, info_x, 28);
+    lvgl_sys::lv_obj_clear_flag(color_dot, lvgl_sys::LV_OBJ_FLAG_SCROLLABLE);
+    lvgl_sys::lv_obj_set_style_bg_color(color_dot, lv_color_hex(0xF5C518), 0);
+    lvgl_sys::lv_obj_set_style_radius(color_dot, 6, 0);
+    lvgl_sys::lv_obj_set_style_border_width(color_dot, 0, 0);
+    set_style_pad_all(color_dot, 0);
+
+    let color_lbl = lvgl_sys::lv_label_create(card);
+    let color_txt = CString::new("Yellow").unwrap();
+    lvgl_sys::lv_label_set_text(color_lbl, color_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(color_lbl, lv_color_hex(COLOR_WHITE), 0);
+    lvgl_sys::lv_obj_set_style_text_font(color_lbl, &lvgl_sys::lv_font_montserrat_14, 0);
+    lvgl_sys::lv_obj_set_pos(color_lbl, info_x + 18, 25);
+
+    let brand_lbl = lvgl_sys::lv_label_create(card);
+    let brand_txt = CString::new("Bambu Lab - 1.75mm").unwrap();
+    lvgl_sys::lv_label_set_text(brand_lbl, brand_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(brand_lbl, lv_color_hex(COLOR_TEXT_MUTED), 0);
+    lvgl_sys::lv_obj_set_style_text_font(brand_lbl, &lvgl_sys::lv_font_montserrat_12, 0);
+    lvgl_sys::lv_obj_set_pos(brand_lbl, info_x, 46);
+
+    // Weight display
+    let weight_lbl = lvgl_sys::lv_label_create(card);
+    let weight_txt = CString::new("847").unwrap();
+    lvgl_sys::lv_label_set_text(weight_lbl, weight_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(weight_lbl, lv_color_hex(COLOR_ACCENT), 0);
+    lvgl_sys::lv_obj_set_style_text_font(weight_lbl, &lvgl_sys::lv_font_montserrat_28, 0);
+    lvgl_sys::lv_obj_set_pos(weight_lbl, info_x, 62);
+
+    let weight_unit = lvgl_sys::lv_label_create(card);
+    let weight_unit_txt = CString::new("g (85%)").unwrap();
+    lvgl_sys::lv_label_set_text(weight_unit, weight_unit_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(weight_unit, lv_color_hex(COLOR_TEXT_MUTED), 0);
+    lvgl_sys::lv_obj_set_style_text_font(weight_unit, &lvgl_sys::lv_font_montserrat_14, 0);
+    lvgl_sys::lv_obj_set_pos(weight_unit, info_x + 60, 72);
+
+    // Print Settings section
+    let section1_y: i16 = 180;
+    let section1_lbl = lvgl_sys::lv_label_create(scr);
+    let section1_txt = CString::new("Print Settings").unwrap();
+    lvgl_sys::lv_label_set_text(section1_lbl, section1_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(section1_lbl, lv_color_hex(COLOR_WHITE), 0);
+    lvgl_sys::lv_obj_set_style_text_font(section1_lbl, &lvgl_sys::lv_font_montserrat_14, 0);
+    lvgl_sys::lv_obj_set_pos(section1_lbl, 16, section1_y);
+
+    let settings_card = lvgl_sys::lv_obj_create(scr);
+    lvgl_sys::lv_obj_set_size(settings_card, 768, 60);
+    lvgl_sys::lv_obj_set_pos(settings_card, 16, section1_y + 24);
+    lvgl_sys::lv_obj_clear_flag(settings_card, lvgl_sys::LV_OBJ_FLAG_SCROLLABLE);
+    lvgl_sys::lv_obj_set_style_bg_color(settings_card, lv_color_hex(0x2D2D2D), 0);
+    lvgl_sys::lv_obj_set_style_radius(settings_card, 8, 0);
+    lvgl_sys::lv_obj_set_style_border_width(settings_card, 0, 0);
+    set_style_pad_all(settings_card, 12);
+
+    // Settings grid
+    create_setting_item(settings_card, 0, "Nozzle", "190-220°C");
+    create_setting_item(settings_card, 170, "Bed", "45-65°C");
+    create_setting_item(settings_card, 340, "K Factor", "0.020");
+    create_setting_item(settings_card, 510, "Max Speed", "500mm/s");
+
+    // Spool Information section
+    let section2_y: i16 = 275;
+    let section2_lbl = lvgl_sys::lv_label_create(scr);
+    let section2_txt = CString::new("Spool Information").unwrap();
+    lvgl_sys::lv_label_set_text(section2_lbl, section2_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(section2_lbl, lv_color_hex(COLOR_WHITE), 0);
+    lvgl_sys::lv_obj_set_style_text_font(section2_lbl, &lvgl_sys::lv_font_montserrat_14, 0);
+    lvgl_sys::lv_obj_set_pos(section2_lbl, 16, section2_y);
+
+    let info_card = lvgl_sys::lv_obj_create(scr);
+    lvgl_sys::lv_obj_set_size(info_card, 768, 80);
+    lvgl_sys::lv_obj_set_pos(info_card, 16, section2_y + 24);
+    lvgl_sys::lv_obj_clear_flag(info_card, lvgl_sys::LV_OBJ_FLAG_SCROLLABLE);
+    lvgl_sys::lv_obj_set_style_bg_color(info_card, lv_color_hex(0x2D2D2D), 0);
+    lvgl_sys::lv_obj_set_style_radius(info_card, 8, 0);
+    lvgl_sys::lv_obj_set_style_border_width(info_card, 0, 0);
+    set_style_pad_all(info_card, 12);
+
+    // Info grid - row 1
+    create_setting_item(info_card, 0, "Tag ID", "A4B7C912");
+    create_setting_item(info_card, 170, "Initial Weight", "1000g");
+    create_setting_item(info_card, 340, "Used", "153g");
+    create_setting_item(info_card, 510, "Last Weighed", "2 min ago");
+
+    // Info grid - row 2
+    create_setting_item_row2(info_card, 0, "Added", "Dec 10, 2024");
+    create_setting_item_row2(info_card, 170, "Uses", "12 prints");
+
+    // Bottom buttons
+    let btn_y: i16 = 410;
+    let btn_h: i16 = 44;
+
+    // Assign Slot button (green)
+    let assign_btn = lvgl_sys::lv_btn_create(scr);
+    lvgl_sys::lv_obj_set_size(assign_btn, 160, btn_h);
+    lvgl_sys::lv_obj_set_pos(assign_btn, 180, btn_y);
+    lvgl_sys::lv_obj_set_style_bg_color(assign_btn, lv_color_hex(COLOR_ACCENT), 0);
+    lvgl_sys::lv_obj_set_style_radius(assign_btn, 8, 0);
+    lvgl_sys::lv_obj_set_style_border_width(assign_btn, 0, 0);
+
+    let assign_lbl = lvgl_sys::lv_label_create(assign_btn);
+    let assign_txt = CString::new("Assign Slot").unwrap();
+    lvgl_sys::lv_label_set_text(assign_lbl, assign_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(assign_lbl, lv_color_hex(0x000000), 0);
+    lvgl_sys::lv_obj_set_style_text_font(assign_lbl, &lvgl_sys::lv_font_montserrat_14, 0);
+    lvgl_sys::lv_obj_align(assign_lbl, lvgl_sys::LV_ALIGN_CENTER as u8, 0, 0);
+
+    // Edit Info button (gray)
+    let edit_btn = lvgl_sys::lv_btn_create(scr);
+    lvgl_sys::lv_obj_set_size(edit_btn, 130, btn_h);
+    lvgl_sys::lv_obj_set_pos(edit_btn, 350, btn_y);
+    lvgl_sys::lv_obj_set_style_bg_color(edit_btn, lv_color_hex(0x424242), 0);
+    lvgl_sys::lv_obj_set_style_radius(edit_btn, 8, 0);
+    lvgl_sys::lv_obj_set_style_border_width(edit_btn, 0, 0);
+
+    let edit_lbl = lvgl_sys::lv_label_create(edit_btn);
+    let edit_txt = CString::new("Edit Info").unwrap();
+    lvgl_sys::lv_label_set_text(edit_lbl, edit_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(edit_lbl, lv_color_hex(COLOR_WHITE), 0);
+    lvgl_sys::lv_obj_set_style_text_font(edit_lbl, &lvgl_sys::lv_font_montserrat_14, 0);
+    lvgl_sys::lv_obj_align(edit_lbl, lvgl_sys::LV_ALIGN_CENTER as u8, 0, 0);
+
+    // Remove button (red outline)
+    let remove_btn = lvgl_sys::lv_btn_create(scr);
+    lvgl_sys::lv_obj_set_size(remove_btn, 130, btn_h);
+    lvgl_sys::lv_obj_set_pos(remove_btn, 490, btn_y);
+    lvgl_sys::lv_obj_set_style_bg_opa(remove_btn, 0, 0);
+    lvgl_sys::lv_obj_set_style_radius(remove_btn, 8, 0);
+    lvgl_sys::lv_obj_set_style_border_width(remove_btn, 2, 0);
+    lvgl_sys::lv_obj_set_style_border_color(remove_btn, lv_color_hex(0xE57373), 0);
+
+    let remove_lbl = lvgl_sys::lv_label_create(remove_btn);
+    let remove_txt = CString::new("Remove").unwrap();
+    lvgl_sys::lv_label_set_text(remove_lbl, remove_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(remove_lbl, lv_color_hex(0xE57373), 0);
+    lvgl_sys::lv_obj_set_style_text_font(remove_lbl, &lvgl_sys::lv_font_montserrat_14, 0);
+    lvgl_sys::lv_obj_align(remove_lbl, lvgl_sys::LV_ALIGN_CENTER as u8, 0, 0);
+}
+
+/// Helper: Create setting item (label + value)
+unsafe fn create_setting_item(parent: *mut lvgl_sys::lv_obj_t, x: i16, label: &str, value: &str) {
+    let lbl = lvgl_sys::lv_label_create(parent);
+    let lbl_txt = CString::new(label).unwrap();
+    lvgl_sys::lv_label_set_text(lbl, lbl_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(lbl, lv_color_hex(COLOR_TEXT_MUTED), 0);
+    lvgl_sys::lv_obj_set_style_text_font(lbl, &lvgl_sys::lv_font_montserrat_10, 0);
+    lvgl_sys::lv_obj_set_pos(lbl, x, 0);
+
+    let val = lvgl_sys::lv_label_create(parent);
+    let val_txt = CString::new(value).unwrap();
+    lvgl_sys::lv_label_set_text(val, val_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(val, lv_color_hex(COLOR_WHITE), 0);
+    lvgl_sys::lv_obj_set_style_text_font(val, &lvgl_sys::lv_font_montserrat_14, 0);
+    lvgl_sys::lv_obj_set_pos(val, x, 14);
+}
+
+/// Helper: Create setting item row 2
+unsafe fn create_setting_item_row2(parent: *mut lvgl_sys::lv_obj_t, x: i16, label: &str, value: &str) {
+    let lbl = lvgl_sys::lv_label_create(parent);
+    let lbl_txt = CString::new(label).unwrap();
+    lvgl_sys::lv_label_set_text(lbl, lbl_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(lbl, lv_color_hex(COLOR_TEXT_MUTED), 0);
+    lvgl_sys::lv_obj_set_style_text_font(lbl, &lvgl_sys::lv_font_montserrat_10, 0);
+    lvgl_sys::lv_obj_set_pos(lbl, x, 36);
+
+    let val = lvgl_sys::lv_label_create(parent);
+    let val_txt = CString::new(value).unwrap();
+    lvgl_sys::lv_label_set_text(val, val_txt.as_ptr());
+    lvgl_sys::lv_obj_set_style_text_color(val, lv_color_hex(COLOR_WHITE), 0);
+    lvgl_sys::lv_obj_set_style_text_font(val, &lvgl_sys::lv_font_montserrat_14, 0);
+    lvgl_sys::lv_obj_set_pos(val, x, 50);
 }
 
 fn lv_color_hex(hex: u32) -> lvgl_sys::lv_color_t {
