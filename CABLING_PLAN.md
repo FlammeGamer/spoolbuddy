@@ -2,12 +2,78 @@
 
 ## Hardware Components
 
-| Component | Model | Interface | Purchase Status |
-|-----------|-------|-----------|-----------------|
-| Main Board | Waveshare ESP32-S3-Touch-LCD-4.3 |
-| NFC Reader | PN5180 | SPI | Arriving tomorrow |
-| Scale ADC | HX711 | GPIO | TBD |
-| Load Cell | 5kg Single-Point | HX711 | TBD |
+| Component | Model | Interface | Status |
+|-----------|-------|-----------|--------|
+| Display | ELECROW CrowPanel Advance 7.0" | ESP32-S3 built-in | ✓ |
+| NFC Reader | PN5180 | SPI | Ready to wire |
+| Scale ADC | NAU7802 (SparkFun Qwiic Scale) | I2C | Connected |
+| Load Cell | 5kg Single-Point | NAU7802 | Connected |
+
+---
+
+## CrowPanel Advance 7.0" Connector Reference
+
+### Back Panel Layout
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     CrowPanel Advance 7.0" (Back)                       │
+│                                                                         │
+│   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────┐  ┌─────────┐   │
+│   │UART0-OUT │  │UART1-OUT │  │ I2C-OUT  │  │   J9    │  │   J11   │   │
+│   │  4-pin   │  │  4-pin   │  │  4-pin   │  │  1x7    │  │  1x7    │   │
+│   └──────────┘  └──────────┘  └──────────┘  └─────────┘  └─────────┘   │
+│                                             └─────────────────────────┘ │
+│                                               Wireless Module Headers   │
+│                                                                         │
+│   [BOOT]  [RESET]                                           [USB-C]    │
+│                        [DIP SWITCHES]                       [UART0-IN] │
+│                           S1  S0                                       │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Wireless Module Headers (J9 + J11) - For PN5180 NFC
+
+```
+        J9 (Left)              J11 (Right)
+        ┌────────┐             ┌────────┐
+Pin 1   │  IO20  │             │  IO19  │   ← Used by Scale (I2C)
+Pin 2   │  IO5   │  ← SCK      │  IO16  │
+Pin 3   │  IO4   │  ← MISO     │  IO15  │   ← RST
+Pin 4   │  IO6   │  ← MOSI     │   NC   │
+Pin 5   │  3V3   │  ← VCC      │  IO2   │   ← BUSY
+Pin 6   │  GND   │  ← GND      │  IO8   │   ← CS (NSS)
+Pin 7   │   5V   │             │   NC   │
+        └────────┘             └────────┘
+
+       ---| IO20 : ------       YELLOW ---| IO19 : ← Used by Scale (I2C)
+YELLOW ---| IO5  : ← SCK               ---| IO16 : ----------------------
+BLUE   ---| IO4  : ← MISO       BLUE   ---| IO15 : ← RST
+GREEN  ---| IO6  : ← MOSI              ---| NC   : ----------------------
+RED    ---| 3V3  : ← VCC        GREEN  ---| IO2  : ← BUSY
+BLACK  ---| GND  : ← GND        BLACK  ---| IO8  : ← CS (NSS)
+       ---| 5V   : ------              ---| NC   : ----------------------
+```
+
+### I2C-OUT Connector (4-pin) - For NAU7802 Scale
+
+```
+┌──────┬──────┬──────┬──────┐
+│ Pin1 │ Pin2 │ Pin3 │ Pin4 │
+│ 3V3  │ SDA  │ SCL  │ GND  │
+│      │ IO19 │ IO20 │      │
+└──────┴──────┴──────┴──────┘
+```
+
+### DIP Switch Settings
+
+For PN5180 (Wireless Module mode - frees SPI from SD card):
+
+| S1 | S0 | Mode |
+|----|----|----|
+| 0 | 1 | **Wireless Module** ← Use this |
+| 0 | 0 | MIC + SPK |
+| 1 | 0 | MIC + TF Card |
 
 ---
 
@@ -15,39 +81,44 @@
 
 ```
                                     ┌─────────────────────────────────────────┐
-                                    │     Waveshare ESP32-S3-Touch-LCD-4.3    │
+                                    │     ELECROW CrowPanel Advance 7.0"      │
                                     │                                         │
                                     │   ┌─────────────────────────────────┐   │
                                     │   │                                 │   │
-                                    │   │      4.3" Touch Display         │   │
+                                    │   │      7.0" Touch Display         │   │
                                     │   │         (800 x 480)             │   │
                                     │   │                                 │   │
                                     │   │      [Built-in - no wiring]     │   │
                                     │   │                                 │   │
                                     │   └─────────────────────────────────┘   │
                                     │                                         │
-     PN5180 NFC Module              │   Expansion Header                      │
+     PN5180 NFC Module              │   J9 Header (Left)                      │
     ┌──────────────────┐            │   ┌───────────────────┐                 │
     │                  │            │   │                   │                 │
-    │   ┌──────────┐   │            │   │  GPIO10 ●─────────┼─────NSS (CS)    │
-    │   │PN5180    │   │            │   │  GPIO11 ●─────────┼─────MOSI        │
-    │   │  Chip    │   │            │   │  GPIO12 ●─────────┼─────SCLK        │
-    │   └──────────┘   │            │   │  GPIO13 ●─────────┼─────MISO        │
-    │                  │            │   │  GPIO14 ●─────────┼─────BUSY        │
-    │   ┌──────────┐   │            │   │  GPIO21 ●─────────┼─────RST         │
-    │   │ Antenna  │   │            │   │                   │                 │
-    │   │  Coil    │   │            │   │    3.3V ●─────────┼─────VCC         │
-    │   └──────────┘   │            │   │     GND ●─────────┼─────GND         │
-    │                  │            │   │                   │                 │
-    └──────────────────┘            │   └───────────────────┘                 │
+    │   ┌──────────┐   │            │   │  IO5  ●──────────┼─────SCK         │
+    │   │PN5180    │   │            │   │  IO4  ●──────────┼─────MISO        │
+    │   │  Chip    │   │            │   │  IO6  ●──────────┼─────MOSI        │
+    │   └──────────┘   │            │   │  3V3  ●──────────┼─────VCC         │
+    │                  │            │   │  GND  ●──────────┼─────GND         │
+    │   ┌──────────┐   │            │   │                   │                 │
+    │   │ Antenna  │   │            │   └───────────────────┘                 │
+    │   │  Coil    │   │            │                                         │
+    │   └──────────┘   │            │   J11 Header (Right)                    │
+    │                  │            │   ┌───────────────────┐                 │
+    └──────────────────┘            │   │                   │                 │
+            │                       │   │  IO15 ●──────────┼─────RST         │
+            │                       │   │  IO2  ●──────────┼─────BUSY        │
+            └───────────────────────┼───│  IO8  ●──────────┼─────NSS (CS)    │
+                                    │   │                   │                 │
+                                    │   └───────────────────┘                 │
                                     │                                         │
-                                    │   ┌───────────────────┐                 │
-     HX711 + Load Cell              │   │                   │                 │
-    ┌──────────────────┐            │   │   GPIO1 ●─────────┼─────DT (DOUT)   │
-    │  ┌────────────┐  │            │   │   GPIO2 ●─────────┼─────SCK         │
-    │  │  HX711     │  │            │   │                   │                 │
-    │  │  Module    │  │            │   │    3.3V ●─────────┼─────VCC         │
-    │  └────────────┘  │            │   │     GND ●─────────┼─────GND         │
+     NAU7802 + Load Cell            │   I2C-OUT (4-pin)                       │
+    ┌──────────────────┐            │   ┌───────────────────┐                 │
+    │  ┌────────────┐  │            │   │                   │                 │
+    │  │ SparkFun   │  │            │   │  IO19 ●──────────┼─────SDA         │
+    │  │ Qwiic      │  │            │   │  IO20 ●──────────┼─────SCL         │
+    │  │ Scale      │  │            │   │  3V3  ●──────────┼─────VCC         │
+    │  └────────────┘  │            │   │  GND  ●──────────┼─────GND         │
     │        │         │            │   │                   │                 │
     │   ┌────┴────┐    │            │   └───────────────────┘                 │
     │   │Load Cell│    │            │                                         │
@@ -65,101 +136,55 @@
 
 ### PN5180 NFC Reader (SPI)
 
-| PN5180 Pin | ESP32-S3 GPIO | Wire Color (suggested) | Notes |
-|------------|---------------|------------------------|-------|
-| VCC | 3.3V | Red | 3.3V only! |
-| GND | GND | Black | Ground |
-| MOSI | GPIO11 | Yellow | SPI Data Out |
-| MISO | GPIO13 | Green | SPI Data In |
-| SCLK | GPIO12 | Blue | SPI Clock |
-| NSS | GPIO10 | Orange | Chip Select (active low) |
-| BUSY | GPIO14 | White | Busy indicator |
-| RST | GPIO21 | Brown | Reset (active low) |
+| PN5180 Pin | ESP32-S3 GPIO | Header | Pin # | Wire Color |
+|------------|---------------|--------|-------|------------|
+| VCC | 3.3V | J9 | Pin 5 | Red |
+| GND | GND | J9 | Pin 6 | Black |
+| SCK | IO5 | J9 | Pin 2 | Blue |
+| MISO | IO4 | J9 | Pin 3 | Green |
+| MOSI | IO6 | J9 | Pin 4 | Yellow |
+| NSS (CS) | IO8 | J11 | Pin 6 | Orange |
+| BUSY | IO2 | J11 | Pin 5 | White |
+| RST | IO15 | J11 | Pin 3 | Brown |
 
 **SPI Configuration:**
 - Mode: SPI Mode 0 (CPOL=0, CPHA=0)
 - Speed: 2 MHz (max 10 MHz)
 - Bit order: MSB first
 
-### HX711 Scale (GPIO)
+### NAU7802 Scale (I2C)
 
-| HX711 Pin | ESP32-S3 GPIO | Wire Color (suggested) | Notes |
-|-----------|---------------|------------------------|-------|
-| VCC | 3.3V | Red | Can use 3.3V or 5V |
-| GND | GND | Black | Ground |
-| DT (DOUT) | GPIO1 | Green | Data out |
-| SCK | GPIO2 | Yellow | Clock |
+| NAU7802 Pin | ESP32-S3 GPIO | Header | Pin # | Wire Color |
+|-------------|---------------|--------|-------|------------|
+| VCC | 3.3V | I2C-OUT | Pin 1 | Red |
+| SDA | IO19 | I2C-OUT | Pin 2 | Yellow |
+| SCL | IO20 | I2C-OUT | Pin 3 | White |
+| GND | GND | I2C-OUT | Pin 4 | Black |
 
-**HX711 Configuration:**
-- Default gain: 128 (Channel A)
-- Sample rate: 10 Hz or 80 Hz (set by RATE pin)
+**I2C Configuration:**
+- Address: 0x2A
+- Speed: 400 kHz (Fast mode)
 
-### 5kg Load Cell Specifications
-
-| Parameter | Value | Notes |
-|-----------|-------|-------|
-| Capacity | 5 kg | Perfect for filament spools (typically 1-2kg) |
-| Output | 1.0 ± 0.15 mV/V | At full scale |
-| Excitation | 3-10V DC | HX711 provides ~4.3V |
-| Resolution | ~0.5g | With 24-bit HX711 ADC |
-| Overload | 150% (7.5kg) | Safe limit |
-
-**Why 5kg?**
-- Full 1kg spool + empty spool (~250g) = ~1.25kg typical max
-- Leaves headroom for heavier spools (2kg, 3kg)
-- Better resolution than 10kg or 20kg cells
-- Common/affordable option
-
-### Load Cell Wiring to HX711
+### Load Cell Wiring to NAU7802
 
 ```
-   Load Cell (5kg)                    HX711 Module
-  ┌─────────────────┐               ┌─────────────────┐
-  │                 │               │                 │
-  │  Red ───────────┼───────────────┤► E+             │
-  │  Black ─────────┼───────────────┤► E-             │
-  │  White ─────────┼───────────────┤► A-             │
-  │  Green ─────────┼───────────────┤► A+             │
-  │                 │               │                 │
-  │   ┌─────────┐   │               │  DT ───► GPIO1  │
-  │   │ Strain  │   │               │  SCK ──► GPIO2  │
-  │   │ Gauge   │   │               │  VCC ──► 3.3V   │
-  │   └─────────┘   │               │  GND ──► GND    │
-  │                 │               │                 │
-  └─────────────────┘               └─────────────────┘
+   Load Cell (5kg)                SparkFun Qwiic Scale
+  ┌─────────────────┐            ┌─────────────────┐
+  │                 │            │                 │
+  │  Red ───────────┼────────────┤► E+ (Red)       │
+  │  Black ─────────┼────────────┤► E- (Black)     │
+  │  White ─────────┼────────────┤► A- (White)     │
+  │  Green ─────────┼────────────┤► A+ (Green)     │
+  │                 │            │                 │
+  │   ┌─────────┐   │            │  Qwiic to I2C   │
+  │   │ Strain  │   │            │  connector      │
+  │   │ Gauge   │   │            │                 │
+  │   └─────────┘   │            │                 │
+  │                 │            │                 │
+  └─────────────────┘            └─────────────────┘
 ```
-
-| Load Cell Wire | HX711 Terminal | Function |
-|----------------|----------------|----------|
-| Red | E+ | Excitation + |
-| Black | E- | Excitation - |
-| White | A- | Signal - |
-| Green | A+ | Signal + |
 
 *Note: Wire colors vary by manufacturer. If readings are negative, swap A+ and A-.*
-
-### Load Cell Mounting Options
-
-**Single-Point (Bar Type) - Recommended:**
-```
-        Fixed End                    Load Platform
-     ┌────────────┐                 ┌────────────┐
-     │████████████│                 │            │
-     │████████████├─────────────────┤            │
-     │████████████│   Load Cell     │   Spool    │
-     │████████████├─────────────────┤   Here     │
-     │████████████│                 │            │
-     └────────────┘                 └────────────┘
-      Mounting                       Weighing
-      Bracket                        Platform
-```
-
-**Mounting Notes:**
-- Single-point load cells are ideal (one mounting point)
-- Ensure load cell is level
-- Add 2-3mm clearance below platform for deflection
-- Use M4 or M5 screws (check load cell holes)
-- Don't overtighten mounting screws
 
 ---
 
@@ -167,6 +192,7 @@
 
 ### Before Powering On
 
+- [ ] DIP switch set: S1=0, S0=1 (Wireless Module mode)
 - [ ] Verify all connections are secure
 - [ ] Confirm 3.3V (not 5V) for PN5180
 - [ ] Check no shorts between adjacent pins
@@ -174,22 +200,49 @@
 
 ### PN5180 Verification
 
-1. [ ] Connect MOSI → GPIO11
-2. [ ] Connect MISO → GPIO13
-3. [ ] Connect SCLK → GPIO12
-4. [ ] Connect NSS → GPIO10
-5. [ ] Connect BUSY → GPIO14
-6. [ ] Connect RST → GPIO21
-7. [ ] Connect VCC → 3.3V
-8. [ ] Connect GND → GND
+1. [ ] Connect SCK → J9 Pin 2 (IO5)
+2. [ ] Connect MISO → J9 Pin 3 (IO4)
+3. [ ] Connect MOSI → J9 Pin 4 (IO6)
+4. [ ] Connect NSS → J11 Pin 6 (IO8)
+5. [ ] Connect BUSY → J11 Pin 5 (IO2)
+6. [ ] Connect RST → J11 Pin 3 (IO15)
+7. [ ] Connect VCC → J9 Pin 5 (3V3)
+8. [ ] Connect GND → J9 Pin 6 (GND)
 
-### HX711 Verification
+### NAU7802 Verification
 
-1. [ ] Connect DT → GPIO1
-2. [ ] Connect SCK → GPIO2
-3. [ ] Connect VCC → 3.3V (or 5V)
-4. [ ] Connect GND → GND
+1. [ ] Connect SDA → I2C-OUT Pin 2 (IO19)
+2. [ ] Connect SCL → I2C-OUT Pin 3 (IO20)
+3. [ ] Connect VCC → I2C-OUT Pin 1 (3V3)
+4. [ ] Connect GND → I2C-OUT Pin 4 (GND)
 5. [ ] Load cell wired to E+/E-/A+/A-
+
+---
+
+## Quick Reference Card
+
+```
+┌────────────────────────────────────────────────────────────┐
+│           SPOOLBUDDY QUICK WIRING (CrowPanel 7.0")         │
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│  DIP Switch: S1=0, S0=1                                    │
+│                                                            │
+│  PN5180 (NFC)              NAU7802 (Scale)                 │
+│  ───────────               ──────────────                  │
+│  VCC  → J9 Pin5 (3V3)      VCC → I2C Pin1 (3V3)           │
+│  GND  → J9 Pin6 (GND)      GND → I2C Pin4 (GND)           │
+│  SCK  → J9 Pin2 (IO5)      SDA → I2C Pin2 (IO19)          │
+│  MISO → J9 Pin3 (IO4)      SCL → I2C Pin3 (IO20)          │
+│  MOSI → J9 Pin4 (IO6)                                      │
+│  CS   → J11 Pin6 (IO8)     Load Cell → Qwiic terminal     │
+│  BUSY → J11 Pin5 (IO2)       Red   → E+                   │
+│  RST  → J11 Pin3 (IO15)      Black → E-                   │
+│                              White → A-                    │
+│  Power: USB-C 5V/2A          Green → A+                   │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -202,40 +255,10 @@
 - Keep antenna flat and parallel to scale surface
 
 ### Scale Platform
-- Load cell mounting: 4-corner or single-point depending on load cell type
+- Load cell mounting: single-point (bar type)
 - Ensure stable, level mounting surface
 - Protect load cell from overload (add mechanical stops if needed)
 - Shield from drafts for stable readings
-
-### Enclosure Considerations
-- Keep PN5180 antenna away from metal (reduces read range)
-- Provide access to USB-C for power and debugging
-- Allow air circulation if enclosed
-- Consider cable strain relief
-
----
-
-## Waveshare ESP32-S3-Touch-LCD-4.3 Pinout Reference
-
-```
-Expansion Connector (directly accessible GPIOs):
-
-         ┌─────────────────────┐
-         │  ESP32-S3 LCD 4.3   │
-         │                     │
-    3V3 ─┤ 1               2  ├─ GND
-  GPIO1 ─┤ 3               4  ├─ GPIO2
- GPIO10 ─┤ 5               6  ├─ GPIO11
- GPIO12 ─┤ 7               8  ├─ GPIO13
- GPIO14 ─┤ 9              10  ├─ GPIO21
-    ... ─┤                    ├─ ...
-         │                     │
-         └─────────────────────┘
-
-Note: Actual pinout depends on specific connector.
-      Refer to Waveshare wiki for exact positions:
-      https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-4.3
-```
 
 ---
 
@@ -243,167 +266,44 @@ Note: Actual pinout depends on specific connector.
 
 | Component | Voltage | Current (typical) | Current (peak) |
 |-----------|---------|-------------------|----------------|
-| ESP32-S3 + Display | 5V (via USB) | 200mA | 500mA |
+| CrowPanel 7.0" | 5V (via USB) | 300mA | 600mA |
 | PN5180 | 3.3V | 80mA | 150mA |
-| HX711 | 3.3V | 1.5mA | 1.5mA |
-| **Total** | **5V USB** | **~300mA** | **~650mA** |
+| NAU7802 | 3.3V | 1mA | 2mA |
+| **Total** | **5V USB** | **~400mA** | **~750mA** |
 
 **Recommendation:** Use a quality USB-C cable and 5V/2A power adapter.
-
----
-
-## USB Serial Access Setup
-
-When connecting via USB for debugging or recovery, you may need to configure serial port permissions.
-
-### Linux (Native Installation)
-
-Run the setup script to install udev rules:
-
-```bash
-./scripts/setup-serial-access.sh
-```
-
-This will:
-1. Install udev rules for automatic permission assignment
-2. Add your user to the `dialout` group
-3. Require logout/login to take effect
-
-### Docker Installation
-
-The `docker-compose.yml` is pre-configured with serial device access:
-
-```yaml
-services:
-  spoolbuddy:
-    volumes:
-      - /dev:/dev
-    group_add:
-      - dialout
-    privileged: true
-```
-
-### Manual Fix (Temporary)
-
-If you get "Permission denied" errors:
-
-```bash
-sudo chown root:dialout /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
-```
-
-*Note: This resets when the device is unplugged.*
-
-### Persistent Fix (Container Host)
-
-On the host machine running Docker, install the systemd service:
-
-```bash
-sudo cp scripts/spoolbuddy-serial.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now spoolbuddy-serial.service
-```
 
 ---
 
 ## Troubleshooting
 
 ### PN5180 Not Responding
-1. Check SPI wiring (especially MISO/MOSI not swapped)
-2. Verify 3.3V power (measure with multimeter)
-3. Check RST is pulled high (or toggle it)
-4. Reduce SPI speed to 1MHz for testing
-5. Check BUSY pin behavior during operations
+1. Check DIP switch: S1=0, S0=1
+2. Check SPI wiring (especially MISO/MOSI not swapped)
+3. Verify 3.3V power (measure with multimeter)
+4. Check RST is high (IO15)
+5. Reduce SPI speed to 1MHz for testing
+6. Check BUSY pin behavior during operations
 
-### HX711 Erratic Readings
+### NAU7802 Erratic Readings
 1. Check load cell wiring (swap A+/A- if readings inverted)
 2. Ensure stable power supply
-3. Add decoupling capacitor (100nF) near HX711
+3. Add decoupling capacitor (100nF) near NAU7802
 4. Shield from electrical noise
 5. Allow warm-up time (~1 minute)
 
 ### Display Not Working
 - Display is built-in; no wiring needed
 - If blank: check USB power, try different cable
-- If touch not working: check I2C (GT911 touch controller is internal)
-
----
-
-## Quick Reference Card
-
-```
-┌────────────────────────────────────────────────────────────┐
-│                 SPOOLBUDDY QUICK WIRING                    │
-├────────────────────────────────────────────────────────────┤
-│                                                            │
-│  PN5180 (NFC)          HX711 (Scale)     5kg Load Cell     │
-│  ───────────           ─────────────     ──────────────    │
-│  VCC  → 3.3V           VCC  → 3.3V       Red   → E+        │
-│  GND  → GND            GND  → GND        Black → E-        │
-│  MOSI → GPIO11         DT   → GPIO1      White → A-        │
-│  MISO → GPIO13         SCK  → GPIO2      Green → A+        │
-│  SCLK → GPIO12                                             │
-│  NSS  → GPIO10                                             │
-│  BUSY → GPIO14                                             │
-│  RST  → GPIO21                                             │
-│                                                            │
-│  Power: USB-C 5V/2A                                        │
-│                                                            │
-└────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Systemd Service Installation
-
-For production deployments on Linux, install SpoolBuddy as a systemd service:
-
-### Quick Install
-
-```bash
-# Build frontend first
-cd frontend && npm run build && cd ..
-
-# Install as systemd service
-sudo ./scripts/install-systemd.sh production
-```
-
-### Manual Installation
-
-1. Copy service files:
-```bash
-sudo cp scripts/spoolbuddy.service /etc/systemd/system/
-sudo cp scripts/spoolbuddy-serial.service /etc/systemd/system/
-```
-
-2. Reload and enable:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable spoolbuddy spoolbuddy-serial
-sudo systemctl start spoolbuddy spoolbuddy-serial
-```
-
-### Service Management
-
-| Command | Description |
-|---------|-------------|
-| `sudo systemctl start spoolbuddy` | Start service |
-| `sudo systemctl stop spoolbuddy` | Stop service |
-| `sudo systemctl restart spoolbuddy` | Restart service |
-| `sudo systemctl status spoolbuddy` | Check status |
-| `sudo journalctl -u spoolbuddy -f` | View logs (follow) |
-
-### Uninstall
-
-```bash
-sudo ./scripts/uninstall-systemd.sh
-```
+- If touch not working: GT911 touch controller is internal
 
 ---
 
 ## Next Steps After Wiring
 
-1. **Flash firmware**: See `firmware/README.md`
-2. **Test NFC**: Place tag on antenna, check serial output
-3. **Calibrate scale**: Use known weight, run calibration
-4. **Connect to server**: Configure WiFi, verify WebSocket connection
-5. **Test full flow**: Read tag → update UI → log weight
+1. **Set DIP switches**: S1=0, S0=1 for Wireless Module mode
+2. **Flash firmware**: See `firmware/README.md`
+3. **Test NFC**: Place tag on antenna, check serial output
+4. **Calibrate scale**: Use known weight, run calibration
+5. **Connect to server**: Configure WiFi, verify WebSocket connection
+6. **Test full flow**: Read tag → update UI → log weight

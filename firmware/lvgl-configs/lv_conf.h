@@ -22,8 +22,17 @@
    MEMORY SETTINGS
  *====================*/
 
-/* Size of the memory available for `lv_mem_alloc()` in bytes (>= 2kB) */
-#define LV_MEM_SIZE (128U * 1024U)
+/* Use ESP-IDF heap allocator which can use PSRAM */
+#define LV_MEM_CUSTOM 1
+#if LV_MEM_CUSTOM == 1
+    #define LV_MEM_CUSTOM_INCLUDE <stdlib.h>
+    #define LV_MEM_CUSTOM_ALLOC   malloc
+    #define LV_MEM_CUSTOM_FREE    free
+    #define LV_MEM_CUSTOM_REALLOC realloc
+#endif
+
+/* Fallback size if custom alloc not used */
+#define LV_MEM_SIZE (180U * 1024U)
 
 /* Number of the intermediate memory buffer used during rendering */
 #define LV_MEM_BUF_MAX_NUM 32
@@ -82,7 +91,7 @@
 
 /* Montserrat fonts - enable what we need */
 #define LV_FONT_MONTSERRAT_8     0
-#define LV_FONT_MONTSERRAT_10    0
+#define LV_FONT_MONTSERRAT_10    1
 #define LV_FONT_MONTSERRAT_12    1
 #define LV_FONT_MONTSERRAT_14    1
 #define LV_FONT_MONTSERRAT_16    1
@@ -214,5 +223,15 @@
 
 /* Snapshot */
 #define LV_USE_SNAPSHOT 0
+
+/*====================
+   CUSTOM STUBS
+ *====================*/
+
+/* lv_deinit is not generated when LV_MEM_CUSTOM=1, but Rust binding needs it.
+ * We provide a stub implementation in components/lvgl_stubs/lv_deinit_stub.c */
+#if LV_MEM_CUSTOM == 1
+    void lv_deinit(void);
+#endif
 
 #endif /* LV_CONF_H */

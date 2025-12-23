@@ -1,43 +1,43 @@
-//! Settings screen.
+//! Settings screen with consolidated tabs.
 //!
 //! Layout:
 //! ┌────────────────────────────────────────────────────────────┐
-//! │ ← Settings                                                │
+//! │ < Settings                                                 │
+//! ├────────────────────────────────────────────────────────────┤
+//! │  [Network]  [Hardware]  [System]                          │
 //! ├────────────────────────────────────────────────────────────┤
 //! │                                                            │
-//! │  WiFi                                                      │
-//! │  ├── Network: NYHC! (Connected)                           │
-//! │  └── [Configure WiFi]                                     │
+//! │  Network Tab:                                              │
+//! │  ┌──────────────────────────────────────────────────────┐ │
+//! │  │ ● WiFi                              MyNetwork  >     │ │
+//! │  │ ● Backend Server                   Connected   >     │ │
+//! │  │   Printers                                     >     │ │
+//! │  └──────────────────────────────────────────────────────┘ │
 //! │                                                            │
-//! │  Server                                                    │
-//! │  ├── URL: spoolbuddy.local:3000                           │
-//! │  └── Status: Connected                                    │
+//! │  Hardware Tab:                                             │
+//! │  ┌──────────────────────────────────────────────────────┐ │
+//! │  │   Scale Calibration                            >     │ │
+//! │  │   NFC Reader                                   >     │ │
+//! │  │   Display                                      >     │ │
+//! │  └──────────────────────────────────────────────────────┘ │
 //! │                                                            │
-//! │  Scale                                                     │
-//! │  ├── [Tare Scale]                                         │
-//! │  └── [Calibrate Scale]                                    │
-//! │                                                            │
-//! │  Display                                                   │
-//! │  └── Brightness: [━━━━━━━━░░] 80%                         │
-//! │  └── Theme: [Dark] / Light                                │
-//! │                                                            │
-//! │  About                                                     │
-//! │  ├── Firmware: v0.1.0                                     │
-//! │  └── Device ID: SPOOLBUDDY-A1B2C3                         │
+//! │  System Tab:                                               │
+//! │  ┌──────────────────────────────────────────────────────┐ │
+//! │  │   Check for Updates                            >     │ │
+//! │  │   Advanced Settings                            >     │ │
+//! │  │   About SpoolBuddy                            >     │ │
+//! │  └──────────────────────────────────────────────────────┘ │
 //! │                                                            │
 //! └────────────────────────────────────────────────────────────┘
 
-use crate::ui::theme::{self, spacing, ThemeMode};
-use crate::ui::widgets::{Button, StatusBar};
-use crate::ui::widgets::button::ButtonStyle;
+use crate::ui::theme::{self, radius, spacing};
 use crate::ui::widgets::icon::Icon;
-use crate::ui::{UiState, DISPLAY_HEIGHT, DISPLAY_WIDTH};
+use crate::ui::widgets::{SettingsRow, StatusBar, StatusDot, TabBar};
+use crate::ui::{Screen, SettingsTab, UiState, DISPLAY_HEIGHT, DISPLAY_WIDTH};
 use embedded_graphics::{
-    mono_font::{ascii::FONT_6X10, ascii::FONT_10X20, MonoTextStyle},
     pixelcolor::Rgb565,
     prelude::*,
     primitives::{PrimitiveStyle, Rectangle, RoundedRectangle},
-    text::Text,
 };
 
 /// Settings screen renderer
@@ -56,224 +56,237 @@ impl SettingsScreen {
             .into_styled(PrimitiveStyle::with_fill(theme.bg))
             .draw(display)?;
 
-        // Header with back button
-        let header_height = 50;
-        Rectangle::new(Point::zero(), Size::new(DISPLAY_WIDTH, header_height))
-            .into_styled(PrimitiveStyle::with_fill(theme.status_bar_bg))
+        // Status bar with back button
+        let mut status_bar = StatusBar::new("< Settings");
+        status_bar.set_wifi(state.wifi_connected, -60);
+        status_bar.set_server(state.server_connected);
+        status_bar.draw(display)?;
+
+        // Tab bar
+        let tabs = ["Network", "Hardware", "System"];
+        let active_tab = match state.settings_tab {
+            SettingsTab::Network => 0,
+            SettingsTab::Hardware => 1,
+            SettingsTab::System => 2,
+        };
+
+        TabBar::new(&tabs, Point::new(0, 48), DISPLAY_WIDTH)
+            .with_active(active_tab)
             .draw(display)?;
 
-        // Back icon
-        Icon::Back.draw(display, Point::new(spacing::MD, 15), 24, theme.text_primary)?;
+        let content_y = 92;
+        let card_x = spacing::MD;
+        let card_width = DISPLAY_WIDTH - (spacing::MD * 2) as u32;
 
-        // Title
-        let title_style = MonoTextStyle::new(&FONT_10X20, theme.text_primary);
-        Text::new("Settings", Point::new(spacing::MD + 36, 32), title_style).draw(display)?;
-
-        // Settings sections
-        let mut y = header_height as i32 + spacing::MD;
-        let section_style = MonoTextStyle::new(&FONT_10X20, theme.text_primary);
-        let label_style = MonoTextStyle::new(&FONT_6X10, theme.text_secondary);
-        let value_style = MonoTextStyle::new(&FONT_6X10, theme.text_primary);
-
-        // WiFi section
-        y = Self::draw_section(display, "WiFi", y)?;
-        y = Self::draw_setting_row(
-            display,
-            "Network",
-            if state.wifi_connected {
-                state.wifi_ssid.as_str()
-            } else {
-                "Not connected"
-            },
-            y,
-        )?;
-
-        let wifi_button = Button::new(
-            Point::new(spacing::MD + 20, y),
-            Size::new(140, 32),
-            "Configure WiFi",
-        )
-        .with_style(ButtonStyle::Secondary);
-        wifi_button.draw(display)?;
-        y += 44;
-
-        // Server section
-        y = Self::draw_section(display, "Server", y)?;
-        y = Self::draw_setting_row(display, "URL", "spoolbuddy.local:3000", y)?;
-        y = Self::draw_setting_row(
-            display,
-            "Status",
-            if state.server_connected {
-                "Connected"
-            } else {
-                "Disconnected"
-            },
-            y,
-        )?;
-
-        // Scale section
-        y = Self::draw_section(display, "Scale", y)?;
-
-        let tare_button = Button::new(
-            Point::new(spacing::MD + 20, y),
-            Size::new(100, 32),
-            "Tare",
-        )
-        .with_style(ButtonStyle::Secondary);
-        tare_button.draw(display)?;
-
-        let cal_button = Button::new(
-            Point::new(spacing::MD + 140, y),
-            Size::new(100, 32),
-            "Calibrate",
-        )
-        .with_style(ButtonStyle::Secondary);
-        cal_button.draw(display)?;
-        y += 44;
-
-        // Display section
-        y = Self::draw_section(display, "Display", y)?;
-
-        // Brightness slider
-        Text::new("Brightness", Point::new(spacing::MD + 20, y + 12), label_style).draw(display)?;
-
-        // Progress bar for brightness
-        let slider_x = spacing::MD + 100;
-        let slider_width = 200;
-        let slider_height = 12;
-
-        // Track
-        RoundedRectangle::with_equal_corners(
-            Rectangle::new(Point::new(slider_x, y + 4), Size::new(slider_width, slider_height)),
-            Size::new(6, 6),
-        )
-        .into_styled(PrimitiveStyle::with_fill(theme.progress_bg))
-        .draw(display)?;
-
-        // Fill
-        let fill_width = ((slider_width as u32) * (state.brightness as u32) / 100) as u32;
-        RoundedRectangle::with_equal_corners(
-            Rectangle::new(Point::new(slider_x, y + 4), Size::new(fill_width, slider_height)),
-            Size::new(6, 6),
-        )
-        .into_styled(PrimitiveStyle::with_fill(theme.primary))
-        .draw(display)?;
-
-        // Percentage label
-        let mut pct: heapless::String<8> = heapless::String::new();
-        let _ = core::fmt::write(&mut pct, format_args!("{}%", state.brightness));
-        Text::new(&pct, Point::new(slider_x + slider_width as i32 + 8, y + 14), value_style)
-            .draw(display)?;
-        y += 28;
-
-        // Theme toggle
-        Text::new("Theme", Point::new(spacing::MD + 20, y + 12), label_style).draw(display)?;
-
-        let current_mode = theme::theme_mode();
-        let dark_button = Button::new(
-            Point::new(slider_x, y),
-            Size::new(60, 28),
-            "Dark",
-        )
-        .with_style(if current_mode == ThemeMode::Dark {
-            ButtonStyle::Primary
-        } else {
-            ButtonStyle::Secondary
-        });
-        dark_button.draw(display)?;
-
-        let light_button = Button::new(
-            Point::new(slider_x + 70, y),
-            Size::new(60, 28),
-            "Light",
-        )
-        .with_style(if current_mode == ThemeMode::Light {
-            ButtonStyle::Primary
-        } else {
-            ButtonStyle::Secondary
-        });
-        light_button.draw(display)?;
-        y += 40;
-
-        // About section
-        y = Self::draw_section(display, "About", y)?;
-        y = Self::draw_setting_row(display, "Firmware", state.firmware_version.as_str(), y)?;
-        Self::draw_setting_row(display, "Device ID", state.device_id.as_str(), y)?;
+        // Render content based on active tab
+        match state.settings_tab {
+            SettingsTab::Network => Self::render_network_tab(display, state, card_x, content_y, card_width)?,
+            SettingsTab::Hardware => Self::render_hardware_tab(display, state, card_x, content_y, card_width)?,
+            SettingsTab::System => Self::render_system_tab(display, state, card_x, content_y, card_width)?,
+        }
 
         Ok(())
     }
 
-    /// Draw a section header
-    fn draw_section<D>(display: &mut D, title: &str, y: i32) -> Result<i32, D::Error>
+    /// Render Network tab content
+    fn render_network_tab<D>(
+        display: &mut D,
+        state: &UiState,
+        card_x: i32,
+        content_y: i32,
+        card_width: u32,
+    ) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = Rgb565>,
     {
         let theme = theme::theme();
-        let section_style = MonoTextStyle::new(&FONT_10X20, theme.text_primary);
+        let card_height = 160u32;
 
-        Text::new(title, Point::new(spacing::MD, y + 16), section_style).draw(display)?;
-
-        // Divider line
-        Rectangle::new(
-            Point::new(spacing::MD, y + 24),
-            Size::new(DISPLAY_WIDTH - (spacing::MD as u32 * 2), 1),
+        RoundedRectangle::with_equal_corners(
+            Rectangle::new(
+                Point::new(card_x, content_y),
+                Size::new(card_width, card_height),
+            ),
+            Size::new(radius::LG, radius::LG),
         )
-        .into_styled(PrimitiveStyle::with_fill(theme.border))
+        .into_styled(PrimitiveStyle::with_fill(theme.card_bg))
         .draw(display)?;
 
-        Ok(y + 32)
+        let row_width = card_width - spacing::SM as u32;
+        let mut row_y = content_y;
+
+        // WiFi row
+        let wifi_status = if state.wifi_connected {
+            StatusDot::Green
+        } else {
+            StatusDot::Gray
+        };
+        let wifi_value = if state.wifi_connected {
+            state.wifi_ssid.as_str()
+        } else {
+            "Not connected"
+        };
+
+        SettingsRow::new(Point::new(card_x, row_y), row_width, "WiFi")
+            .with_icon(Icon::Setting)
+            .with_status(wifi_status)
+            .with_value(wifi_value)
+            .draw(display)?;
+        row_y += SettingsRow::HEIGHT as i32;
+
+        // Backend Server row
+        let server_status = if state.server_connected {
+            StatusDot::Green
+        } else {
+            StatusDot::Gray
+        };
+        let server_value = if state.server_connected {
+            "Connected"
+        } else {
+            "Disconnected"
+        };
+
+        SettingsRow::new(Point::new(card_x, row_y), row_width, "Backend Server")
+            .with_icon(Icon::Setting)
+            .with_status(server_status)
+            .with_value(server_value)
+            .draw(display)?;
+        row_y += SettingsRow::HEIGHT as i32;
+
+        // Printers row
+        SettingsRow::new(Point::new(card_x, row_y), row_width, "Printers")
+            .with_icon(Icon::Setting)
+            .with_value("1 connected")
+            .without_separator()
+            .draw(display)?;
+
+        Ok(())
     }
 
-    /// Draw a setting row with label and value
-    fn draw_setting_row<D>(
+    /// Render Hardware tab content
+    fn render_hardware_tab<D>(
         display: &mut D,
-        label: &str,
-        value: &str,
-        y: i32,
-    ) -> Result<i32, D::Error>
+        _state: &UiState,
+        card_x: i32,
+        content_y: i32,
+        card_width: u32,
+    ) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = Rgb565>,
     {
         let theme = theme::theme();
-        let label_style = MonoTextStyle::new(&FONT_6X10, theme.text_secondary);
-        let value_style = MonoTextStyle::new(&FONT_6X10, theme.text_primary);
+        let card_height = 160u32;
 
-        // Tree line indicator
-        Text::new("├─", Point::new(spacing::MD + 4, y + 10), label_style).draw(display)?;
+        RoundedRectangle::with_equal_corners(
+            Rectangle::new(
+                Point::new(card_x, content_y),
+                Size::new(card_width, card_height),
+            ),
+            Size::new(radius::LG, radius::LG),
+        )
+        .into_styled(PrimitiveStyle::with_fill(theme.card_bg))
+        .draw(display)?;
 
-        // Label
-        Text::new(label, Point::new(spacing::MD + 24, y + 10), label_style).draw(display)?;
+        let row_width = card_width - spacing::SM as u32;
+        let mut row_y = content_y;
 
-        // Value (right side)
-        let value_x = DISPLAY_WIDTH as i32 - spacing::MD - (value.len() as i32 * 6);
-        Text::new(value, Point::new(value_x, y + 10), value_style).draw(display)?;
+        // Scale Calibration row
+        SettingsRow::new(Point::new(card_x, row_y), row_width, "Scale Calibration")
+            .with_icon(Icon::Weight)
+            .with_value("Calibrated")
+            .draw(display)?;
+        row_y += SettingsRow::HEIGHT as i32;
 
-        Ok(y + 20)
+        // NFC Reader row
+        SettingsRow::new(Point::new(card_x, row_y), row_width, "NFC Reader")
+            .with_icon(Icon::Nfc)
+            .with_value("Ready")
+            .draw(display)?;
+        row_y += SettingsRow::HEIGHT as i32;
+
+        // Display row
+        SettingsRow::new(Point::new(card_x, row_y), row_width, "Display")
+            .with_icon(Icon::Setting)
+            .with_value("80%")
+            .without_separator()
+            .draw(display)?;
+
+        Ok(())
+    }
+
+    /// Render System tab content
+    fn render_system_tab<D>(
+        display: &mut D,
+        state: &UiState,
+        card_x: i32,
+        content_y: i32,
+        card_width: u32,
+    ) -> Result<(), D::Error>
+    where
+        D: DrawTarget<Color = Rgb565>,
+    {
+        let theme = theme::theme();
+        let card_height = 160u32;
+
+        RoundedRectangle::with_equal_corners(
+            Rectangle::new(
+                Point::new(card_x, content_y),
+                Size::new(card_width, card_height),
+            ),
+            Size::new(radius::LG, radius::LG),
+        )
+        .into_styled(PrimitiveStyle::with_fill(theme.card_bg))
+        .draw(display)?;
+
+        let row_width = card_width - spacing::SM as u32;
+        let mut row_y = content_y;
+
+        // Check for Updates row
+        SettingsRow::new(Point::new(card_x, row_y), row_width, "Check for Updates")
+            .with_icon(Icon::Setting)
+            .draw(display)?;
+        row_y += SettingsRow::HEIGHT as i32;
+
+        // Advanced Settings row
+        SettingsRow::new(Point::new(card_x, row_y), row_width, "Advanced Settings")
+            .with_icon(Icon::Setting)
+            .draw(display)?;
+        row_y += SettingsRow::HEIGHT as i32;
+
+        // About SpoolBuddy row
+        SettingsRow::new(Point::new(card_x, row_y), row_width, "About SpoolBuddy")
+            .with_icon(Icon::Setting)
+            .with_value(state.firmware_version.as_str())
+            .without_separator()
+            .draw(display)?;
+
+        Ok(())
     }
 
     /// Get back button bounds
     pub fn get_back_button_bounds() -> Rectangle {
-        Rectangle::new(Point::new(0, 0), Size::new(100, 50))
+        Rectangle::new(Point::new(0, 0), Size::new(60, 48))
     }
 
-    /// Check if point is in brightness slider
-    pub fn is_in_brightness_slider(point: Point) -> bool {
-        let slider_x = spacing::MD + 100;
-        let slider_width = 200;
-        let slider_y = 50 + spacing::MD + 32 + 20 + 44 + 20 + 20 + 44 + 32 + 4; // Approximate y position
-
-        point.x >= slider_x
-            && point.x < slider_x + slider_width as i32
-            && point.y >= slider_y as i32
-            && point.y < (slider_y + 20) as i32
+    /// Get tab bar bounds
+    pub fn get_tab_bar_y() -> i32 {
+        48
     }
 
-    /// Get brightness from slider position
-    pub fn get_brightness_from_point(point: Point) -> u8 {
-        let slider_x = spacing::MD + 100;
-        let slider_width = 200;
+    /// Calculate which tab was pressed
+    pub fn get_tab_from_point(point: Point) -> Option<SettingsTab> {
+        if point.y < 48 || point.y >= 84 {
+            return None;
+        }
 
-        let relative_x = (point.x - slider_x).max(0).min(slider_width as i32);
-        ((relative_x as u32) * 100 / slider_width as u32) as u8
+        let tab_width = DISPLAY_WIDTH as i32 / 3;
+        let index = point.x / tab_width;
+
+        match index {
+            0 => Some(SettingsTab::Network),
+            1 => Some(SettingsTab::Hardware),
+            2 => Some(SettingsTab::System),
+            _ => None,
+        }
     }
 }

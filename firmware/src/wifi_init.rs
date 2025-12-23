@@ -77,6 +77,7 @@ pub fn connect_wifi(
 }
 
 /// Check if WiFi credentials are configured
+#[allow(dead_code)]
 pub fn is_configured() -> bool {
     !WIFI_SSID.is_empty() && WIFI_SSID != "YOUR_WIFI_SSID"
 }

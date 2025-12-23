@@ -1,21 +1,33 @@
 //! PN5180 NFC controller driver.
 //!
 //! The PN5180 communicates via SPI with the following pins:
-//! - MOSI, MISO, SCLK - Standard SPI (directly controlled, directly active low)
-//! - NSS - Chip select (directly controlled, active low)
+//! - MOSI, MISO, SCLK - Standard SPI
+//! - NSS - Chip select (active low)
 //! - BUSY - Indicates when chip is processing (active high)
 //! - RST - Hardware reset (active low)
 //!
 //! CrowPanel Advance 7.0" Wireless Module Header pinout:
-//! - Pin 3 (CLK)  -> SPI Clock
-//! - Pin 5 (MISO) -> SPI MISO
-//! - Pin 7 (MOSI) -> SPI MOSI
-//! - Pin 8 (CS)   -> NSS (directly controlled)
-//! - Pin 1 (TX)   -> BUSY
-//! - Pin 2 (RX)   -> RST
 //!
-//! GPIO assignments (when DIP switch S0=1, S1=0 for Wireless Module mode):
-//! - These GPIOs are shared with SD card, so only one can be active at a time
+//! ```text
+//!         J9 (Left)              J11 (Right)
+//!         ┌────────┐             ┌────────┐
+//! Pin 1   │  IO20  │             │  IO19  │
+//! Pin 2   │  IO5   │  ← SCK      │  IO16  │
+//! Pin 3   │  IO4   │  ← MISO     │  IO15  │   ← RST
+//! Pin 4   │  IO6   │  ← MOSI     │   NC   │
+//! Pin 5   │  3V3   │  ← VCC      │  IO2   │   ← BUSY
+//! Pin 6   │  GND   │  ← GND      │  IO8   │   ← CS (NSS)
+//! Pin 7   │   5V   │             │   NC   │
+//!         └────────┘             └────────┘
+//! ```
+//!
+//! GPIO assignments (DIP switch S1=0, S0=1 for Wireless Module mode):
+//! - IO5  (J9 Pin 2)  -> SPI SCK
+//! - IO4  (J9 Pin 3)  -> SPI MISO
+//! - IO6  (J9 Pin 4)  -> SPI MOSI
+//! - IO8  (J11 Pin 6) -> NSS (chip select)
+//! - IO2  (J11 Pin 5) -> BUSY
+//! - IO15 (J11 Pin 3) -> RST
 //!
 //! Commands are sent as:
 //! [CMD_BYTE] [PAYLOAD...]
@@ -23,6 +35,30 @@
 //! Responses are read after BUSY goes low.
 
 use log::info;
+
+// =============================================================================
+// GPIO Pin Definitions for CrowPanel Advance 7.0"
+// =============================================================================
+// These pins are exposed on the Wireless Module Headers (J9 + J11)
+// Requires DIP switch setting: S1=0, S0=1
+
+/// SPI Clock pin (J9 Pin 2)
+pub const PIN_SCK: u8 = 5;   // IO5
+
+/// SPI MISO pin (J9 Pin 3)
+pub const PIN_MISO: u8 = 4;  // IO4
+
+/// SPI MOSI pin (J9 Pin 4)
+pub const PIN_MOSI: u8 = 6;  // IO6
+
+/// Chip Select pin (J11 Pin 6) - directly controlled, active low
+pub const PIN_NSS: u8 = 8;   // IO8
+
+/// Busy indicator pin (J11 Pin 5) - active high when processing
+pub const PIN_BUSY: u8 = 2;  // IO2
+
+/// Hardware reset pin (J11 Pin 3) - active low
+pub const PIN_RST: u8 = 15;  // IO15
 
 /// PN5180 command codes
 #[allow(dead_code)]
@@ -125,15 +161,15 @@ impl Default for Pn5180State {
 // STUB IMPLEMENTATION - Hardware not connected yet
 // =============================================================================
 // The functions below are stubs that will be implemented when the PN5180
-// hardware is connected via the wireless module header.
+// hardware is connected via the CrowPanel wireless module headers (J9 + J11).
 //
-// GPIO assignments (DIP switch S0=1, S1=0 for Wireless Module mode):
-// - CLK (Pin 3)  -> SPI Clock
-// - MISO (Pin 5) -> SPI MISO
-// - MOSI (Pin 7) -> SPI MOSI
-// - CS (Pin 8)   -> NSS chip select
-// - TX (Pin 1)   -> BUSY signal
-// - RX (Pin 2)   -> RST reset
+// GPIO assignments (DIP switch S1=0, S0=1 for Wireless Module mode):
+// - IO5  (J9 Pin 2)  -> SPI SCK
+// - IO4  (J9 Pin 3)  -> SPI MISO
+// - IO6  (J9 Pin 4)  -> SPI MOSI
+// - IO8  (J11 Pin 6) -> NSS chip select
+// - IO2  (J11 Pin 5) -> BUSY signal
+// - IO15 (J11 Pin 3) -> RST reset
 // =============================================================================
 
 /// Initialize the PN5180 NFC reader (STUB)

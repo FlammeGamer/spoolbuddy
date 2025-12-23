@@ -4,12 +4,21 @@
 //!
 //! I2C Address: 0x2A
 //!
+//! CrowPanel Advance 7.0" I2C-OUT Connector:
+//! ```text
+//! ┌──────┬──────┬──────┬──────┐
+//! │ Pin1 │ Pin2 │ Pin3 │ Pin4 │
+//! │ 3V3  │ SDA  │ SCL  │ GND  │
+//! │      │ IO19 │ IO20 │      │
+//! └──────┴──────┴──────┴──────┘
+//! ```
+//!
 //! Pinout (SparkFun Qwiic Scale):
 //!   MCU Side:
 //!     - GND: Ground
 //!     - 3V3: 3.3V power
-//!     - SDA: I2C Data
-//!     - SCL: I2C Clock
+//!     - SDA: I2C Data (IO19)
+//!     - SCL: I2C Clock (IO20)
 //!     - INT: Interrupt (optional)
 //!     - AVDD: Analog VDD (connect to 3V3)
 //!

@@ -49,10 +49,48 @@ pub struct UiManager {
 pub enum Screen {
     Home,
     SpoolInfo,
+    AmsOverview,
+    ScanResult,
+    SpoolDetail,
+    Catalog,
     AmsSelect,
     Settings,
+    NfcReader,
+    DisplayBrightness,
+    About,
     Calibration,
     WifiSetup,
+}
+
+/// Settings tab for consolidated settings screen
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SettingsTab {
+    #[default]
+    Network,
+    Hardware,
+    System,
+}
+
+/// Catalog filter type
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CatalogFilter {
+    #[default]
+    All,
+    InAms,
+    Pla,
+    Petg,
+    Other,
+}
+
+/// NFC reader status
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum NfcStatus {
+    #[default]
+    Ready,
+    Reading,
+    Success,
+    Error,
+    NotConnected,
 }
 
 /// Shared UI state
@@ -76,6 +114,32 @@ pub struct UiState {
     pub firmware_version: String<16>,
     /// Device ID
     pub device_id: String<32>,
+
+    // Settings screen state
+    /// Current settings tab
+    pub settings_tab: SettingsTab,
+
+    // Catalog state
+    /// Current catalog filter
+    pub catalog_filter: CatalogFilter,
+
+    // NFC state
+    /// NFC reader status
+    pub nfc_status: NfcStatus,
+    /// Last NFC tag ID read
+    pub nfc_last_tag: String<32>,
+
+    // Display settings
+    /// Auto brightness enabled
+    pub auto_brightness: bool,
+    /// Screen timeout enabled
+    pub screen_timeout: bool,
+    /// Timeout duration in seconds
+    pub timeout_seconds: u16,
+
+    // AMS selection state
+    /// Selected AMS slot (ams_id, slot_id) for assignment
+    pub selected_ams_slot: Option<(u8, u8)>,
 }
 
 impl Default for UiState {
@@ -96,6 +160,14 @@ impl Default for UiState {
             brightness: 80,
             firmware_version,
             device_id,
+            settings_tab: SettingsTab::default(),
+            catalog_filter: CatalogFilter::default(),
+            nfc_status: NfcStatus::default(),
+            nfc_last_tag: String::new(),
+            auto_brightness: false,
+            screen_timeout: true,
+            timeout_seconds: 60,
+            selected_ams_slot: None,
         }
     }
 }
@@ -215,6 +287,13 @@ impl UiManager {
             Screen::AmsSelect => self.handle_ams_select_touch(event),
             Screen::Calibration => self.handle_calibration_touch(event),
             Screen::WifiSetup => self.handle_wifi_setup_touch(event),
+            Screen::AmsOverview => self.handle_ams_overview_touch(event),
+            Screen::ScanResult => self.handle_scan_result_touch(event),
+            Screen::SpoolDetail => self.handle_spool_detail_touch(event),
+            Screen::Catalog => self.handle_catalog_touch(event),
+            Screen::NfcReader => self.handle_nfc_reader_touch(event),
+            Screen::DisplayBrightness => self.handle_display_brightness_touch(event),
+            Screen::About => self.handle_about_touch(event),
         }
     }
 
@@ -255,23 +334,62 @@ impl UiManager {
     fn handle_settings_touch(&mut self, event: TouchEvent) -> Option<UiAction> {
         if let TouchEvent::Press { x, y } = event {
             // Back button (top left)
-            if x < 100 && y < 60 {
+            if x < 60 && y < 48 {
                 self.navigate(Screen::Home);
                 return None;
             }
-            // WiFi configure button
-            if y > 80 && y < 140 {
-                self.navigate(Screen::WifiSetup);
+
+            // Tab bar (y 48-84)
+            if y >= 48 && y < 84 {
+                let tab_width = DISPLAY_WIDTH as u16 / 3;
+                let tab_index = x / tab_width;
+                let new_tab = match tab_index {
+                    0 => SettingsTab::Network,
+                    1 => SettingsTab::Hardware,
+                    2 => SettingsTab::System,
+                    _ => return None,
+                };
+                if self.state.settings_tab != new_tab {
+                    self.state.settings_tab = new_tab;
+                    self.dirty = true;
+                }
                 return None;
             }
-            // Tare scale button
-            if y > 200 && y < 240 {
-                return Some(UiAction::TareScale);
-            }
-            // Calibrate scale button
-            if y > 240 && y < 280 {
-                self.navigate(Screen::Calibration);
-                return None;
+
+            // Content rows (y 92+, each row is 48px)
+            // Row 1: y 92-140, Row 2: y 140-188, Row 3: y 188-236
+            if y >= 92 && y < 236 {
+                let row = ((y - 92) / 48) as u8;
+
+                match self.state.settings_tab {
+                    SettingsTab::Network => {
+                        // Network tab: WiFi, Backend Server, Printers
+                        match row {
+                            0 => self.navigate(Screen::WifiSetup),
+                            // 1 => Backend server config (not implemented)
+                            // 2 => Printers list (not implemented)
+                            _ => {}
+                        }
+                    }
+                    SettingsTab::Hardware => {
+                        // Hardware tab: Scale Calibration, NFC Reader, Display
+                        match row {
+                            0 => self.navigate(Screen::Calibration),
+                            1 => self.navigate(Screen::NfcReader),
+                            2 => self.navigate(Screen::DisplayBrightness),
+                            _ => {}
+                        }
+                    }
+                    SettingsTab::System => {
+                        // System tab: Check for Updates, Advanced Settings, About
+                        match row {
+                            0 => return Some(UiAction::CheckForUpdates),
+                            // 1 => Advanced settings (not implemented)
+                            2 => self.navigate(Screen::About),
+                            _ => {}
+                        }
+                    }
+                }
             }
         }
         None
@@ -289,6 +407,125 @@ impl UiManager {
 
     fn handle_wifi_setup_touch(&mut self, _event: TouchEvent) -> Option<UiAction> {
         // TODO: Implement WiFi setup
+        None
+    }
+
+    fn handle_ams_overview_touch(&mut self, event: TouchEvent) -> Option<UiAction> {
+        if let TouchEvent::Press { x, y } = event {
+            // Back button (top left)
+            if x < 60 && y < 48 {
+                self.navigate(Screen::Home);
+                return None;
+            }
+            // Action buttons (right sidebar)
+            if x > 600 {
+                if y >= 48 && y < 140 {
+                    // Scan button
+                    self.navigate(Screen::ScanResult);
+                } else if y >= 140 && y < 232 {
+                    // Catalog button
+                    self.navigate(Screen::Catalog);
+                } else if y >= 232 && y < 324 {
+                    // Calibrate button
+                    self.navigate(Screen::Calibration);
+                } else if y >= 324 && y < 416 {
+                    // Settings button
+                    self.navigate(Screen::Settings);
+                }
+            }
+        }
+        None
+    }
+
+    fn handle_scan_result_touch(&mut self, event: TouchEvent) -> Option<UiAction> {
+        if let TouchEvent::Press { x, y } = event {
+            // Back button
+            if x < 60 && y < 48 {
+                self.navigate(Screen::Home);
+                return None;
+            }
+            // Assign & Save button (bottom)
+            if y > 400 && x > 300 && x < 500 {
+                return Some(UiAction::AssignAndSave);
+            }
+        }
+        None
+    }
+
+    fn handle_spool_detail_touch(&mut self, event: TouchEvent) -> Option<UiAction> {
+        if let TouchEvent::Press { x, y } = event {
+            // Back button
+            if x < 60 && y < 48 {
+                self.navigate(Screen::AmsOverview);
+                return None;
+            }
+        }
+        None
+    }
+
+    fn handle_catalog_touch(&mut self, event: TouchEvent) -> Option<UiAction> {
+        if let TouchEvent::Press { x, y } = event {
+            // Back button
+            if x < 60 && y < 48 {
+                self.navigate(Screen::AmsOverview);
+                return None;
+            }
+            // Filter pills (y ~60-90)
+            if y >= 56 && y < 90 {
+                // TODO: Calculate which filter pill was pressed
+            }
+        }
+        None
+    }
+
+    fn handle_nfc_reader_touch(&mut self, event: TouchEvent) -> Option<UiAction> {
+        if let TouchEvent::Press { x, y } = event {
+            // Back button
+            if x < 60 && y < 48 {
+                self.navigate(Screen::Settings);
+                return None;
+            }
+            // Test button (bottom)
+            if y > 380 && x > 300 && x < 500 {
+                return Some(UiAction::TestNfc);
+            }
+        }
+        None
+    }
+
+    fn handle_display_brightness_touch(&mut self, event: TouchEvent) -> Option<UiAction> {
+        if let TouchEvent::Press { x, y } = event {
+            // Back button
+            if x < 60 && y < 48 {
+                self.navigate(Screen::Settings);
+                return None;
+            }
+            // Brightness slider area (y ~100-140)
+            if y >= 100 && y < 160 && x >= 100 && x < 700 {
+                // Calculate brightness from x position
+                let brightness = ((x - 100) * 100 / 600).min(100) as u8;
+                return Some(UiAction::SetBrightness(brightness));
+            }
+            // Auto brightness toggle (~y 200)
+            if y >= 180 && y < 230 && x > 650 {
+                return Some(UiAction::ToggleAutoBrightness);
+            }
+            // Screen timeout toggle (~y 250)
+            if y >= 240 && y < 290 && x > 650 {
+                return Some(UiAction::ToggleScreenTimeout);
+            }
+        }
+        None
+    }
+
+    fn handle_about_touch(&mut self, event: TouchEvent) -> Option<UiAction> {
+        if let TouchEvent::Press { x, y } = event {
+            // Back button
+            if x < 60 && y < 48 {
+                self.navigate(Screen::Settings);
+                return None;
+            }
+        }
         None
     }
 }
@@ -311,6 +548,18 @@ pub enum UiAction {
     WriteTag,
     ConfigureWifi,
     SetBrightness(u8),
+    // New actions for added screens
+    ChangeSettingsTab(SettingsTab),
+    SetCatalogFilter(CatalogFilter),
+    SelectAmsSlot { ams_id: u8, slot_id: u8 },
+    AssignAndSave,
+    TestNfc,
+    CheckForUpdates,
+    ToggleAutoBrightness,
+    ToggleScreenTimeout,
+    SetTimeoutDuration(u16),
+    OpenSpoolDetail,
+    NavigateBack,
 }
 
 /// Display errors
