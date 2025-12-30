@@ -511,7 +511,6 @@ class PrinterConnection:
                             global_tray = 16 + (ams_id - 128)  # HT uses indices 16+
                         else:
                             global_tray = snow_int  # External or unknown
-                        logger.debug(f"[{self.serial}] snow={snow_int} -> ams_id={ams_id}, slot_id={slot_id}, global_tray={global_tray}")
                         if ext_id == 0:
                             self._state.tray_now_right = global_tray
                         elif ext_id == 1:
@@ -522,17 +521,6 @@ class PrinterConnection:
             state_val = self._safe_int(extruder_state)
             if state_val is not None:
                 self._state.active_extruder = (state_val >> 4) & 0xF
-                logger.debug(f"[{self.serial}] active_extruder={self._state.active_extruder} (from state={state_val})")
-
-        # Log dual-nozzle info if present (now using global tray indices)
-        if self._state.tray_now_left is not None or self._state.tray_now_right is not None:
-            # Convert global indices to readable format for logging
-            def tray_to_name(t):
-                if t is None: return "None"
-                if t >= 16: return f"HT-{chr(65 + t - 16)}"
-                if t >= 254: return "External"
-                return f"{chr(65 + t // 4)}{t % 4 + 1}"  # A1-D4 format
-            logger.info(f"[{self.serial}] Dual-nozzle: L={tray_to_name(self._state.tray_now_left)} R={tray_to_name(self._state.tray_now_right)} active={'L' if self._state.active_extruder == 1 else 'R'}")
 
         # Notify listener
         if self._on_state_update:
@@ -603,18 +591,6 @@ class PrinterConnection:
         """Parse AMS units and trays from MQTT data."""
         if "ams" not in ams_data:
             return
-
-        # Debug: log raw AMS data structure
-        logger.info(f"[{self.serial}] Parsing AMS data with {len(ams_data.get('ams', []))} units")
-        for idx, ams_unit in enumerate(ams_data.get("ams", [])):
-            unit_id = ams_unit.get("id")
-            trays = ams_unit.get("tray", [])
-            logger.info(f"[{self.serial}]   Unit {idx}: id={unit_id}, trays={len(trays)}")
-            for tray in trays:
-                tray_id = tray.get("id")
-                tray_type = tray.get("tray_type")
-                tray_color = tray.get("tray_color")
-                logger.info(f"[{self.serial}]     Tray id={tray_id}: {tray_type} ({tray_color})")
 
         # Build/update AMS extruder map from info field
         # This map persists across updates even when info field is missing

@@ -844,7 +844,6 @@ function DiscoverModal({ onClose, onSelect, existingSerials }: DiscoverModalProp
       const pollInterval = setInterval(async () => {
         try {
           const printers = await api.getDiscoveredPrinters();
-          console.log("Discovered printers:", printers);
           setDiscovered(printers);
         } catch (e) {
           console.error("Failed to get discovered printers:", e);

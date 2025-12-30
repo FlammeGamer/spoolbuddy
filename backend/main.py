@@ -114,14 +114,6 @@ def on_printer_state_update(serial: str, state: PrinterState):
     # Store current state as previous for next update
     _previous_states[serial] = state.model_copy()
 
-    # Debug: Log AMS state being sent via WebSocket
-    if state.ams_units:
-        logger.info(f"[{serial}] Sending {len(state.ams_units)} AMS units via WebSocket:")
-        for unit in state.ams_units:
-            logger.info(f"[{serial}]   Unit id={unit.id}, extruder={unit.extruder}, trays={len(unit.trays)}")
-            for tray in unit.trays:
-                logger.info(f"[{serial}]     Tray ams_id={tray.ams_id}, tray_id={tray.tray_id}: {tray.tray_type} ({tray.tray_color})")
-
     # Convert to dict for JSON serialization
     message = {
         "type": "printer_state",
