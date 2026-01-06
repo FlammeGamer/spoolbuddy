@@ -164,9 +164,8 @@ export function Printers() {
     try {
       await api.connectPrinter(serial);
       showToast('success', `Connected to "${printer?.name || serial}"`);
-      // Clear connecting state and reload printers to get updated status
-      setConnecting(null);
-      await loadPrinters();
+      // WebSocket will trigger loadPrinters() when printer_connected is received
+      // Don't call loadPrinters() here to avoid double-reload and flickering
     } catch (e) {
       console.error("Failed to connect:", e);
       setConnecting(null);
@@ -306,7 +305,7 @@ export function Printers() {
                     <div class="flex items-center space-x-4">
                       {/* Auto-connect toggle */}
                       <button
-                        onClick={() => handleAutoConnectToggle(printer.serial, printer.auto_connect ?? false)}
+                        onClick={(e) => { e.stopPropagation(); handleAutoConnectToggle(printer.serial, printer.auto_connect ?? false); }}
                         class="flex items-center space-x-2 text-sm"
                         title={printer.auto_connect ? "Disable auto-connect" : "Enable auto-connect"}
                       >
@@ -340,7 +339,7 @@ export function Printers() {
                       )}
                       {!connected && connecting !== printer.serial && (
                         <button
-                          onClick={() => handleConnect(printer.serial)}
+                          onClick={(e) => { e.stopPropagation(); handleConnect(printer.serial); }}
                           class="text-primary-600 hover:text-primary-700 text-sm font-medium"
                         >
                           Connect
@@ -348,14 +347,14 @@ export function Printers() {
                       )}
                       {connected && (
                         <button
-                          onClick={() => handleDisconnect(printer.serial)}
+                          onClick={(e) => { e.stopPropagation(); handleDisconnect(printer.serial); }}
                           class="text-gray-600 hover:text-gray-700 text-sm font-medium"
                         >
                           Disconnect
                         </button>
                       )}
                       <button
-                        onClick={() => handleDelete(printer.serial)}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(printer.serial); }}
                         class="text-red-600 hover:text-red-700"
                       >
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -388,6 +387,7 @@ export function Printers() {
                                     trayNow={state.tray_now}
                                     trayNowLeft={state.tray_now_left}
                                     trayNowRight={state.tray_now_right}
+                                    activeExtruder={state.active_extruder}
                                   />
                                 ))}
                             </div>
@@ -408,6 +408,7 @@ export function Printers() {
                                   trayNow={state.tray_now}
                                   trayNowLeft={state.tray_now_left}
                                   trayNowRight={state.tray_now_right}
+                                  activeExtruder={state.active_extruder}
                                 />
                               ))}
                             {/* Ext-1 (L nozzle for multi-nozzle) */}

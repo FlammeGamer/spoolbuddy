@@ -13,6 +13,77 @@ from models import PrinterState, AmsUnit, AmsTray
 logger = logging.getLogger(__name__)
 
 
+# Stage name mapping from BambuStudio DeviceManager.cpp
+STAGE_NAMES = {
+    0: "Printing",
+    1: "Auto bed leveling",
+    2: "Heatbed preheating",
+    3: "Vibration compensation",
+    4: "Changing filament",
+    5: "M400 pause",
+    6: "Paused (filament ran out)",
+    7: "Heating nozzle",
+    8: "Calibrating dynamic flow",
+    9: "Scanning bed surface",
+    10: "Inspecting first layer",
+    11: "Identifying build plate type",
+    12: "Calibrating Micro Lidar",
+    13: "Homing toolhead",
+    14: "Cleaning nozzle tip",
+    15: "Checking extruder temperature",
+    16: "Paused by the user",
+    17: "Pause (front cover fall off)",
+    18: "Calibrating the micro lidar",
+    19: "Calibrating flow ratio",
+    20: "Pause (nozzle temperature malfunction)",
+    21: "Pause (heatbed temperature malfunction)",
+    22: "Filament unloading",
+    23: "Pause (step loss)",
+    24: "Filament loading",
+    25: "Motor noise cancellation",
+    26: "Pause (AMS offline)",
+    27: "Pause (low speed of the heatbreak fan)",
+    28: "Pause (chamber temperature control problem)",
+    29: "Cooling chamber",
+    30: "Paused (toolhead not returning)",
+    31: "Pause (first layer problem)",
+    32: "Inspecting Z seam",
+    33: "Pause (spaghetti detected)",
+    34: "Pause (auto recover failed)",
+    35: "Nozzle offset calibration",
+    36: "Nozzle cleaning",
+    37: "Pause (pressure advance)",
+    38: "Nozzle offset preheating",
+    39: "Pause (nozzle clog detected)",
+    40: "High temperature auto bed leveling",
+    41: "Auto Check: Quick Release Lever",
+    42: "Auto Check: Door and Upper Cover",
+    43: "Laser Calibration",
+    44: "Auto Check: Platform",
+    45: "Confirming BirdsEye Camera location",
+    46: "Calibrating BirdsEye Camera",
+    47: "Auto bed leveling - phase 1",
+    48: "Auto bed leveling - phase 2",
+    49: "Heating chamber",
+    50: "Cooling heatbed",
+    51: "Printing calibration lines",
+    52: "Auto Check: Material",
+    53: "Live View Camera Calibration",
+    54: "Waiting for heatbed temperature",
+    55: "Auto Check: Material Position",
+    56: "Cutting Module Offset Calibration",
+    57: "Measuring Surface",
+    58: "Thermal Preconditioning",
+}
+
+
+def get_stage_name(stg_cur: int) -> str:
+    """Get human-readable name for a stage number."""
+    if stg_cur < 0 or stg_cur >= 255:
+        return None  # -1 (X1 idle) or 255 (A1/P1 idle)
+    return STAGE_NAMES.get(stg_cur, f"Unknown stage ({stg_cur})")
+
+
 @dataclass
 class Calibration:
     """Calibration profile for a filament."""
@@ -22,6 +93,10 @@ class Calibration:
     name: str
     extruder_id: Optional[int] = None
     nozzle_diameter: Optional[str] = None
+
+
+# Grace period before reporting printer as disconnected (handles brief MQTT interruptions)
+DISCONNECT_GRACE_PERIOD_SEC = 5.0
 
 
 @dataclass
@@ -35,6 +110,7 @@ class PrinterConnection:
 
     _client: Optional[mqtt.Client] = field(default=None, repr=False)
     _connected: bool = field(default=False, repr=False)
+    _disconnect_time: Optional[float] = field(default=None, repr=False)  # Timestamp of disconnect
     _state: PrinterState = field(default_factory=PrinterState, repr=False)
     _on_state_update: Optional[Callable[[str, PrinterState], None]] = field(default=None, repr=False)
     _loop: Optional[asyncio.AbstractEventLoop] = field(default=None, repr=False)
@@ -48,7 +124,15 @@ class PrinterConnection:
 
     @property
     def connected(self) -> bool:
-        return self._connected
+        """Check if connected, with grace period for brief disconnects."""
+        if self._connected:
+            return True
+        # If recently disconnected, still report as connected during grace period
+        if self._disconnect_time is not None:
+            elapsed = time.time() - self._disconnect_time
+            if elapsed < DISCONNECT_GRACE_PERIOD_SEC:
+                return True
+        return False
 
     @property
     def state(self) -> PrinterState:
@@ -375,6 +459,7 @@ class PrinterConnection:
         """MQTT connect callback."""
         if reason_code == 0:
             self._connected = True
+            self._disconnect_time = None  # Clear disconnect timestamp on reconnect
             logger.info(f"Connected to printer {self.serial}")
 
             # Subscribe to report topic
@@ -401,7 +486,8 @@ class PrinterConnection:
     def _on_disconnect(self, client, userdata, flags, reason_code, properties):
         """MQTT disconnect callback."""
         self._connected = False
-        logger.info(f"Disconnected from printer {self.serial}: {reason_code}")
+        self._disconnect_time = time.time()  # Track when disconnect happened
+        logger.info(f"Disconnected from printer {self.serial}: {reason_code} (grace period: {DISCONNECT_GRACE_PERIOD_SEC}s)")
 
         # Notify disconnect callback
         if hasattr(self, '_on_disconnect_callback') and self._on_disconnect_callback:
@@ -473,6 +559,15 @@ class PrinterConnection:
         # Extract gcode state
         if "gcode_state" in print_data:
             self._state.gcode_state = print_data["gcode_state"]
+
+        # Extract current stage (stg_cur) - detailed printer status
+        if "stg_cur" in print_data:
+            new_stg = print_data["stg_cur"]
+            if new_stg != self._state.stg_cur:
+                stage_name = get_stage_name(new_stg)
+                logger.info(f"[{self.serial}] stg_cur changed: {self._state.stg_cur} -> {new_stg} ({stage_name})")
+            self._state.stg_cur = new_stg
+            self._state.stg_cur_name = get_stage_name(new_stg)
 
         # Extract progress (mc_percent is actual print progress)
         if "mc_percent" in print_data:

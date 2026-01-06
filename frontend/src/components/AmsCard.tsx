@@ -9,44 +9,56 @@ interface AmsCardProps {
   printerSerial?: string;
   calibrations?: CalibrationProfile[];
   trayNow?: number | null; // Legacy single-nozzle: global tray index
-  trayNowLeft?: number | null; // Dual-nozzle: active tray for left nozzle (extruder 1)
-  trayNowRight?: number | null; // Dual-nozzle: active tray for right nozzle (extruder 0)
+  trayNowLeft?: number | null; // Dual-nozzle: loaded tray for left nozzle (extruder 1)
+  trayNowRight?: number | null; // Dual-nozzle: loaded tray for right nozzle (extruder 0)
+  activeExtruder?: number | null; // Currently printing extruder (0=right, 1=left)
   compact?: boolean; // Smaller size for secondary row
 }
 
 // Get active tray index within an AMS unit
-// For dual-nozzle: uses per-extruder tray_now (converted to global index) based on unit's extruder
+// For dual-nozzle: only shows active if this unit's extruder is the currently printing one
 // For single-nozzle: uses global tray_now index
 function getActiveTrayInUnit(
   unit: AmsUnit,
   trayNow: number | null,
   trayNowLeft: number | null,
-  trayNowRight: number | null
+  trayNowRight: number | null,
+  activeExtruder: number | null
 ): number | null {
   const amsId = unit.id;
-  const extruder = unit.extruder;
+  const unitExtruder = unit.extruder;
 
   // For dual-nozzle printers (when per-extruder values are available)
-  // tray_now_left/right are now global indices (converted by backend)
+  // tray_now_left/right are "loaded" trays, activeExtruder tells us which is printing
   if (trayNowLeft !== null || trayNowRight !== null) {
-    // Determine which tray_now to use based on this AMS unit's extruder assignment
-    const activeTray = extruder === 0 ? trayNowRight : trayNowLeft;
+    // If activeExtruder is unknown (-1 or null), don't show any tray as active
+    if (activeExtruder === null || activeExtruder === -1) {
+      return null;
+    }
 
-    if (activeTray === null || activeTray === undefined || activeTray === 255 || activeTray >= 254) {
+    // Only show active indicator if this unit's extruder matches the active one
+    if (unitExtruder !== activeExtruder) {
+      return null;
+    }
+
+    // Get the loaded tray for this extruder
+    const loadedTray = unitExtruder === 0 ? trayNowRight : trayNowLeft;
+
+    if (loadedTray === null || loadedTray === undefined || loadedTray === 255 || loadedTray >= 254) {
       return null;
     }
 
     // Check if this AMS unit contains the active tray (using global index)
     if (amsId <= 3) {
       // Regular AMS: global tray 0-3 = AMS 0, 4-7 = AMS 1, etc.
-      const activeAmsId = Math.floor(activeTray / 4);
+      const activeAmsId = Math.floor(loadedTray / 4);
       if (activeAmsId === amsId) {
-        return activeTray % 4;
+        return loadedTray % 4;
       }
     } else if (amsId >= 128 && amsId <= 135) {
       // AMS-HT: global tray 16-23 maps to AMS-HT 128-135
       const htIndex = amsId - 128;
-      if (activeTray === 16 + htIndex) {
+      if (loadedTray === 16 + htIndex) {
         return 0; // HT only has one slot
       }
     }
@@ -337,14 +349,14 @@ function SlotMenu({ printerSerial, amsId, trayId, calibrations, currentKValue }:
 }
 
 // Regular AMS card (4 slots)
-function RegularAmsCard({ unit, printerModel, printerSerial, calibrations = [], trayNow, trayNowLeft, trayNowRight }: AmsCardProps) {
+function RegularAmsCard({ unit, printerModel, printerSerial, calibrations = [], trayNow, trayNowLeft, trayNowRight, activeExtruder }: AmsCardProps) {
   const amsName = getAmsName(unit.id);
   const humidity = getHumidityDisplay(unit.humidity);
   const humidityStr = formatHumidity(unit.humidity);
   const temperatureStr = formatTemperature(unit.temperature);
 
   // Get active tray for this AMS unit (handles both single and dual-nozzle)
-  const activeTrayIdx = getActiveTrayInUnit(unit, trayNow ?? null, trayNowLeft ?? null, trayNowRight ?? null);
+  const activeTrayIdx = getActiveTrayInUnit(unit, trayNow ?? null, trayNowLeft ?? null, trayNowRight ?? null, activeExtruder ?? null);
 
   // Get nozzle label for multi-nozzle printers
   // extruder 0 = Right nozzle, extruder 1 = Left nozzle (per SpoolEase/Bambu convention)
@@ -468,7 +480,7 @@ function RegularAmsCard({ unit, printerModel, printerSerial, calibrations = [], 
 }
 
 // HT AMS card (single slot) - 50% width of regular AMS
-function HtAmsCard({ unit, printerModel, printerSerial, calibrations = [], trayNow, trayNowLeft, trayNowRight }: AmsCardProps) {
+function HtAmsCard({ unit, printerModel, printerSerial, calibrations = [], trayNow, trayNowLeft, trayNowRight, activeExtruder }: AmsCardProps) {
   const amsName = getAmsName(unit.id);
   const humidity = getHumidityDisplay(unit.humidity);
   const humidityStr = formatHumidity(unit.humidity);
@@ -487,7 +499,7 @@ function HtAmsCard({ unit, printerModel, printerSerial, calibrations = [], trayN
     : null;
   const isMultiNozzle = printerModel && ["H2C", "H2D"].includes(printerModel.toUpperCase());
   const hasControls = !!printerSerial;
-  const isActive = getActiveTrayInUnit(unit, trayNow ?? null, trayNowLeft ?? null, trayNowRight ?? null) === 0;
+  const isActive = getActiveTrayInUnit(unit, trayNow ?? null, trayNowLeft ?? null, trayNowRight ?? null, activeExtruder ?? null) === 0;
 
   return (
     <div class="relative bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg overflow-hidden flex-1 min-w-[180px] max-w-[280px]">
@@ -563,14 +575,14 @@ function HtAmsCard({ unit, printerModel, printerSerial, calibrations = [], trayN
   );
 }
 
-export function AmsCard({ unit, printerModel, numExtruders = 1, printerSerial, calibrations = [], trayNow, trayNowLeft, trayNowRight }: AmsCardProps) {
+export function AmsCard({ unit, printerModel, numExtruders = 1, printerSerial, calibrations = [], trayNow, trayNowLeft, trayNowRight, activeExtruder }: AmsCardProps) {
   const isHt = isHtAms(unit.id);
 
   if (isHt) {
-    return <HtAmsCard unit={unit} printerModel={printerModel} numExtruders={numExtruders} printerSerial={printerSerial} calibrations={calibrations} trayNow={trayNow} trayNowLeft={trayNowLeft} trayNowRight={trayNowRight} />;
+    return <HtAmsCard unit={unit} printerModel={printerModel} numExtruders={numExtruders} printerSerial={printerSerial} calibrations={calibrations} trayNow={trayNow} trayNowLeft={trayNowLeft} trayNowRight={trayNowRight} activeExtruder={activeExtruder} />;
   }
 
-  return <RegularAmsCard unit={unit} printerModel={printerModel} numExtruders={numExtruders} printerSerial={printerSerial} calibrations={calibrations} trayNow={trayNow} trayNowLeft={trayNowLeft} trayNowRight={trayNowRight} />;
+  return <RegularAmsCard unit={unit} printerModel={printerModel} numExtruders={numExtruders} printerSerial={printerSerial} calibrations={calibrations} trayNow={trayNow} trayNowLeft={trayNowLeft} trayNowRight={trayNowRight} activeExtruder={activeExtruder} />;
 }
 
 // External spool holder (Virtual Tray) - 50% width of regular AMS

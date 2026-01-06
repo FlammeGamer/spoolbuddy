@@ -1,6 +1,9 @@
 /**
  * SpoolBuddy UI Navigation and WiFi Stubs for Simulator
  * This is a modified version of the firmware ui.c with simulated WiFi
+ *
+ * When backend is connected, printer data comes from the real backend.
+ * WiFi simulation remains for testing the WiFi settings UI.
  */
 
 #include "ui.h"
@@ -10,6 +13,21 @@
 #include "vars.h"
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
+
+#ifdef ENABLE_BACKEND_CLIENT
+#include "../backend_client.h"
+#endif
+
+// ============================================================================
+// Main Screen Backend Updates (shared with firmware via ui_backend.c)
+// ============================================================================
+
+#ifdef ENABLE_BACKEND_CLIENT
+// update_backend_ui() is implemented in ui_backend.c (shared with firmware)
+extern void update_backend_ui(void);
+#endif
+
 
 // ============================================================================
 // WiFi Stub Implementation for Simulator
@@ -81,7 +99,7 @@ int wifi_get_ssid(char *buf, int buf_len) {
 // UI Navigation Code (same as firmware)
 // ============================================================================
 
-static int16_t currentScreen = -1;
+int16_t currentScreen = -1;  // Non-static so ui_backend.c can access it
 static enum ScreensEnum pendingScreen = 0;
 static enum ScreensEnum previousScreen = SCREEN_ID_MAIN;
 static const char *pending_settings_detail_title = NULL;
@@ -756,6 +774,50 @@ typedef struct {
 static SavedPrinter saved_printers[MAX_PRINTERS];
 static int saved_printer_count = 0;
 static int editing_printer_index = -1;  // -1 = adding new, >= 0 = editing
+
+#ifdef ENABLE_BACKEND_CLIENT
+static bool using_backend_printers = false;  // True when printers come from backend
+
+// Sync printers from backend to saved_printers array
+static void sync_printers_from_backend(void) {
+    const BackendState *state = backend_get_state();
+    if (!state || !state->backend_reachable) {
+        using_backend_printers = false;
+        return;
+    }
+
+    using_backend_printers = true;
+
+    // Only update if printer count changed or connection states changed
+    bool needs_update = (state->printer_count != saved_printer_count);
+    if (!needs_update) {
+        for (int i = 0; i < state->printer_count && i < MAX_PRINTERS; i++) {
+            int expected_state = state->printers[i].connected ? 2 : 0;
+            if (saved_printers[i].mqtt_state != expected_state ||
+                strcmp(saved_printers[i].serial, state->printers[i].serial) != 0) {
+                needs_update = true;
+                break;
+            }
+        }
+    }
+
+    if (!needs_update) return;
+
+    // Sync printers from backend
+    saved_printer_count = 0;
+    for (int i = 0; i < state->printer_count && i < MAX_PRINTERS; i++) {
+        const BackendPrinterState *p = &state->printers[i];
+        strncpy(saved_printers[i].name, p->name, sizeof(saved_printers[i].name) - 1);
+        strncpy(saved_printers[i].serial, p->serial, sizeof(saved_printers[i].serial) - 1);
+        saved_printers[i].ip_address[0] = '\0';  // Not available in API response
+        saved_printers[i].access_code[0] = '\0';
+        saved_printers[i].mqtt_state = p->connected ? 2 : 0;  // 0=disconnected, 2=connected
+        saved_printer_count++;
+    }
+
+    printf("[UI] Synced %d printers from backend\n", saved_printer_count);
+}
+#endif
 
 // Simulated discovered printers
 typedef struct {
@@ -1448,6 +1510,7 @@ void ui_init(void) {
 
     create_screen_main();
     wire_main_buttons();
+    // Static content hiding is now handled by update_backend_ui() via setup_ams_containers()
     loadScreen(SCREEN_ID_MAIN);
 }
 
@@ -1472,6 +1535,9 @@ void ui_tick(void) {
             case SCREEN_ID_MAIN:
                 create_screen_main();
                 wire_main_buttons();
+#ifdef ENABLE_BACKEND_CLIENT
+                update_backend_ui();  // Updates UI and hides static content
+#endif
                 break;
             case SCREEN_ID_AMS_OVERVIEW:
                 create_screen_ams_overview();
@@ -1550,7 +1616,26 @@ void ui_tick(void) {
     }
 
     static int wifi_poll_counter = 0;
+#ifdef ENABLE_BACKEND_CLIENT
+    static int backend_poll_counter = 0;
+    static int main_screen_poll_counter = 0;
+#endif
     int screen_id = currentScreen + 1;
+
+#ifdef ENABLE_BACKEND_CLIENT
+    // Main screen backend updates (every ~500ms)
+    if (screen_id == SCREEN_ID_MAIN) {
+        main_screen_poll_counter++;
+        if (main_screen_poll_counter >= 100) {  // ~500ms at 5ms tick
+            main_screen_poll_counter = 0;
+            update_backend_ui();
+        }
+    } else {
+        main_screen_poll_counter = 0;
+    }
+#endif
+
+    // WiFi UI updates
     if (screen_id == SCREEN_ID_SETTINGS || screen_id == SCREEN_ID_SETTINGS_WI_FI) {
         wifi_poll_counter++;
         if (wifi_poll_counter >= 50) {
@@ -1560,6 +1645,28 @@ void ui_tick(void) {
     } else {
         wifi_poll_counter = 0;
     }
+
+#ifdef ENABLE_BACKEND_CLIENT
+    // Backend sync for printers (on settings or printer edit screens)
+    if (screen_id == SCREEN_ID_SETTINGS || screen_id == SCREEN_ID_SETTINGS_PRINTER_EDIT) {
+        backend_poll_counter++;
+        if (backend_poll_counter >= 100) {  // ~500ms at 5ms tick
+            backend_poll_counter = 0;
+            int old_count = saved_printer_count;
+            sync_printers_from_backend();
+            // Refresh printer list if count changed
+            if (saved_printer_count != old_count && objects.tab_printers_content) {
+                update_printers_list();
+            }
+            // Refresh printer edit UI if on that screen
+            if (screen_id == SCREEN_ID_SETTINGS_PRINTER_EDIT) {
+                update_printer_edit_ui();
+            }
+        }
+    } else {
+        backend_poll_counter = 0;
+    }
+#endif
 
     tick_screen(currentScreen);
 }

@@ -4078,8 +4078,8 @@
                 {
                   "objID": "fede2b7a-974e-4034-84b4-b82464436d84",
                   "type": "LVGLImageWidget",
-                  "left": -17,
-                  "top": -17,
+                  "left": -11,
+                  "top": -13,
                   "width": 70,
                   "height": 70,
                   "customInputs": [],
@@ -4118,7 +4118,7 @@
                           "bg_opa": 255,
                           "border_color": "#3D3D3D",
                           "border_opa": 255,
-                          "border_width": 1,
+                          "border_width": 2,
                           "opa": 128,
                           "shadow_width": 5,
                           "shadow_ofs_x": 2,
@@ -4493,7 +4493,10 @@
                       "shadow_ofs_y": 1,
                       "shadow_spread": 1,
                       "shadow_color": "#796666",
-                      "shadow_opa": 100
+                      "shadow_opa": 100,
+                      "border_width": 2,
+                      "border_color": "#2f3237",
+                      "border_opa": 255
                     }
                   }
                 }

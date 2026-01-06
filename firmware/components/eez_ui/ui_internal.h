@@ -79,10 +79,13 @@ typedef struct {
     char serial[20];            // 20 bytes, offset 32
     char gcode_state[16];       // 16 bytes, offset 52
     char subtask_name[64];      // 64 bytes, offset 68
-    uint16_t remaining_time_min; // 2 bytes, offset 132
-    uint8_t print_progress;     // 1 byte, offset 134
-    bool connected;             // 1 byte, offset 135
-    // Total: 136 bytes
+    char stg_cur_name[48];      // 48 bytes, offset 132 - detailed stage name
+    uint16_t remaining_time_min; // 2 bytes, offset 180
+    uint8_t print_progress;     // 1 byte, offset 182
+    int8_t stg_cur;             // 1 byte, offset 183 - stage number (-1 = idle)
+    bool connected;             // 1 byte, offset 184
+    uint8_t _pad[3];            // 3 bytes padding
+    // Total: 188 bytes
 } BackendPrinterInfo;
 
 // Backend client functions (implemented in Rust)
@@ -122,6 +125,7 @@ extern int backend_get_ams_unit(int printer_index, int ams_index, AmsUnitCInfo *
 extern int backend_get_tray_now(int printer_index);
 extern int backend_get_tray_now_left(int printer_index);
 extern int backend_get_tray_now_right(int printer_index);
+extern int backend_get_active_extruder(int printer_index);  // -1=unknown, 0=right, 1=left
 
 // Time manager functions (implemented in Rust)
 // Returns hour in upper 8 bits, minute in lower 8 bits, or -1 if not synced

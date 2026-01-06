@@ -1,16 +1,28 @@
 /**
  * SpoolBuddy LVGL 9.x Simulator with SDL2
  * Display: 800x480 (same as CrowPanel 7.0")
+ *
+ * This simulator can connect to the real Python backend for testing
+ * UI changes without flashing the ESP32 firmware.
+ *
+ * Usage:
+ *   ./simulator                         # Uses default localhost:3000
+ *   ./simulator http://192.168.1.10:3000  # Custom backend URL
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <time.h>
 #include <SDL2/SDL.h>
 #include "lvgl.h"
 #include "ui/ui.h"
 #include "ui/screens.h"
+
+#ifdef ENABLE_BACKEND_CLIENT
+#include "backend_client.h"
+#endif
 
 #define DISP_HOR_RES 800
 #define DISP_VER_RES 480
@@ -123,6 +135,40 @@ static void *tick_thread(void *arg)
     return NULL;
 }
 
+#ifdef ENABLE_BACKEND_CLIENT
+/* Backend polling thread */
+static int backend_running = 1;
+static pthread_mutex_t backend_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static void *backend_thread(void *arg)
+{
+    (void)arg;
+    printf("[backend] Polling thread started\n");
+
+    while (backend_running) {
+        pthread_mutex_lock(&backend_mutex);
+        int result = backend_poll();
+        pthread_mutex_unlock(&backend_mutex);
+
+        if (result == 0) {
+            const BackendState *state = backend_get_state();
+            if (state->printer_count > 0) {
+                printf("[backend] %d printer(s), first: %s (%s)\n",
+                       state->printer_count,
+                       state->printers[0].name,
+                       state->printers[0].connected ? "connected" : "disconnected");
+            }
+        }
+
+        // Poll every 2 seconds (like the real firmware)
+        usleep(BACKEND_POLL_INTERVAL_MS * 1000);
+    }
+
+    printf("[backend] Polling thread stopped\n");
+    return NULL;
+}
+#endif
+
 /* Initialize LVGL display */
 static void lvgl_display_init(void)
 {
@@ -155,13 +201,33 @@ int main(int argc, char **argv)
     (void)argc;
     (void)argv;
 
-    printf("SpoolBuddy LVGL 9 Simulator\n");
+    printf("===========================================\n");
+    printf("  SpoolBuddy LVGL 9 Simulator\n");
+    printf("===========================================\n");
     printf("Display: %dx%d\n", DISP_HOR_RES, DISP_VER_RES);
+
+#ifdef ENABLE_BACKEND_CLIENT
+    const char *backend_url = BACKEND_DEFAULT_URL;
+    if (argc > 1) {
+        backend_url = argv[1];
+    }
+    printf("Backend: %s\n", backend_url);
+#else
+    printf("Backend: disabled (offline mode)\n");
+#endif
+    printf("\n");
 
     /* Initialize SDL */
     if (sdl_init() != 0) {
         return 1;
     }
+
+#ifdef ENABLE_BACKEND_CLIENT
+    /* Initialize backend client */
+    if (backend_init(backend_url) != 0) {
+        fprintf(stderr, "Warning: Backend init failed, running in offline mode\n");
+    }
+#endif
 
     /* Initialize LVGL */
     lv_init();
@@ -172,11 +238,18 @@ int main(int argc, char **argv)
     pthread_t tick_tid;
     pthread_create(&tick_tid, NULL, tick_thread, NULL);
 
+#ifdef ENABLE_BACKEND_CLIENT
+    /* Start backend polling thread */
+    pthread_t backend_tid;
+    pthread_create(&backend_tid, NULL, backend_thread, NULL);
+#endif
+
     /* Initialize UI */
     ui_init();
 
     printf("UI initialized. Starting main loop...\n");
     printf("Press ESC or close window to exit.\n");
+    printf("\n");
 
     /* Main loop */
     int running = 1;
@@ -200,6 +273,13 @@ int main(int argc, char **argv)
         sdl_render();
         usleep(5000); /* ~200 fps max */
     }
+
+    /* Cleanup */
+#ifdef ENABLE_BACKEND_CLIENT
+    backend_running = 0;
+    pthread_join(backend_tid, NULL);
+    backend_cleanup();
+#endif
 
     sdl_deinit();
     printf("Simulator exited.\n");

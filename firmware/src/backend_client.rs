@@ -10,8 +10,11 @@ use std::ffi::{c_char, c_int};
 use std::sync::Mutex;
 use embedded_svc::http::client::Client as HttpClient;
 
-/// Maximum number of printers to cache
-const MAX_PRINTERS: usize = 8;
+/// Maximum number of printers to cache (reduced for memory)
+const MAX_PRINTERS: usize = 4;
+
+/// Maximum number of AMS units per printer
+const MAX_AMS_UNITS: usize = 4;
 
 /// HTTP timeout in milliseconds
 const HTTP_TIMEOUT_MS: u64 = 5000;
@@ -22,17 +25,20 @@ pub enum BackendState {
     Disconnected,
     Discovering,
     Connected { ip: [u8; 4], port: u16 },
+    #[allow(dead_code)]
     Error(String),
 }
 
 /// AMS tray from backend API
 #[derive(Debug, Clone, Deserialize, Default)]
 struct ApiAmsTray {
-    ams_id: i32,
-    tray_id: i32,
+    #[serde(rename = "ams_id")]
+    _ams_id: i32,
+    #[serde(rename = "tray_id")]
+    _tray_id: i32,
     tray_type: Option<String>,
     tray_color: Option<String>,  // RGBA hex (e.g., "FF0000FF")
-    remain: Option<u8>,          // 0-100 percentage
+    remain: Option<i32>,         // 0-100 percentage, or negative if unknown
 }
 
 /// AMS unit from backend API
@@ -56,11 +62,14 @@ struct ApiPrinter {
     subtask_name: Option<String>,
     mc_remaining_time: Option<u16>,
     cover_url: Option<String>,
+    stg_cur: Option<i8>,           // Current stage number (-1 = idle)
+    stg_cur_name: Option<String>,  // Human-readable stage name
     #[serde(default)]
     ams_units: Vec<ApiAmsUnit>,
     tray_now: Option<i32>,
     tray_now_left: Option<i32>,
     tray_now_right: Option<i32>,
+    active_extruder: Option<i32>,  // 0=right, 1=left, None=unknown
 }
 
 /// Time response from backend API
@@ -112,12 +121,15 @@ struct CachedPrinter {
     print_progress: u8,
     subtask_name: [u8; 64],
     remaining_time_min: u16,
+    stg_cur: i8,            // Current stage number (-1 = idle)
+    stg_cur_name: [u8; 48], // Human-readable stage name
     // AMS data
     ams_unit_count: u8,
-    ams_units: [CachedAmsUnit; 8],  // Max 8 AMS units
+    ams_units: [CachedAmsUnit; MAX_AMS_UNITS],
     tray_now: i32,          // -1 if not available
     tray_now_left: i32,     // -1 if not available
     tray_now_right: i32,    // -1 if not available
+    active_extruder: i32,   // -1 if not available, 0=right, 1=left
 }
 
 impl Default for CachedPrinter {
@@ -130,11 +142,14 @@ impl Default for CachedPrinter {
             print_progress: 0,
             subtask_name: [0; 64],
             remaining_time_min: 0,
+            stg_cur: -1,
+            stg_cur_name: [0; 48],
             ams_unit_count: 0,
-            ams_units: [CachedAmsUnit::default(); 8],
+            ams_units: [CachedAmsUnit::default(); MAX_AMS_UNITS],
             tray_now: -1,
             tray_now_left: -1,
             tray_now_right: -1,
+            active_extruder: -1,
         }
     }
 }
@@ -169,12 +184,15 @@ const EMPTY_PRINTER: CachedPrinter = CachedPrinter {
     gcode_state: [0; 16],
     print_progress: 0,
     subtask_name: [0; 64],
+    stg_cur_name: [0; 48],
     remaining_time_min: 0,
+    stg_cur: -1,
     ams_unit_count: 0,
-    ams_units: [EMPTY_AMS_UNIT; 8],
+    ams_units: [EMPTY_AMS_UNIT; MAX_AMS_UNITS],
     tray_now: -1,
     tray_now_left: -1,
     tray_now_right: -1,
+    active_extruder: -1,
 };
 
 impl BackendManager {
@@ -241,6 +259,9 @@ pub fn poll_backend() {
     let base_url = manager.server_url.clone();
     drop(manager); // Release lock before HTTP calls
 
+    // Send heartbeat to indicate display is connected
+    send_heartbeat(&base_url);
+
     // Fetch printers
     let printers_url = format!("{}/api/printers", base_url);
     let mut cover_url_to_fetch: Option<String> = None;
@@ -265,6 +286,51 @@ pub fn poll_backend() {
 
     // Fetch time from backend
     fetch_and_set_time(&base_url);
+}
+
+/// Send heartbeat to backend to indicate display is connected
+/// Also checks for pending commands (e.g., reboot)
+fn send_heartbeat(base_url: &str) {
+    use esp_idf_sys::esp_restart;
+
+    let version = env!("CARGO_PKG_VERSION");
+    let url = format!("{}/api/display/heartbeat?version={}", base_url, version);
+
+    let config = HttpConfig {
+        timeout: Some(std::time::Duration::from_millis(2000)),
+        ..Default::default()
+    };
+
+    let connection = match EspHttpConnection::new(&config) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+
+    let mut client = HttpClient::wrap(connection);
+
+    let request = match client.get(&url) {
+        Ok(r) => r,
+        Err(_) => return,
+    };
+
+    let mut response = match request.submit() {
+        Ok(r) => r,
+        Err(_) => return,
+    };
+
+    // Read response to check for commands
+    let mut buf = [0u8; 256];
+    if let Ok(n) = response.read(&mut buf) {
+        if n > 0 {
+            let body = String::from_utf8_lossy(&buf[..n]);
+            // Check for reboot command
+            if body.contains("\"command\":\"reboot\"") || body.contains("\"command\": \"reboot\"") {
+                log::info!("Received reboot command from backend");
+                std::thread::sleep(std::time::Duration::from_millis(500));
+                unsafe { esp_restart(); }
+            }
+        }
+    }
 }
 
 /// Fetch time from backend and update time manager
@@ -425,22 +491,37 @@ fn update_printer_cache(manager: &mut BackendManager, printers: &[ApiPrinter]) {
             cached.remaining_time_min = time;
         }
 
+        // Copy stage info
+        cached.stg_cur = printer.stg_cur.unwrap_or(-1);
+        cached.stg_cur_name = [0; 48];
+        if let Some(ref stg_name) = printer.stg_cur_name {
+            let bytes = stg_name.as_bytes();
+            let len = bytes.len().min(47);
+            cached.stg_cur_name[..len].copy_from_slice(&bytes[..len]);
+        }
+
         // Copy active tray info
         cached.tray_now = printer.tray_now.unwrap_or(-1);
         cached.tray_now_left = printer.tray_now_left.unwrap_or(-1);
         cached.tray_now_right = printer.tray_now_right.unwrap_or(-1);
+        cached.active_extruder = printer.active_extruder.unwrap_or(-1);
 
         // Copy AMS units
-        cached.ams_unit_count = printer.ams_units.len().min(8) as u8;
-        cached.ams_units = [EMPTY_AMS_UNIT; 8];
+        cached.ams_unit_count = printer.ams_units.len().min(MAX_AMS_UNITS) as u8;
+        cached.ams_units = [EMPTY_AMS_UNIT; MAX_AMS_UNITS];
 
-        for (j, ams) in printer.ams_units.iter().take(8).enumerate() {
+        info!("Printer {} has {} AMS units, tray_now={}, active_extruder={}",
+              i, printer.ams_units.len(), cached.tray_now, cached.active_extruder);
+
+        for (j, ams) in printer.ams_units.iter().take(MAX_AMS_UNITS).enumerate() {
             let cached_ams = &mut cached.ams_units[j];
             cached_ams.id = ams.id;
             cached_ams.humidity = ams.humidity.unwrap_or(-1);
             cached_ams.temperature = ams.temperature.map(|t| (t * 10.0) as i16).unwrap_or(-1);
             cached_ams.extruder = ams.extruder.map(|e| e as i8).unwrap_or(-1);
             cached_ams.tray_count = ams.trays.len().min(4) as u8;
+
+            info!("  AMS[{}] id={} trays={}", j, ams.id, ams.trays.len());
 
             for (k, tray) in ams.trays.iter().take(4).enumerate() {
                 let cached_tray = &mut cached_ams.trays[k];
@@ -459,8 +540,8 @@ fn update_printer_cache(manager: &mut BackendManager, printers: &[ApiPrinter]) {
                     .map(|c| parse_rgba_color(c))
                     .unwrap_or(0);
 
-                // Remaining percentage
-                cached_tray.remain = tray.remain.unwrap_or(0);
+                // Remaining percentage (clamp negative to 0)
+                cached_tray.remain = tray.remain.unwrap_or(0).max(0) as u8;
             }
         }
     }
@@ -580,14 +661,17 @@ pub struct BackendStatus {
 /// Printer info for C interface
 #[repr(C)]
 pub struct PrinterInfo {
-    pub name: [c_char; 32],          // 32 bytes, offset 0
+    pub name: [c_char; 32],           // 32 bytes, offset 0
     pub serial: [c_char; 20],         // 20 bytes, offset 32
     pub gcode_state: [c_char; 16],    // 16 bytes, offset 52
     pub subtask_name: [c_char; 64],   // 64 bytes, offset 68
-    pub remaining_time_min: u16,      // 2 bytes, offset 132
-    pub print_progress: u8,           // 1 byte, offset 134
-    pub connected: bool,              // 1 byte, offset 135
-    // Total: 136 bytes
+    pub stg_cur_name: [c_char; 48],   // 48 bytes, offset 132 - detailed stage name
+    pub remaining_time_min: u16,      // 2 bytes, offset 180
+    pub print_progress: u8,           // 1 byte, offset 182
+    pub stg_cur: i8,                  // 1 byte, offset 183 - stage number (-1 = idle)
+    pub connected: bool,              // 1 byte, offset 184
+    pub _pad: [u8; 3],                // 3 bytes padding for alignment
+    // Total: 188 bytes
 }
 
 /// Get backend connection status
@@ -667,6 +751,15 @@ pub extern "C" fn backend_get_printer(index: c_int, info: *mut PrinterInfo) -> c
         (*info).connected = cached.connected;
         (*info).print_progress = cached.print_progress;
         (*info).remaining_time_min = cached.remaining_time_min;
+
+        // Copy stage info
+        (*info).stg_cur = cached.stg_cur;
+        for (i, &b) in cached.stg_cur_name.iter().enumerate() {
+            (*info).stg_cur_name[i] = b as c_char;
+        }
+
+        // Initialize padding
+        (*info)._pad = [0; 3];
     }
 
     0
@@ -791,7 +884,9 @@ pub extern "C" fn backend_get_ams_count(printer_index: c_int) -> c_int {
     if printer_index < 0 || printer_index as usize >= manager.printer_count {
         return 0;
     }
-    manager.printers[printer_index as usize].ams_unit_count as c_int
+    let count = manager.printers[printer_index as usize].ams_unit_count as c_int;
+    info!("backend_get_ams_count({}) = {}", printer_index, count);
+    count
 }
 
 /// Get AMS unit info
@@ -870,4 +965,15 @@ pub extern "C" fn backend_get_tray_now_right(printer_index: c_int) -> c_int {
         return -1;
     }
     manager.printers[printer_index as usize].tray_now_right
+}
+
+/// Get currently active extruder (dual-nozzle printer)
+/// Returns -1 if not available, 0=right, 1=left
+#[no_mangle]
+pub extern "C" fn backend_get_active_extruder(printer_index: c_int) -> c_int {
+    let manager = BACKEND_MANAGER.lock().unwrap();
+    if printer_index < 0 || printer_index as usize >= manager.printer_count {
+        return -1;
+    }
+    manager.printers[printer_index as usize].active_extruder
 }

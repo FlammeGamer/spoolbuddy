@@ -60,3 +60,4 @@ Cargo.lock
 # Claude code
 CLAUDE.md
 SPOOLBUDDY_PLAN.md
+lvgl-simulator-sdl/build/

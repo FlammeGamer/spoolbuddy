@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "preact/hooks";
 import { useWebSocket } from "../lib/websocket";
-import { api, CloudAuthStatus, VersionInfo, UpdateCheck, UpdateStatus, ESP32ConnectionStatus, ESP32DeviceInfo } from "../lib/api";
-import { Cloud, CloudOff, LogOut, Loader2, Mail, Lock, Key, Download, RefreshCw, CheckCircle, AlertCircle, GitBranch, ExternalLink, Wifi, WifiOff, Cpu, Search, Usb, RotateCcw } from "lucide-preact";
+import { api, CloudAuthStatus, VersionInfo, UpdateCheck, UpdateStatus, FirmwareCheck } from "../lib/api";
+import { Cloud, CloudOff, LogOut, Loader2, Mail, Lock, Key, Download, RefreshCw, CheckCircle, AlertCircle, GitBranch, ExternalLink, Wifi, WifiOff, Cpu, Usb, RotateCcw, Upload, HardDrive } from "lucide-preact";
 import { useToast } from "../lib/toast";
 import { SerialTerminal } from "../components/SerialTerminal";
 import { SpoolCatalogSettings } from "../components/SpoolCatalogSettings";
@@ -27,14 +27,14 @@ export function Settings() {
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [applyingUpdate, setApplyingUpdate] = useState(false);
 
-  // ESP32 Device connection state
-  const [esp32Status, setEsp32Status] = useState<ESP32ConnectionStatus | null>(null);
-  const [esp32Loading, setEsp32Loading] = useState(true);
-  const [esp32Ip, setEsp32Ip] = useState('');
-  const [esp32Connecting, setEsp32Connecting] = useState(false);
-  const [esp32Scanning, setEsp32Scanning] = useState(false);
-  const [discoveredDevices, setDiscoveredDevices] = useState<ESP32DeviceInfo[]>([]);
+  // ESP32 Device state
   const [showTerminal, setShowTerminal] = useState(false);
+
+  // Firmware update state
+  const [firmwareCheck, setFirmwareCheck] = useState<FirmwareCheck | null>(null);
+  const [checkingFirmware, setCheckingFirmware] = useState(false);
+  const [uploadingFirmware, setUploadingFirmware] = useState(false);
+  const [deviceFirmwareVersion, setDeviceFirmwareVersion] = useState<string | null>(null);
 
   // Fetch cloud status on mount
   useEffect(() => {
@@ -64,76 +64,22 @@ export function Settings() {
     fetchVersion();
   }, []);
 
-  // Fetch ESP32 status on mount
+  // Fetch device firmware version on mount and when device connects
   useEffect(() => {
-    const fetchESP32Status = async () => {
+    const fetchDisplayStatus = async () => {
       try {
-        const status = await api.getESP32Status();
-        setEsp32Status(status);
-        // Pre-fill IP if we have a saved config
-        const config = await api.getESP32Config();
-        if (config?.ip) {
-          setEsp32Ip(config.ip);
+        const status = await api.getDisplayStatus();
+        if (status.firmware_version) {
+          setDeviceFirmwareVersion(status.firmware_version);
         }
       } catch (e) {
-        console.error('Failed to fetch ESP32 status:', e);
-      } finally {
-        setEsp32Loading(false);
+        console.error('Failed to fetch display status:', e);
       }
     };
-    fetchESP32Status();
-  }, []);
+    fetchDisplayStatus();
+  }, [deviceConnected]);
 
-  // ESP32 connection handlers
-  const handleESP32Connect = useCallback(async () => {
-    if (!esp32Ip) {
-      showToast('error', 'Please enter an IP address');
-      return;
-    }
-    setEsp32Connecting(true);
-    try {
-      const status = await api.connectESP32({ ip: esp32Ip, port: 80, name: null });
-      setEsp32Status(status);
-      if (status.connected) {
-        showToast('success', 'Connected to ESP32 device');
-      } else {
-        showToast('error', status.last_error || 'Failed to connect');
-      }
-    } catch (e) {
-      showToast('error', e instanceof Error ? e.message : 'Connection failed');
-    } finally {
-      setEsp32Connecting(false);
-    }
-  }, [esp32Ip, showToast]);
-
-  const handleESP32Disconnect = useCallback(async () => {
-    try {
-      await api.disconnectESP32();
-      setEsp32Status({ connected: false, device: null, last_error: null, reconnect_attempts: 0 });
-      showToast('success', 'Disconnected from device');
-    } catch (e) {
-      showToast('error', 'Failed to disconnect');
-    }
-  }, [showToast]);
-
-  const handleESP32Scan = useCallback(async () => {
-    setEsp32Scanning(true);
-    setDiscoveredDevices([]);
-    try {
-      const result = await api.discoverESP32Devices(5000);
-      setDiscoveredDevices(result.devices);
-      if (result.devices.length === 0) {
-        showToast('info', 'No devices found on network');
-      } else {
-        showToast('success', `Found ${result.devices.length} device(s)`);
-      }
-    } catch (e) {
-      showToast('error', 'Network scan failed');
-    } finally {
-      setEsp32Scanning(false);
-    }
-  }, [showToast]);
-
+  // ESP32 reboot handler
   const handleESP32Reboot = useCallback(async () => {
     try {
       await api.rebootESP32();
@@ -142,6 +88,98 @@ export function Settings() {
       showToast('error', 'Failed to send reboot command');
     }
   }, [showToast]);
+
+  // Check for firmware updates
+  const handleCheckFirmware = useCallback(async () => {
+    setCheckingFirmware(true);
+    try {
+      // Device version is reported by firmware during OTA check, not from frontend
+      const check = await api.checkFirmwareUpdate(undefined);
+      setFirmwareCheck(check);
+      // Update device version state if returned
+      if (check.current_version) {
+        setDeviceFirmwareVersion(check.current_version);
+      }
+      if (check.error) {
+        showToast('error', check.error);
+      } else if (check.update_available) {
+        showToast('info', `Firmware update available: v${check.latest_version}`);
+      } else if (check.current_version) {
+        showToast('success', 'Firmware is up to date');
+      } else {
+        showToast('info', 'No firmware version reported by device');
+      }
+    } catch (e) {
+      showToast('error', e instanceof Error ? e.message : 'Failed to check firmware');
+    } finally {
+      setCheckingFirmware(false);
+    }
+  }, [showToast]);
+
+  // Upload firmware file
+  const handleFirmwareUpload = useCallback(async (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.bin')) {
+      showToast('error', 'Please select a .bin firmware file');
+      return;
+    }
+
+    setUploadingFirmware(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/firmware/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Upload failed');
+      }
+
+      const result = await response.json();
+      showToast('success', `Firmware v${result.version} uploaded successfully`);
+      handleCheckFirmware();
+    } catch (e) {
+      showToast('error', e instanceof Error ? e.message : 'Failed to upload firmware');
+    } finally {
+      setUploadingFirmware(false);
+      input.value = ''; // Reset file input
+    }
+  }, [showToast, handleCheckFirmware]);
+
+  // Device update state
+  const [deviceUpdating, setDeviceUpdating] = useState(false);
+
+  // Trigger device OTA update (reboot device to apply)
+  const handleTriggerOTA = useCallback(async () => {
+    try {
+      setDeviceUpdating(true);
+      showToast('info', 'Sending reboot command to device...');
+      await api.rebootESP32();
+      showToast('success', 'Device is rebooting to install update. This may take a minute.');
+      // Wait for device to disconnect and reconnect
+      setTimeout(() => {
+        setDeviceUpdating(false);
+      }, 60000); // Reset after 60s
+    } catch (e) {
+      setDeviceUpdating(false);
+      showToast('error', 'Failed to send reboot command');
+    }
+  }, [showToast]);
+
+  // Reset updating state when device reconnects
+  useEffect(() => {
+    if (deviceConnected && deviceUpdating) {
+      setDeviceUpdating(false);
+      showToast('success', 'Device reconnected - update complete!');
+    }
+  }, [deviceConnected, deviceUpdating, showToast]);
 
   // Check for updates
   const handleCheckUpdates = useCallback(async (force: boolean = false) => {
@@ -461,185 +499,63 @@ export function Settings() {
           </div>
         </div>
         <div class="p-6 space-y-6">
-          {esp32Loading ? (
-            <div class="flex items-center gap-2 text-[var(--text-muted)]">
-              <Loader2 class="w-4 h-4 animate-spin" />
-              <span>Checking device status...</span>
-            </div>
-          ) : esp32Status?.connected && esp32Status.device ? (
-            /* Connected state */
-            <div class="space-y-6">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                    <Wifi class="w-5 h-5 text-green-500" />
-                  </div>
-                  <div>
-                    <p class="text-sm font-medium text-[var(--text-primary)]">Connected</p>
-                    <p class="text-sm text-[var(--text-secondary)]">{esp32Status.device.ip}</p>
-                  </div>
-                </div>
-                <button onClick={handleESP32Disconnect} class="btn flex items-center gap-2">
-                  <WifiOff class="w-4 h-4" />
-                  Disconnect
-                </button>
-              </div>
-
-              {/* Device Info */}
-              <div class="grid grid-cols-2 gap-4 p-4 bg-[var(--card-bg)] rounded-lg border border-[var(--border-color)]">
-                <div>
-                  <p class="text-xs text-[var(--text-muted)]">Firmware</p>
-                  <p class="text-sm font-mono text-[var(--text-primary)]">
-                    {esp32Status.device.firmware_version || 'Unknown'}
-                  </p>
-                </div>
-                <div>
-                  <p class="text-xs text-[var(--text-muted)]">Hostname</p>
-                  <p class="text-sm font-mono text-[var(--text-primary)]">
-                    {esp32Status.device.hostname || 'Unknown'}
-                  </p>
-                </div>
-                <div>
-                  <p class="text-xs text-[var(--text-muted)]">NFC Reader</p>
-                  <p class={`text-sm font-medium ${esp32Status.device.nfc_status ? 'text-green-500' : 'text-red-500'}`}>
-                    {esp32Status.device.nfc_status ? 'OK' : 'Not detected'}
-                  </p>
-                </div>
-                <div>
-                  <p class="text-xs text-[var(--text-muted)]">Scale</p>
-                  <p class={`text-sm font-medium ${esp32Status.device.scale_status ? 'text-green-500' : 'text-red-500'}`}>
-                    {esp32Status.device.scale_status ? 'OK' : 'Not detected'}
-                  </p>
-                </div>
-                {esp32Status.device.uptime && (
-                  <div class="col-span-2">
-                    <p class="text-xs text-[var(--text-muted)]">Uptime</p>
-                    <p class="text-sm text-[var(--text-primary)]">
-                      {Math.floor(esp32Status.device.uptime / 3600)}h {Math.floor((esp32Status.device.uptime % 3600) / 60)}m
-                    </p>
-                  </div>
+          {/* Connection Status - uses WebSocket deviceConnected */}
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class={`w-10 h-10 rounded-full ${
+                deviceUpdating ? 'bg-yellow-500/20' :
+                deviceConnected ? 'bg-green-500/20' : 'bg-red-500/20'
+              } flex items-center justify-center`}>
+                {deviceUpdating ? (
+                  <Loader2 class="w-5 h-5 text-yellow-500 animate-spin" />
+                ) : deviceConnected ? (
+                  <Wifi class="w-5 h-5 text-green-500" />
+                ) : (
+                  <WifiOff class="w-5 h-5 text-red-500" />
                 )}
               </div>
-
-              {/* Scale reading */}
-              <div class="border-t border-[var(--border-color)] pt-6">
-                <h3 class="text-sm font-medium text-[var(--text-primary)]">Scale</h3>
-                <div class="mt-4 flex items-center justify-between">
-                  <div>
-                    <p class="text-sm text-[var(--text-secondary)]">Current reading</p>
-                    <p class="text-2xl font-mono text-[var(--text-primary)]">
-                      {currentWeight !== null ? `${currentWeight.toFixed(1)}g` : "--"}
-                    </p>
-                  </div>
-                  <div class="space-x-3">
-                    <button onClick={handleTare} disabled={!deviceConnected} class="btn">
-                      Tare Scale
-                    </button>
-                    <button disabled={!deviceConnected} class="btn">
-                      Calibrate
-                    </button>
-                  </div>
-                </div>
+              <div>
+                <p class="text-sm font-medium text-[var(--text-primary)]">
+                  {deviceUpdating ? 'Updating...' : deviceConnected ? 'Connected' : 'Disconnected'}
+                </p>
+                <p class="text-sm text-[var(--text-secondary)]">
+                  {deviceUpdating ? 'Device is rebooting and installing firmware' :
+                   deviceConnected ? 'Display is sending heartbeats' : 'No heartbeat from display'}
+                </p>
               </div>
+            </div>
+          </div>
 
-              {/* Device actions */}
-              <div class="border-t border-[var(--border-color)] pt-6 flex gap-3">
-                <button onClick={handleESP32Reboot} class="btn flex items-center gap-2">
-                  <RotateCcw class="w-4 h-4" />
-                  Reboot Device
+          {/* Scale reading */}
+          <div class="border-t border-[var(--border-color)] pt-6">
+            <h3 class="text-sm font-medium text-[var(--text-primary)]">Scale</h3>
+            <div class="mt-4 flex items-center justify-between">
+              <div>
+                <p class="text-sm text-[var(--text-secondary)]">Current reading</p>
+                <p class="text-2xl font-mono text-[var(--text-primary)]">
+                  {currentWeight !== null ? `${currentWeight.toFixed(1)}g` : "--"}
+                </p>
+              </div>
+              <div class="space-x-3">
+                <button onClick={handleTare} disabled={!deviceConnected} class="btn">
+                  Tare Scale
+                </button>
+                <button disabled={!deviceConnected} class="btn">
+                  Calibrate
                 </button>
               </div>
             </div>
-          ) : (
-            /* Not connected state */
-            <div class="space-y-6">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-[var(--text-muted)]/20 flex items-center justify-center">
-                  <WifiOff class="w-5 h-5 text-[var(--text-muted)]" />
-                </div>
-                <div>
-                  <p class="text-sm font-medium text-[var(--text-primary)]">Not Connected</p>
-                  <p class="text-sm text-[var(--text-secondary)]">Enter device IP or scan network</p>
-                </div>
-              </div>
+          </div>
 
-              {esp32Status?.last_error && (
-                <div class="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-500 text-sm">
-                  {esp32Status.last_error}
-                </div>
-              )}
-
-              {/* Connection form */}
-              <div class="space-y-4">
-                <div>
-                  <label class="label">Device IP Address</label>
-                  <div class="flex gap-2">
-                    <div class="relative flex-1">
-                      <Wifi class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
-                      <input
-                        type="text"
-                        class="input input-with-icon"
-                        placeholder="192.168.1.100"
-                        value={esp32Ip}
-                        onInput={(e) => setEsp32Ip((e.target as HTMLInputElement).value)}
-                        disabled={esp32Connecting}
-                        onKeyDown={(e) => e.key === 'Enter' && handleESP32Connect()}
-                      />
-                    </div>
-                    <button
-                      onClick={handleESP32Connect}
-                      disabled={esp32Connecting || !esp32Ip}
-                      class="btn btn-primary flex items-center gap-2"
-                    >
-                      {esp32Connecting ? <Loader2 class="w-4 h-4 animate-spin" /> : <Wifi class="w-4 h-4" />}
-                      {esp32Connecting ? 'Connecting...' : 'Connect'}
-                    </button>
-                  </div>
-                </div>
-
-                <div class="flex items-center gap-4">
-                  <div class="flex-1 border-t border-[var(--border-color)]" />
-                  <span class="text-xs text-[var(--text-muted)]">or</span>
-                  <div class="flex-1 border-t border-[var(--border-color)]" />
-                </div>
-
-                <button
-                  onClick={handleESP32Scan}
-                  disabled={esp32Scanning}
-                  class="btn w-full flex items-center justify-center gap-2"
-                >
-                  {esp32Scanning ? <Loader2 class="w-4 h-4 animate-spin" /> : <Search class="w-4 h-4" />}
-                  {esp32Scanning ? 'Scanning network...' : 'Scan for Devices'}
-                </button>
-
-                {/* Discovered devices */}
-                {discoveredDevices.length > 0 && (
-                  <div class="space-y-2">
-                    <p class="text-sm text-[var(--text-secondary)]">Found devices:</p>
-                    {discoveredDevices.map((device) => (
-                      <button
-                        key={device.ip}
-                        onClick={() => setEsp32Ip(device.ip)}
-                        class="w-full p-3 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-lg text-left hover:border-[var(--accent-color)] transition-colors"
-                      >
-                        <div class="flex items-center justify-between">
-                          <div>
-                            <p class="text-sm font-medium text-[var(--text-primary)]">
-                              {device.hostname || device.ip}
-                            </p>
-                            <p class="text-xs text-[var(--text-muted)]">{device.ip}</p>
-                          </div>
-                          {device.firmware_version && (
-                            <span class="text-xs text-[var(--text-muted)]">v{device.firmware_version}</span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+          {deviceConnected ? (
+            /* Connected - show device actions */
+            <div class="border-t border-[var(--border-color)] pt-6 flex gap-3">
+              <button onClick={handleESP32Reboot} class="btn flex items-center gap-2">
+                <RotateCcw class="w-4 h-4" />
+                Reboot Device
+              </button>
             </div>
-          )}
+          ) : null}
 
           {/* USB Serial Terminal */}
           <div class="border-t border-[var(--border-color)] pt-6">
@@ -800,6 +716,146 @@ export function Settings() {
               </div>
             </div>
           )}
+
+          {/* Device Firmware Section */}
+          <div class="border-t border-[var(--border-color)] pt-6">
+            <div class="flex items-center gap-2 mb-4">
+              <HardDrive class="w-5 h-5 text-[var(--text-muted)]" />
+              <h3 class="text-sm font-medium text-[var(--text-primary)]">Device Firmware</h3>
+            </div>
+
+            {/* Step 1: Device Status */}
+            <div class="p-4 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-lg mb-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    deviceUpdating ? 'bg-yellow-500/20' :
+                    deviceConnected ? 'bg-green-500/20' : 'bg-gray-500/20'
+                  }`}>
+                    {deviceUpdating ? (
+                      <Loader2 class="w-5 h-5 text-yellow-500 animate-spin" />
+                    ) : (
+                      <Cpu class={`w-5 h-5 ${deviceConnected ? 'text-green-500' : 'text-gray-400'}`} />
+                    )}
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-[var(--text-primary)]">
+                      {deviceUpdating ? 'Updating Device...' :
+                       deviceConnected ? 'SpoolBuddy Display' : 'No Device Connected'}
+                    </p>
+                    <p class="text-sm text-[var(--text-muted)] font-mono">
+                      {deviceUpdating ? 'Rebooting and installing firmware...' :
+                       deviceConnected ? (
+                        deviceFirmwareVersion || firmwareCheck?.current_version
+                          ? `v${deviceFirmwareVersion || firmwareCheck?.current_version}`
+                          : 'Version unknown - reboot device to report'
+                       ) : 'Connect device via WiFi'}
+                    </p>
+                  </div>
+                </div>
+                {deviceConnected && !deviceUpdating && (
+                  <button
+                    onClick={handleCheckFirmware}
+                    disabled={checkingFirmware}
+                    class="btn flex items-center gap-2"
+                  >
+                    {checkingFirmware ? (
+                      <>
+                        <Loader2 class="w-4 h-4 animate-spin" />
+                        Checking...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw class="w-4 h-4" />
+                        Check for Updates
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Step 2: Update Available (only shown after check finds update) */}
+            {firmwareCheck?.update_available && !deviceUpdating && (
+              <div class="p-4 bg-[var(--accent-color)]/10 border border-[var(--accent-color)]/30 rounded-lg mb-4">
+                <div class="flex items-start gap-3">
+                  <div class="w-10 h-10 rounded-full bg-[var(--accent-color)]/20 flex items-center justify-center flex-shrink-0">
+                    <Download class="w-5 h-5 text-[var(--accent-color)]" />
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-[var(--text-primary)]">
+                      Update Available: v{firmwareCheck.latest_version}
+                    </p>
+                    <p class="text-sm text-[var(--text-secondary)] mt-1">
+                      Your device is running v{deviceFirmwareVersion || firmwareCheck.current_version || 'unknown'}.
+                      Click update to install the new firmware.
+                    </p>
+                    <div class="mt-3 p-3 bg-[var(--bg-secondary)] rounded text-xs text-[var(--text-muted)]">
+                      <p class="font-medium mb-1">What will happen:</p>
+                      <ol class="list-decimal list-inside space-y-1">
+                        <li>Device will reboot</li>
+                        <li>Download new firmware (~4.5MB)</li>
+                        <li>Install and reboot again</li>
+                      </ol>
+                      <p class="mt-2">This takes about 1-2 minutes. Do not power off the device.</p>
+                    </div>
+                    <button
+                      onClick={handleTriggerOTA}
+                      disabled={!deviceConnected}
+                      class="btn btn-primary flex items-center gap-2 mt-3"
+                    >
+                      <Download class="w-4 h-4" />
+                      Update to v{firmwareCheck.latest_version}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2 alt: Up to date (only shown after check confirms up to date) */}
+            {firmwareCheck && !firmwareCheck.update_available && (deviceFirmwareVersion || firmwareCheck.current_version) && !deviceUpdating && (
+              <div class="p-4 bg-green-500/10 border border-green-500/30 rounded-lg mb-4">
+                <div class="flex items-center gap-3">
+                  <CheckCircle class="w-5 h-5 text-green-500" />
+                  <p class="text-sm text-green-600">
+                    Your device is up to date (v{deviceFirmwareVersion || firmwareCheck.current_version})
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Upload Firmware (for developers) */}
+            <details class="group">
+              <summary class="cursor-pointer text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)]">
+                Developer: Upload custom firmware
+              </summary>
+              <div class="mt-2 p-4 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-lg">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-[var(--text-primary)]">Upload Firmware Binary</p>
+                    <p class="text-xs text-[var(--text-muted)]">
+                      Upload a .bin file to make it available for OTA
+                    </p>
+                  </div>
+                  <label class="btn flex items-center gap-2 cursor-pointer">
+                    {uploadingFirmware ? (
+                      <Loader2 class="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Upload class="w-4 h-4" />
+                    )}
+                    {uploadingFirmware ? 'Uploading...' : 'Choose File'}
+                    <input
+                      type="file"
+                      accept=".bin"
+                      onChange={handleFirmwareUpload}
+                      disabled={uploadingFirmware}
+                      class="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+            </details>
+          </div>
         </div>
       </div>
 

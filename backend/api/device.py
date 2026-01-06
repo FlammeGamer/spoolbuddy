@@ -185,11 +185,13 @@ async def ping_device(ip: str, port: int = 80):
 @router.post("/reboot")
 async def reboot_device():
     """Send reboot command to connected device."""
-    if not _connected_device:
+    from main import is_display_connected, queue_display_command
+
+    if not is_display_connected():
         raise HTTPException(status_code=400, detail="No device connected")
 
-    # TODO: Send reboot command via WebSocket
-    return {"success": True, "message": "Reboot command sent"}
+    queue_display_command("reboot")
+    return {"success": True, "message": "Reboot command queued"}
 
 
 @router.post("/factory-reset")

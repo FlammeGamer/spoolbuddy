@@ -65,24 +65,52 @@ def _get_local_firmware() -> list[FirmwareVersion]:
             size=f.stat().st_size,
         ))
 
-    # Sort by version descending
-    firmware_files.sort(key=lambda x: x.version, reverse=True)
+    # Sort by version descending (using parsed version for proper ordering)
+    firmware_files.sort(key=lambda x: _parse_version(x.version) or (0, 0, 0, 0, 0), reverse=True)
     return firmware_files
 
 
+def _parse_version(v: str):
+    """Parse version string supporting semver and PEP 440 pre-releases.
+
+    Supports: 0.1.0, 0.1.0a1, 0.1.0b2, 0.1.0rc1, 0.1.0-beta.2
+    """
+    import re
+    # Normalize: 0.1.0-beta.2 -> 0.1.0b2
+    v = re.sub(r'-?alpha\.?', 'a', v)
+    v = re.sub(r'-?beta\.?', 'b', v)
+    v = re.sub(r'-?rc\.?', 'rc', v)
+
+    # Match: major.minor.patch[prerelease][prerelease_num]
+    match = re.match(r'^(\d+)\.(\d+)\.(\d+)(a|b|rc)?(\d+)?$', v)
+    if not match:
+        return None
+
+    major, minor, patch = int(match.group(1)), int(match.group(2)), int(match.group(3))
+    pre_type = match.group(4)  # a, b, rc, or None
+    pre_num = int(match.group(5)) if match.group(5) else 0
+
+    # Pre-release ordering: a < b < rc < release
+    pre_order = {'a': 0, 'b': 1, 'rc': 2, None: 3}
+
+    return (major, minor, patch, pre_order.get(pre_type, 3), pre_num)
+
+
 def _compare_versions(current: str, latest: str) -> bool:
-    """Compare version strings. Returns True if latest > current."""
+    """Compare version strings. Returns True if latest > current.
+
+    Supports: 0.1.0, 0.1.0a1, 0.1.0b2, 0.1.0rc1
+    """
     try:
-        current_parts = [int(x) for x in current.split(".")]
-        latest_parts = [int(x) for x in latest.split(".")]
+        current_parsed = _parse_version(current)
+        latest_parsed = _parse_version(latest)
 
-        while len(current_parts) < len(latest_parts):
-            current_parts.append(0)
-        while len(latest_parts) < len(current_parts):
-            latest_parts.append(0)
+        if current_parsed and latest_parsed:
+            return latest_parsed > current_parsed
 
-        return latest_parts > current_parts
-    except (ValueError, AttributeError):
+        # Fallback to string comparison
+        return latest > current
+    except Exception:
         return latest > current
 
 
@@ -106,28 +134,34 @@ async def check_firmware_update(current_version: Optional[str] = None):
     """
     Check for firmware updates.
 
-    Checks both local releases directory and GitHub releases.
+    Checks both local releases directory and GitHub releases, returns the newest.
 
     Args:
-        current_version: The device's current firmware version
+        current_version: The device's current firmware version (if not provided, uses last known device version)
     """
     global _firmware_cache, _firmware_cache_time
 
+    # Use device's reported version if not explicitly provided
+    if not current_version:
+        from main import get_display_firmware_version
+        current_version = get_display_firmware_version()
+
     result = FirmwareCheck(current_version=current_version)
 
-    # Check local firmware first
+    # Track best available firmware from all sources
+    best_version: Optional[str] = None
+    best_url: Optional[str] = None
+    best_notes: Optional[str] = None
+
+    # Check local firmware
     local_firmware = _get_local_firmware()
     if local_firmware:
         latest_local = local_firmware[0]
-        result.latest_version = latest_local.version
-        result.download_url = f"/api/firmware/download/{latest_local.filename}"
+        best_version = latest_local.version
+        best_url = f"/api/firmware/download/{latest_local.filename}"
+        logger.debug(f"Local firmware available: {latest_local.version}")
 
-        if current_version:
-            result.update_available = _compare_versions(current_version, latest_local.version)
-
-        return result
-
-    # Check GitHub releases if no local firmware
+    # Check GitHub releases (always check, compare with local)
     if not _firmware_cache or not _firmware_cache_time or \
             datetime.now() - _firmware_cache_time > CACHE_DURATION:
         try:
@@ -151,23 +185,41 @@ async def check_firmware_update(current_version: Optional[str] = None):
                                     "notes": release.get("body"),
                                 }
                                 _firmware_cache_time = datetime.now()
+                                logger.debug(f"GitHub firmware available: {_firmware_cache['version']}")
                                 break
                         if _firmware_cache:
                             break
 
         except Exception as e:
-            logger.error(f"Error checking GitHub for firmware: {e}")
-            result.error = str(e)
+            logger.warning(f"Could not check GitHub for firmware: {e}")
+            # Don't set error if we have local firmware
 
+    # Compare local vs GitHub and use the newest
     if _firmware_cache:
-        result.latest_version = _firmware_cache["version"]
-        result.download_url = _firmware_cache["url"]
-        result.release_notes = _firmware_cache.get("notes")
+        github_version = _firmware_cache["version"]
+
+        if best_version is None:
+            # No local firmware, use GitHub
+            best_version = github_version
+            best_url = _firmware_cache["url"]
+            best_notes = _firmware_cache.get("notes")
+        elif _compare_versions(best_version, github_version):
+            # GitHub is newer than local
+            best_version = github_version
+            best_url = _firmware_cache["url"]
+            best_notes = _firmware_cache.get("notes")
+            logger.info(f"GitHub firmware ({github_version}) is newer than local ({local_firmware[0].version if local_firmware else 'none'})")
+
+    # Set result
+    if best_version:
+        result.latest_version = best_version
+        result.download_url = best_url
+        result.release_notes = best_notes
 
         if current_version:
-            result.update_available = _compare_versions(
-                current_version, _firmware_cache["version"]
-            )
+            result.update_available = _compare_versions(current_version, best_version)
+    else:
+        result.error = "No firmware available (local or GitHub)"
 
     return result
 

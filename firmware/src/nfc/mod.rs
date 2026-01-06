@@ -6,12 +6,13 @@
 //!
 //! Interface: SPI (up to 7 MHz) + BUSY + RST pins
 //!
-//! Hardware connection via CrowPanel Advance 7.0" Wireless Module Headers:
-//! (DIP switch S1=0, S0=1 for Wireless Module mode)
+//! Hardware connection via CrowPanel Advance 7.0" headers:
+//! NOTE: J9 pins (IO4/5/6) are used by the RGB LCD display!
+//! We use UART0-OUT header for SPI instead.
 //!
-//! - IO5  (J9 Pin 2)  -> SPI SCK
-//! - IO4  (J9 Pin 3)  -> SPI MISO
-//! - IO6  (J9 Pin 4)  -> SPI MOSI
+//! - IO43 (UART0-OUT) -> SPI SCK
+//! - IO44 (UART0-OUT) -> SPI MISO
+//! - IO16 (J11 Pin 2) -> SPI MOSI
 //! - IO8  (J11 Pin 6) -> NSS chip select
 //! - IO2  (J11 Pin 5) -> BUSY signal
 //! - IO15 (J11 Pin 3) -> RST reset

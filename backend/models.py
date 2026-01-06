@@ -121,11 +121,15 @@ class PrinterWithStatus(BaseModel):
     subtask_name: Optional[str] = None  # Current print job name
     mc_remaining_time: Optional[int] = None  # Remaining time in minutes
     cover_url: Optional[str] = None  # URL to cover image if printing
+    # Detailed status tracking
+    stg_cur: int = -1  # Current stage number (-1 = idle/unknown)
+    stg_cur_name: Optional[str] = None  # Human-readable stage name (e.g., "Auto bed leveling")
     # AMS state
     ams_units: list[AmsUnit] = []
     tray_now: Optional[int] = None  # Active tray (single nozzle)
     tray_now_left: Optional[int] = None  # Active tray left nozzle (dual)
     tray_now_right: Optional[int] = None  # Active tray right nozzle (dual)
+    active_extruder: Optional[int] = None  # Currently active extruder (0=right, 1=left)
 
 
 class PrinterState(BaseModel):
@@ -144,6 +148,9 @@ class PrinterState(BaseModel):
     tray_now_left: Optional[int] = None  # Active tray for left nozzle (extruder 1)
     tray_now_right: Optional[int] = None  # Active tray for right nozzle (extruder 0)
     active_extruder: Optional[int] = None  # Currently active extruder (0=right, 1=left)
+    # Detailed status tracking (from stg_cur field)
+    stg_cur: int = -1  # Current stage number (-1 = idle/unknown, 255 = idle on A1/P1)
+    stg_cur_name: Optional[str] = None  # Human-readable stage name
 
 
 # ============ AMS Filament Setting ============

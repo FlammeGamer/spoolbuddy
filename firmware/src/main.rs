@@ -34,6 +34,12 @@ mod backend_client;
 // Time manager for NTP sync
 mod time_manager;
 
+// OTA update manager
+mod ota_manager;
+
+// NFC disabled until cable arrives
+const NFC_ENABLED: bool = false;
+
 // Display driver C functions (handles LVGL init and EEZ UI)
 extern "C" {
     fn display_init() -> i32;
@@ -134,97 +140,73 @@ fn main() {
     // ==========================================================================
     // Initialize PN5180 NFC Module
     // ==========================================================================
-    // SPI pins on J9 header:
-    //   - IO5 (J9 Pin 2) -> SCK
-    //   - IO4 (J9 Pin 3) -> MISO
-    //   - IO6 (J9 Pin 4) -> MOSI
-    // GPIO pins on J11 header:
-    //   - IO8 (J11 Pin 6) -> NSS (chip select)
-    //   - IO2 (J11 Pin 5) -> BUSY
-    //   - RST: Not used (software reset) - GPIO15 conflicts with Touch I2C
+    if NFC_ENABLED {
+    // NOTE: J9 header pins (IO4/5/6) are used internally by the RGB LCD display!
+    // We use UART0-OUT header and J11 for SPI instead:
+    //   - IO43 (UART0-OUT) -> SCK
+    //   - IO44 (UART0-OUT) -> MISO
+    //   - IO16 (J11 Pin 2) -> MOSI
+    // Control pins on J11 header:
+    //   - IO8  (J11 Pin 6) -> NSS (chip select)
+    //   - IO2  (J11 Pin 5) -> BUSY
+    //   - IO15 (J11 Pin 3) -> RST
     info!("=== NFC SPI INIT ===");
+    info!("Using pins: SCK=GPIO43, MISO=GPIO44, MOSI=GPIO16, NSS=GPIO8");
 
-    // First, test if GPIO4 and GPIO6 are shorted on the CrowPanel
-    info!("=== GPIO SHORT TEST ===");
-    info!("Testing if GPIO4 (MISO) and GPIO6 (MOSI) are shorted on CrowPanel...");
+    // Quick GPIO sanity check for new pins
+    info!("=== GPIO SANITY CHECK ===");
     {
-        // Configure GPIO6 as output, GPIO4 as input with no pull (floating)
         use esp_idf_hal::gpio::Pull;
-        let mut gpio6_out = PinDriver::output(peripherals.pins.gpio6).unwrap();
-        let gpio4_in = PinDriver::input(peripherals.pins.gpio4, Pull::Floating).unwrap();
 
-        // Test 1: Set GPIO6 HIGH, read GPIO4
-        gpio6_out.set_high().unwrap();
-        FreeRtos::delay_ms(10);
-        let read_high = gpio4_in.is_high();
-        info!("  GPIO6=HIGH -> GPIO4 reads: {}", if read_high { "HIGH" } else { "LOW" });
+        // Test GPIO44 (MISO) - should float high with pull-up
+        let gpio44_test = PinDriver::input(peripherals.pins.gpio44, Pull::Up).unwrap();
+        FreeRtos::delay_ms(5);
+        let miso_state = gpio44_test.is_high();
+        info!("  GPIO44 (MISO) with pull-up: {}", if miso_state { "HIGH (good)" } else { "LOW (check wiring!)" });
+        drop(gpio44_test);
 
-        // Test 2: Set GPIO6 LOW, read GPIO4
-        gpio6_out.set_low().unwrap();
-        FreeRtos::delay_ms(10);
-        let read_low = gpio4_in.is_low();
-        info!("  GPIO6=LOW  -> GPIO4 reads: {}", if read_low { "LOW" } else { "HIGH" });
+        // Test GPIO43 (SCK) and GPIO16 (MOSI) as outputs
+        let mut gpio43_test = PinDriver::output(peripherals.pins.gpio43).unwrap();
+        let mut gpio16_test = PinDriver::output(peripherals.pins.gpio16).unwrap();
 
-        if read_high && read_low {
-            info!("  *** GPIO4 and GPIO6 ARE SHORTED! ***");
-            info!("  This is a CrowPanel hardware issue - these pins are connected internally.");
-            info!("  You need to use different pins for MOSI and MISO.");
-        } else {
-            info!("  GPIO4 and GPIO6 appear independent (not shorted)");
-        }
+        gpio43_test.set_high().unwrap();
+        gpio16_test.set_high().unwrap();
+        FreeRtos::delay_ms(1);
+        info!("  GPIO43 (SCK) and GPIO16 (MOSI) configured as outputs");
 
-        // Release pins for next test
-        drop(gpio6_out);
-        drop(gpio4_in);
-
-        // Test 3: Check if GPIO4 (MISO) is shorted to GND
-        info!("Testing if GPIO4 (MISO) is shorted to GND...");
-
-        // Re-steal GPIO4 for the pull-up test
-        let gpio4_stolen = unsafe { esp_idf_hal::gpio::Gpio4::steal() };
-
-        // Configure GPIO4 as input with PULL-UP - if shorted to GND, it will still read LOW
-        let gpio4_pullup = PinDriver::input(gpio4_stolen, Pull::Up).unwrap();
-        FreeRtos::delay_ms(10);
-        let miso_with_pullup = gpio4_pullup.is_high();
-        info!("  GPIO4 with internal pull-up: {}", if miso_with_pullup { "HIGH (normal)" } else { "LOW (stuck!)" });
-
-        if !miso_with_pullup {
-            info!("  *** GPIO4 (MISO) IS SHORTED TO GND! ***");
-            info!("  Even with internal pull-up, it reads LOW.");
-            info!("  Check your MISO solder joint for bridges to GND.");
-        }
-
-        // Release pin for SPI use
-        drop(gpio4_pullup);
+        gpio43_test.set_low().unwrap();
+        gpio16_test.set_low().unwrap();
+        drop(gpio43_test);
+        drop(gpio16_test);
     }
-    info!("=== GPIO SHORT TEST DONE ===");
+    info!("=== GPIO SANITY CHECK DONE ===");
 
     // ==========================================================================
     // BIT-BANG SPI TEST - Tests physical wiring before SPI peripheral init
     // ==========================================================================
     // This test manually toggles GPIO pins to verify physical connections
     // to the PN5180, bypassing the ESP32's SPI peripheral entirely.
+    // Using new pins: SCK=GPIO43, MISO=GPIO44, MOSI=GPIO16, NSS=GPIO8
     info!("=== BIT-BANG SPI TEST ===");
     info!("This test manually toggles GPIOs to verify physical wiring.");
-    info!("If this test passes but SPI fails, the issue is with the ESP32 SPI peripheral.");
+    info!("Pins: SCK=GPIO43, MISO=GPIO44, MOSI=GPIO16, NSS=GPIO8");
     {
         use esp_idf_hal::gpio::Pull;
 
         // Steal the pins for bit-bang test
-        let gpio4_bb = unsafe { esp_idf_hal::gpio::Gpio4::steal() };
-        let gpio5_bb = unsafe { esp_idf_hal::gpio::Gpio5::steal() };
-        let gpio6_bb = unsafe { esp_idf_hal::gpio::Gpio6::steal() };
+        let gpio43_bb = unsafe { esp_idf_hal::gpio::Gpio43::steal() };
+        let gpio44_bb = unsafe { esp_idf_hal::gpio::Gpio44::steal() };
+        let gpio16_bb = unsafe { esp_idf_hal::gpio::Gpio16::steal() };
         let gpio8_bb = unsafe { esp_idf_hal::gpio::Gpio8::steal() };
 
         // Configure pins:
-        // - GPIO5 (SCK) = output
-        // - GPIO6 (MOSI) = output
-        // - GPIO4 (MISO) = input with pull-up
+        // - GPIO43 (SCK) = output
+        // - GPIO16 (MOSI) = output
+        // - GPIO44 (MISO) = input with pull-up
         // - GPIO8 (NSS) = output
-        let mut sck = PinDriver::output(gpio5_bb).unwrap();
-        let mut mosi = PinDriver::output(gpio6_bb).unwrap();
-        let miso = PinDriver::input(gpio4_bb, Pull::Up).unwrap();
+        let mut sck = PinDriver::output(gpio43_bb).unwrap();
+        let mut mosi = PinDriver::output(gpio16_bb).unwrap();
+        let miso = PinDriver::input(gpio44_bb, Pull::Up).unwrap();
         let mut nss = PinDriver::output(gpio8_bb).unwrap();
 
         // Initial state: SCK low, MOSI low, NSS high
@@ -356,52 +338,63 @@ fn main() {
 
         nss.set_high().unwrap();
 
-        // Test 4: GPIO pin verification (internal loopback via MOSI->MISO short)
+        // Test 4: GPIO pin verification
         info!("");
         info!("Test BB-4: GPIO OUTPUT VERIFICATION");
-        info!("  Testing if GPIO5 (SCK) and GPIO6 (MOSI) can actually drive output...");
+        info!("  Testing if GPIO43 (SCK) and GPIO16 (MOSI) can actually drive output...");
 
-        // Read GPIO5 and GPIO6 output state using GPIO_OUT register
+        // GPIO43 is in GPIO_OUT1 (bits 32-53), GPIO16 is in GPIO_OUT (bits 0-31)
+        // GPIO_OUT1_REG = 0x60004010, GPIO_IN1_REG = 0x60004040
+        let gpio_out1_before: u32;
         let gpio_out_before: u32;
         unsafe {
-            gpio_out_before = core::ptr::read_volatile(0x60004004 as *const u32);
+            gpio_out1_before = core::ptr::read_volatile(0x60004010 as *const u32);  // GPIO32-53
+            gpio_out_before = core::ptr::read_volatile(0x60004004 as *const u32);   // GPIO0-31
         }
-        info!("  GPIO_OUT before: SCK(5)={} MOSI(6)={}",
-            (gpio_out_before >> 5) & 1, (gpio_out_before >> 6) & 1);
+        info!("  GPIO_OUT1 before: SCK(43)={}", (gpio_out1_before >> (43 - 32)) & 1);
+        info!("  GPIO_OUT  before: MOSI(16)={}", (gpio_out_before >> 16) & 1);
 
         // Set both HIGH
         sck.set_high().unwrap();
         mosi.set_high().unwrap();
         FreeRtos::delay_ms(1);
+        let gpio_out1_high: u32;
         let gpio_out_high: u32;
+        let gpio_in1_high: u32;
         let gpio_in_high: u32;
         unsafe {
+            gpio_out1_high = core::ptr::read_volatile(0x60004010 as *const u32);
             gpio_out_high = core::ptr::read_volatile(0x60004004 as *const u32);
+            gpio_in1_high = core::ptr::read_volatile(0x60004040 as *const u32);
             gpio_in_high = core::ptr::read_volatile(0x6000403C as *const u32);
         }
-        info!("  Set HIGH: GPIO_OUT SCK={} MOSI={}, GPIO_IN SCK={} MOSI={}",
-            (gpio_out_high >> 5) & 1, (gpio_out_high >> 6) & 1,
-            (gpio_in_high >> 5) & 1, (gpio_in_high >> 6) & 1);
+        info!("  Set HIGH: SCK_OUT={} SCK_IN={}, MOSI_OUT={} MOSI_IN={}",
+            (gpio_out1_high >> (43 - 32)) & 1, (gpio_in1_high >> (43 - 32)) & 1,
+            (gpio_out_high >> 16) & 1, (gpio_in_high >> 16) & 1);
 
         // Set both LOW
         sck.set_low().unwrap();
         mosi.set_low().unwrap();
         FreeRtos::delay_ms(1);
+        let gpio_out1_low: u32;
         let gpio_out_low: u32;
+        let gpio_in1_low: u32;
         let gpio_in_low: u32;
         unsafe {
+            gpio_out1_low = core::ptr::read_volatile(0x60004010 as *const u32);
             gpio_out_low = core::ptr::read_volatile(0x60004004 as *const u32);
+            gpio_in1_low = core::ptr::read_volatile(0x60004040 as *const u32);
             gpio_in_low = core::ptr::read_volatile(0x6000403C as *const u32);
         }
-        info!("  Set LOW:  GPIO_OUT SCK={} MOSI={}, GPIO_IN SCK={} MOSI={}",
-            (gpio_out_low >> 5) & 1, (gpio_out_low >> 6) & 1,
-            (gpio_in_low >> 5) & 1, (gpio_in_low >> 6) & 1);
+        info!("  Set LOW:  SCK_OUT={} SCK_IN={}, MOSI_OUT={} MOSI_IN={}",
+            (gpio_out1_low >> (43 - 32)) & 1, (gpio_in1_low >> (43 - 32)) & 1,
+            (gpio_out_low >> 16) & 1, (gpio_in_low >> 16) & 1);
 
         // Check if GPIO_OUT actually changed
-        let sck_out_works = ((gpio_out_high >> 5) & 1) != ((gpio_out_low >> 5) & 1);
-        let mosi_out_works = ((gpio_out_high >> 6) & 1) != ((gpio_out_low >> 6) & 1);
-        let sck_in_works = ((gpio_in_high >> 5) & 1) != ((gpio_in_low >> 5) & 1);
-        let mosi_in_works = ((gpio_in_high >> 6) & 1) != ((gpio_in_low >> 6) & 1);
+        let sck_out_works = ((gpio_out1_high >> (43 - 32)) & 1) != ((gpio_out1_low >> (43 - 32)) & 1);
+        let mosi_out_works = ((gpio_out_high >> 16) & 1) != ((gpio_out_low >> 16) & 1);
+        let sck_in_works = ((gpio_in1_high >> (43 - 32)) & 1) != ((gpio_in1_low >> (43 - 32)) & 1);
+        let mosi_in_works = ((gpio_in_high >> 16) & 1) != ((gpio_in_low >> 16) & 1);
 
         info!("  GPIO_OUT changes: SCK={} MOSI={}",
             if sck_out_works { "YES" } else { "NO!" },
@@ -414,27 +407,24 @@ fn main() {
             info!("");
             info!("  *** GPIO OUTPUT REGISTER NOT CHANGING! ***");
             info!("  The PinDriver::set_high/set_low is not working.");
-            info!("  This could be a driver bug or hardware issue.");
         }
 
         if sck_out_works && !sck_in_works {
             info!("");
             info!("  *** SCK: GPIO_OUT changes but GPIO_IN doesn't! ***");
-            info!("  The pin is being set but something is overriding it.");
-            info!("  Check if GPIO5 is connected to something else on CrowPanel.");
+            info!("  Check GPIO43 wiring on UART0-OUT header.");
         }
 
         if mosi_out_works && !mosi_in_works {
             info!("");
             info!("  *** MOSI: GPIO_OUT changes but GPIO_IN doesn't! ***");
-            info!("  The pin is being set but something is overriding it.");
-            info!("  Check if GPIO6 is connected to something else on CrowPanel.");
+            info!("  Check GPIO16 wiring on J11 header.");
         }
 
         // Test 5: SCK -> MISO loopback test (if wired)
         info!("");
         info!("Test BB-5: SCK -> MISO loopback test");
-        info!("  (If you shorted J9-Pin2 to J9-Pin3, this tests if SCK output works)");
+        info!("  (If you shorted SCK to MISO, this tests if SCK output works)");
 
         // Toggle SCK while watching MISO
         let mut sck_loopback_works = true;
@@ -458,15 +448,15 @@ fn main() {
         sck.set_low().unwrap();
 
         if sck_loopback_works {
-            info!("  *** SCK -> MISO LOOPBACK WORKS! GPIO5 is functional! ***");
+            info!("  *** SCK -> MISO LOOPBACK WORKS! GPIO43 is functional! ***");
         } else {
-            info!("  SCK loopback failed - either wire not connected or GPIO5 not reaching J9-Pin2");
+            info!("  SCK loopback failed - wire not connected or GPIO43 issue");
         }
 
         // Test 6: MOSI -> MISO loopback test (if wired)
         info!("");
         info!("Test BB-6: MOSI -> MISO loopback test");
-        info!("  (If you shorted J9-Pin4 to J9-Pin3, this tests if MOSI output works)");
+        info!("  (If you shorted MOSI to MISO, this tests if MOSI output works)");
 
         let mut mosi_loopback_works = true;
         for i in 0..4 {
@@ -489,30 +479,29 @@ fn main() {
         mosi.set_low().unwrap();
 
         if mosi_loopback_works {
-            info!("  *** MOSI -> MISO LOOPBACK WORKS! GPIO6 is functional! ***");
+            info!("  *** MOSI -> MISO LOOPBACK WORKS! GPIO16 is functional! ***");
         } else {
-            info!("  MOSI loopback failed - either wire not connected or GPIO6 not reaching J9-Pin4");
+            info!("  MOSI loopback failed - wire not connected or GPIO16 issue");
         }
 
         // Summary
         info!("");
         info!("=== LOOPBACK TEST SUMMARY ===");
         if mosi_loopback_works && !sck_loopback_works {
-            info!("MOSI works but SCK doesn't - GPIO5 may not be connected to J9-Pin2!");
-            info!("Try using a different GPIO for SCK.");
+            info!("MOSI works but SCK doesn't - check GPIO43 on UART0-OUT header!");
         } else if sck_loopback_works && !mosi_loopback_works {
-            info!("SCK works but MOSI doesn't - GPIO6 may not be connected to J9-Pin4!");
-            info!("Try using a different GPIO for MOSI.");
+            info!("SCK works but MOSI doesn't - check GPIO16 on J11 header!");
         } else if sck_loopback_works && mosi_loopback_works {
             info!("Both SCK and MOSI loopbacks work - GPIO pins are functional!");
             info!("If PN5180 still doesn't respond, check:");
             info!("  - NSS (GPIO8) connection to PN5180");
             info!("  - VCC/GND power to PN5180");
-            info!("  - PN5180 module itself may be damaged");
+            info!("  - PN5180 module itself");
         } else {
-            info!("Neither loopback worked - check your wire connections");
-            info!("  Short J9-Pin2 to J9-Pin3 for SCK test");
-            info!("  Short J9-Pin4 to J9-Pin3 for MOSI test");
+            info!("Neither loopback worked - check wire connections:");
+            info!("  SCK  = GPIO43 on UART0-OUT header");
+            info!("  MOSI = GPIO16 on J11 Pin 2");
+            info!("  MISO = GPIO44 on UART0-OUT header");
         }
 
         // Release pins so they can be used by SPI
@@ -524,78 +513,75 @@ fn main() {
     info!("=== BIT-BANG TEST DONE ===");
 
     // Re-take the pins for SPI (they were consumed by the GPIO test)
-    let gpio4 = unsafe { esp_idf_hal::gpio::Gpio4::steal() };
-    let gpio5 = unsafe { esp_idf_hal::gpio::Gpio5::steal() };
-    let gpio6 = unsafe { esp_idf_hal::gpio::Gpio6::steal() };
+    let gpio43 = unsafe { esp_idf_hal::gpio::Gpio43::steal() };  // SCK
+    let gpio44 = unsafe { esp_idf_hal::gpio::Gpio44::steal() };  // MISO
+    let gpio16 = unsafe { esp_idf_hal::gpio::Gpio16::steal() };  // MOSI
 
-    // Enable internal pull-up on MISO (GPIO4) to prevent floating
-    // This helps diagnose if PN5180 is actively driving LOW vs line floating
-    info!("Enabling internal pull-up on MISO (GPIO4) via IO_MUX...");
+    // Enable internal pull-up on MISO (GPIO44) to prevent floating
+    info!("Enabling internal pull-up on MISO (GPIO44) via IO_MUX...");
     unsafe {
-        // ESP32-S3 IO_MUX register addresses (from TRM):
-        // Base: 0x60009000, GPIO4 offset: 0x14
-        let io_mux_gpio4 = 0x60009000 + 0x14;  // IO_MUX_GPIO4_REG (corrected!)
-        let current = core::ptr::read_volatile(io_mux_gpio4 as *const u32);
+        // ESP32-S3 IO_MUX register addresses: Base: 0x60009000
+        // Each GPIO has a 4-byte register, but they're NOT sequential!
+        // GPIO44 IO_MUX is at offset 0xB4 (from TRM)
+        let io_mux_gpio44 = 0x60009000 + 0xB4;
+        let current = core::ptr::read_volatile(io_mux_gpio44 as *const u32);
         // Bit 8 = FUN_WPU (pull-up), Bit 7 = FUN_WPD (pull-down)
         let new_val = (current | (1 << 8)) & !(1 << 7);  // Enable pull-up, disable pull-down
-        core::ptr::write_volatile(io_mux_gpio4 as *mut u32, new_val);
-        info!("  GPIO4 IO_MUX @ 0x{:08X}: 0x{:08X} -> 0x{:08X}", io_mux_gpio4, current, new_val);
+        core::ptr::write_volatile(io_mux_gpio44 as *mut u32, new_val);
+        info!("  GPIO44 IO_MUX @ 0x{:08X}: 0x{:08X} -> 0x{:08X}", io_mux_gpio44, current, new_val);
 
-        // Also check GPIO_ENABLE_REG to see if something is driving GPIO4 as output
-        let gpio_enable = 0x60004020 as *const u32;  // GPIO_ENABLE_REG
-        let gpio_enable_val = core::ptr::read_volatile(gpio_enable);
-        let gpio4_is_output = (gpio_enable_val >> 4) & 1;
-        info!("  GPIO_ENABLE_REG: 0x{:08X} (GPIO4 output={}))", gpio_enable_val, gpio4_is_output);
+        // Check GPIO_ENABLE1_REG to see if something is driving GPIO44 as output
+        let gpio_enable1 = 0x60004024 as *const u32;  // GPIO_ENABLE1_REG (GPIO32-53)
+        let gpio_enable1_val = core::ptr::read_volatile(gpio_enable1);
+        let gpio44_is_output = (gpio_enable1_val >> (44 - 32)) & 1;
+        info!("  GPIO_ENABLE1_REG: 0x{:08X} (GPIO44 output={})", gpio_enable1_val, gpio44_is_output);
 
-        // Check GPIO_IN_REG to see the actual pin state
-        let gpio_in = 0x6000403C as *const u32;  // GPIO_IN_REG
-        let gpio_in_val = core::ptr::read_volatile(gpio_in);
-        let gpio4_level = (gpio_in_val >> 4) & 1;
-        info!("  GPIO_IN_REG: 0x{:08X} (GPIO4 level={})", gpio_in_val, gpio4_level);
-
-        // Check SPI3 MISO signal routing via GPIO matrix
-        let gpio_func_in_sel_cfg = 0x60004154 + (63 * 4);  // FSPIQ_IN signal is 63 for SPI3 MISO
-        let func_in_val = core::ptr::read_volatile(gpio_func_in_sel_cfg as *const u32);
-        info!("  SPI3_MISO func_in_sel: 0x{:08X}", func_in_val);
+        // Check GPIO_IN1_REG to see the actual pin state
+        let gpio_in1 = 0x60004040 as *const u32;  // GPIO_IN1_REG (GPIO32-53)
+        let gpio_in1_val = core::ptr::read_volatile(gpio_in1);
+        let gpio44_level = (gpio_in1_val >> (44 - 32)) & 1;
+        info!("  GPIO_IN1_REG: 0x{:08X} (GPIO44 level={})", gpio_in1_val, gpio44_level);
     }
 
-    // Initialize SPI bus - try SPI3 instead of SPI2 (maybe SPI2 has internal issues)
+    // Initialize SPI bus using SPI3 with new pins
     let spi_driver = match SpiDriver::new(
         peripherals.spi3,
-        gpio5,  // SCK
-        gpio6,  // MOSI
-        Some(gpio4),  // MISO
+        gpio43,  // SCK
+        gpio16,  // MOSI
+        Some(gpio44),  // MISO
         &SpiDriverConfig::default(),
     ) {
         Ok(driver) => {
-            info!("SPI3 bus initialized (SCK=GPIO5, MOSI=GPIO6, MISO=GPIO4)");
+            info!("SPI3 bus initialized (SCK=GPIO43, MOSI=GPIO16, MISO=GPIO44)");
 
             // Check GPIO state AFTER SPI initialization
             info!("=== GPIO STATE AFTER SPI INIT ===");
             unsafe {
-                // Check all SPI pins: GPIO4=MISO, GPIO5=SCK, GPIO6=MOSI, GPIO8=NSS
+                // Check SPI pins: GPIO43=SCK, GPIO44=MISO, GPIO16=MOSI, GPIO8=NSS
 
-                // GPIO_ENABLE - which pins are outputs
+                // GPIO_ENABLE (0-31) and GPIO_ENABLE1 (32-53) - which pins are outputs
                 let gpio_enable_val = core::ptr::read_volatile(0x60004020 as *const u32);
-                info!("  GPIO_ENABLE: 0x{:08X}", gpio_enable_val);
-                info!("    GPIO4(MISO)={} GPIO5(SCK)={} GPIO6(MOSI)={} GPIO8(NSS)={}",
-                    (gpio_enable_val >> 4) & 1,
-                    (gpio_enable_val >> 5) & 1,
-                    (gpio_enable_val >> 6) & 1,
+                let gpio_enable1_val = core::ptr::read_volatile(0x60004024 as *const u32);
+                info!("  GPIO_ENABLE: 0x{:08X}, GPIO_ENABLE1: 0x{:08X}", gpio_enable_val, gpio_enable1_val);
+                info!("    GPIO43(SCK)={} GPIO44(MISO)={} GPIO16(MOSI)={} GPIO8(NSS)={}",
+                    (gpio_enable1_val >> (43 - 32)) & 1,
+                    (gpio_enable1_val >> (44 - 32)) & 1,
+                    (gpio_enable_val >> 16) & 1,
                     (gpio_enable_val >> 8) & 1);
 
                 // GPIO_OUT - what values are being driven
                 let gpio_out_val = core::ptr::read_volatile(0x60004004 as *const u32);
-                info!("  GPIO_OUT: 0x{:08X}", gpio_out_val);
+                let gpio_out1_val = core::ptr::read_volatile(0x60004010 as *const u32);
+                info!("  GPIO_OUT: 0x{:08X}, GPIO_OUT1: 0x{:08X}", gpio_out_val, gpio_out1_val);
 
                 // Check FUNC_OUT_SEL for each pin (which peripheral signal is routed)
-                let gpio4_out = core::ptr::read_volatile((0x60004554 + 4*4) as *const u32);
-                let gpio5_out = core::ptr::read_volatile((0x60004554 + 5*4) as *const u32);
-                let gpio6_out = core::ptr::read_volatile((0x60004554 + 6*4) as *const u32);
+                let gpio43_out = core::ptr::read_volatile((0x60004554 + 43*4) as *const u32);
+                let gpio44_out = core::ptr::read_volatile((0x60004554 + 44*4) as *const u32);
+                let gpio16_out = core::ptr::read_volatile((0x60004554 + 16*4) as *const u32);
                 let gpio8_out = core::ptr::read_volatile((0x60004554 + 8*4) as *const u32);
-                info!("  FUNC_OUT_SEL: GPIO4=0x{:02X} GPIO5=0x{:02X} GPIO6=0x{:02X} GPIO8=0x{:02X}",
-                    gpio4_out & 0x1FF, gpio5_out & 0x1FF, gpio6_out & 0x1FF, gpio8_out & 0x1FF);
-                info!("    Expected: GPIO5=SPICLK(114) GPIO6=SPID(115) GPIO4=input");
+                info!("  FUNC_OUT_SEL: GPIO43=0x{:02X} GPIO44=0x{:02X} GPIO16=0x{:02X} GPIO8=0x{:02X}",
+                    gpio43_out & 0x1FF, gpio44_out & 0x1FF, gpio16_out & 0x1FF, gpio8_out & 0x1FF);
+                info!("    Expected: GPIO43=SPI3_CLK(66) GPIO16=SPI3_D(68) GPIO44=input");
 
                 // Check SPI3 peripheral registers
                 // ESP32-S3: SPI2=0x60024000, SPI3=0x60025000
@@ -616,11 +602,12 @@ fn main() {
 
                 // Check GPIO_IN to see actual pin states
                 let gpio_in_val = core::ptr::read_volatile(0x6000403C as *const u32);
-                info!("  GPIO_IN: 0x{:08X}", gpio_in_val);
-                info!("    GPIO4={} GPIO5={} GPIO6={} GPIO8={}",
-                    (gpio_in_val >> 4) & 1,
-                    (gpio_in_val >> 5) & 1,
-                    (gpio_in_val >> 6) & 1,
+                let gpio_in1_val = core::ptr::read_volatile(0x60004040 as *const u32);
+                info!("  GPIO_IN: 0x{:08X}, GPIO_IN1: 0x{:08X}", gpio_in_val, gpio_in1_val);
+                info!("    GPIO43={} GPIO44={} GPIO16={} GPIO8={}",
+                    (gpio_in1_val >> (43 - 32)) & 1,
+                    (gpio_in1_val >> (44 - 32)) & 1,
+                    (gpio_in_val >> 16) & 1,
                     (gpio_in_val >> 8) & 1);
             }
             info!("=== END GPIO STATE ===");
@@ -700,56 +687,62 @@ fn main() {
 
             info!("=== FIXING SPI3 GPIO ROUTING ===");
             unsafe {
-                // ESP32-S3 GPSPI3 signal numbers (from TRM):
-                // SPICLK_OUT = 114 (SCK output)
-                // SPID_OUT = 115 (MOSI output)
-                // SPIQ_IN = 116 (MISO input)
-                // SPICS0_OUT = 117 (CS output) - but we use GPIO for NSS
+                // ESP32-S3 GP-SPI3 signal numbers from gpio_sig_map.h:
+                // https://github.com/espressif/esp-idf/blob/master/components/soc/esp32s3/include/soc/gpio_sig_map.h
+                // SPI3_CLK_OUT_IDX = 66 (SCK output)
+                // SPI3_Q_IN_IDX = 67 (MISO input)
+                // SPI3_D_OUT_IDX = 68 (MOSI output)
+                //
+                // New pin assignments:
+                // GPIO43 = SCK, GPIO44 = MISO, GPIO16 = MOSI
 
-                // 1. Fix GPIO4 (MISO) - make it input, route to SPIQ_IN
-                let gpio_enable_w1tc = 0x60004028 as *mut u32;
-                core::ptr::write_volatile(gpio_enable_w1tc, 1 << 4);  // Disable GPIO4 output
+                // 1. Fix GPIO44 (MISO) - make it input, route to SPI3_Q_IN (signal 67)
+                // GPIO44 is in GPIO_ENABLE1 (bits 32-53), bit 12 (44-32=12)
+                let gpio_enable1_w1tc = 0x6000402C as *mut u32;  // GPIO_ENABLE1_W1TC
+                core::ptr::write_volatile(gpio_enable1_w1tc, 1 << (44 - 32));  // Disable GPIO44 output
 
-                // Route SPIQ_IN (signal 116) from GPIO4
-                let spiq_in_sel = 0x60004154 + (116 * 4);
-                core::ptr::write_volatile(spiq_in_sel as *mut u32, (1 << 7) | 4);  // sig_in_sel=1, gpio=4
-                info!("  GPIO4 (MISO): disabled output, routed SPIQ_IN from GPIO4");
+                // Route SPI3_Q_IN (signal 67) from GPIO44
+                let spiq_in_sel = 0x60004154 + (67 * 4);  // Signal 67 = SPI3_Q_IN
+                core::ptr::write_volatile(spiq_in_sel as *mut u32, (1 << 7) | 44);  // sig_in_sel=1, gpio=44
+                info!("  GPIO44 (MISO): disabled output, routed SPI3_Q_IN (sig 67) from GPIO44");
 
-                // 2. Fix GPIO5 (SCK) - route SPICLK_OUT (signal 114) to it
-                let gpio5_func_out = 0x60004554 + (5 * 4);
-                let current_gpio5 = core::ptr::read_volatile(gpio5_func_out as *const u32);
-                core::ptr::write_volatile(gpio5_func_out as *mut u32, 114);  // SPICLK_OUT
-                info!("  GPIO5 (SCK): FUNC_OUT was 0x{:02X}, set to 114 (SPICLK_OUT)", current_gpio5 & 0x1FF);
+                // 2. Fix GPIO43 (SCK) - route SPI3_CLK_OUT (signal 66) to it
+                let gpio43_func_out = 0x60004554 + (43 * 4);
+                let current_gpio43 = core::ptr::read_volatile(gpio43_func_out as *const u32);
+                core::ptr::write_volatile(gpio43_func_out as *mut u32, 66);  // SPI3_CLK_OUT
+                info!("  GPIO43 (SCK): FUNC_OUT was 0x{:02X}, set to 66 (SPI3_CLK_OUT)", current_gpio43 & 0x1FF);
 
-                // 3. Fix GPIO6 (MOSI) - route SPID_OUT (signal 115) to it
-                let gpio6_func_out = 0x60004554 + (6 * 4);
-                let current_gpio6 = core::ptr::read_volatile(gpio6_func_out as *const u32);
-                core::ptr::write_volatile(gpio6_func_out as *mut u32, 115);  // SPID_OUT
-                info!("  GPIO6 (MOSI): FUNC_OUT was 0x{:02X}, set to 115 (SPID_OUT)", current_gpio6 & 0x1FF);
+                // 3. Fix GPIO16 (MOSI) - route SPI3_D_OUT (signal 68) to it
+                let gpio16_func_out = 0x60004554 + (16 * 4);
+                let current_gpio16 = core::ptr::read_volatile(gpio16_func_out as *const u32);
+                core::ptr::write_volatile(gpio16_func_out as *mut u32, 68);  // SPI3_D_OUT
+                info!("  GPIO16 (MOSI): FUNC_OUT was 0x{:02X}, set to 68 (SPI3_D_OUT)", current_gpio16 & 0x1FF);
 
                 // 4. GPIO8 (NSS) - keep as GPIO output (we control it manually)
-                // No change needed, just verify it's set to GPIO function (0x100 = no peripheral)
                 let gpio8_func_out = 0x60004554 + (8 * 4);
                 let current_gpio8 = core::ptr::read_volatile(gpio8_func_out as *const u32);
                 info!("  GPIO8 (NSS): FUNC_OUT is 0x{:02X} (GPIO mode)", current_gpio8 & 0x1FF);
 
-                // 5. Make sure GPIO4 has pull-up enabled
-                let io_mux_gpio4 = 0x60009014 as *mut u32;
-                let mux_val = core::ptr::read_volatile(io_mux_gpio4);
-                let new_mux = (mux_val & !(0x7 << 12)) | (1 << 12) | (1 << 8);
-                core::ptr::write_volatile(io_mux_gpio4, new_mux);
+                // 5. Make sure GPIO44 has pull-up enabled
+                // GPIO44 IO_MUX is at offset 0xB4 from base 0x60009000
+                let io_mux_gpio44 = 0x600090B4 as *mut u32;
+                let mux_val = core::ptr::read_volatile(io_mux_gpio44);
+                let new_mux = (mux_val & !(0x7 << 12)) | (1 << 12) | (1 << 8);  // MCU_SEL=1 (GPIO), pull-up
+                core::ptr::write_volatile(io_mux_gpio44, new_mux);
 
                 // Verify final state
                 let gpio_enable_final = core::ptr::read_volatile(0x60004020 as *const u32);
-                let gpio5_final = core::ptr::read_volatile(gpio5_func_out as *const u32);
-                let gpio6_final = core::ptr::read_volatile(gpio6_func_out as *const u32);
-                info!("  Final FUNC_OUT: GPIO5=0x{:02X} GPIO6=0x{:02X}",
-                    gpio5_final & 0x1FF, gpio6_final & 0x1FF);
-                info!("  Final GPIO_ENABLE: 0x{:08X} (GPIO4={} GPIO5={} GPIO6={})",
-                    gpio_enable_final,
-                    (gpio_enable_final >> 4) & 1,
-                    (gpio_enable_final >> 5) & 1,
-                    (gpio_enable_final >> 6) & 1);
+                let gpio_enable1_final = core::ptr::read_volatile(0x60004024 as *const u32);
+                let gpio43_final = core::ptr::read_volatile(gpio43_func_out as *const u32);
+                let gpio16_final = core::ptr::read_volatile(gpio16_func_out as *const u32);
+                info!("  Final FUNC_OUT: GPIO43=0x{:02X} GPIO16=0x{:02X}",
+                    gpio43_final & 0x1FF, gpio16_final & 0x1FF);
+                info!("  Final GPIO_ENABLE: 0x{:08X} GPIO_ENABLE1: 0x{:08X}",
+                    gpio_enable_final, gpio_enable1_final);
+                info!("    GPIO43={} GPIO44={} GPIO16={}",
+                    (gpio_enable1_final >> (43 - 32)) & 1,
+                    (gpio_enable1_final >> (44 - 32)) & 1,
+                    (gpio_enable_final >> 16) & 1);
 
                 // Verify SPI3 peripheral clock is now enabled
                 let clk_after = core::ptr::read_volatile(0x60026010 as *const u32);
@@ -780,19 +773,20 @@ fn main() {
                     info!("  SPI3_CLOCK fixed: 0x{:08X} -> 0x{:08X}", spi_clk, clk_after);
                 }
 
-                // Increase GPIO drive strength for SCK (GPIO5) and MOSI (GPIO6)
+                // Increase GPIO drive strength for SCK (GPIO43) and MOSI (GPIO16)
                 // IO_MUX drive strength is bits [9:8]: 0=5mA, 1=10mA, 2=20mA, 3=40mA
-                let io_mux_gpio5 = 0x60009018 as *mut u32;  // GPIO5 IO_MUX
-                let io_mux_gpio6 = 0x6000901C as *mut u32;  // GPIO6 IO_MUX
-                let mux5 = core::ptr::read_volatile(io_mux_gpio5);
-                let mux6 = core::ptr::read_volatile(io_mux_gpio6);
+                // GPIO43 IO_MUX is at offset 0xB0, GPIO16 is at offset 0x44
+                let io_mux_gpio43 = 0x600090B0 as *mut u32;
+                let io_mux_gpio16 = 0x60009044 as *mut u32;
+                let mux43 = core::ptr::read_volatile(io_mux_gpio43);
+                let mux16 = core::ptr::read_volatile(io_mux_gpio16);
                 // Set drive strength to maximum (3 = 40mA)
-                let new_mux5 = (mux5 & !(0x3 << 8)) | (3 << 8);
-                let new_mux6 = (mux6 & !(0x3 << 8)) | (3 << 8);
-                core::ptr::write_volatile(io_mux_gpio5, new_mux5);
-                core::ptr::write_volatile(io_mux_gpio6, new_mux6);
-                info!("  GPIO5 drive: 0x{:08X} -> 0x{:08X}", mux5, new_mux5);
-                info!("  GPIO6 drive: 0x{:08X} -> 0x{:08X}", mux6, new_mux6);
+                let new_mux43 = (mux43 & !(0x3 << 10)) | (3 << 10);  // FUN_DRV is bits [11:10]
+                let new_mux16 = (mux16 & !(0x3 << 10)) | (3 << 10);
+                core::ptr::write_volatile(io_mux_gpio43, new_mux43);
+                core::ptr::write_volatile(io_mux_gpio16, new_mux16);
+                info!("  GPIO43 drive: 0x{:08X} -> 0x{:08X}", mux43, new_mux43);
+                info!("  GPIO16 drive: 0x{:08X} -> 0x{:08X}", mux16, new_mux16);
             }
             info!("=== SPI3 FIX DONE ===");
 
@@ -857,33 +851,11 @@ fn main() {
                         // Try to init properly after diagnostics
                         let (spi_device, nss) = (diag_driver.spi, diag_driver.nss);
                         match nfc::pn5180::init_pn5180(spi_device, nss, None, None, &mut nfc_state) {
-                            Ok(mut driver) => {
+                            Ok(driver) => {
                                 info!("PN5180 NFC initialized successfully");
-
-                                // Continuous firmware version test
-                                info!("=== CONTINUOUS FW VERSION TEST ===");
-                                info!("(Running 10 tests, ~2 per second)");
-
-                                for i in 0..10 {
-                                    let version = driver.get_firmware_version();
-                                    match version {
-                                        Ok((major, minor, patch)) => {
-                                            if major == 0 && minor == 0 && patch == 0 {
-                                                info!("#{:02}: FW=0.0.0 (bad - 0x00)", i + 1);
-                                            } else if major == 15 && minor == 15 && patch == 255 {
-                                                info!("#{:02}: FW=15.15.255 (bad - 0xFF)", i + 1);
-                                            } else {
-                                                info!("#{:02}: FW={}.{}.{} *** GOOD! ***", i + 1, major, minor, patch);
-                                            }
-                                        }
-                                        Err(e) => {
-                                            info!("#{:02}: Error {:?}", i + 1, e);
-                                        }
-                                    }
-                                    FreeRtos::delay_ms(500);
-                                }
-
-                                info!("=== FW TEST DONE ===");
+                                // Store driver for later use in main loop
+                                // TODO: Add NFC manager to handle tag detection
+                                drop(driver);  // For now, just verify init works
                             }
                             Err(e) => warn!("PN5180 init failed: {:?}", e),
                         }
@@ -894,6 +866,7 @@ fn main() {
             Err(e) => warn!("SPI device creation failed: {:?}", e),
         }
     }
+    } // end if NFC_ENABLED
 
     info!("Entering main loop...");
 
@@ -914,6 +887,7 @@ fn main() {
 
         // Post-WiFi initialization - check frequently until WiFi connects
         static WIFI_INIT_DONE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+        static OTA_CHECK_DONE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
         if !WIFI_INIT_DONE.load(std::sync::atomic::Ordering::Relaxed) {
             if loop_count % 20 == 0 && wifi_manager::is_connected() {
                 // Initialize SNTP for time sync (may take time)
@@ -930,6 +904,30 @@ fn main() {
         } else if loop_count % 400 == 0 {
             // Regular polling every 2 seconds
             backend_client::poll_backend();
+        }
+
+        // OTA check on startup (once, after WiFi init)
+        if WIFI_INIT_DONE.load(std::sync::atomic::Ordering::Relaxed)
+            && !OTA_CHECK_DONE.load(std::sync::atomic::Ordering::Relaxed)
+        {
+            OTA_CHECK_DONE.store(true, std::sync::atomic::Ordering::Relaxed);
+            info!("Checking for firmware updates...");
+            match ota_manager::check_for_update("http://192.168.255.16:3000") {
+                Ok(info) => {
+                    if info.available {
+                        info!("Firmware update available: v{} ({} bytes)", info.version, info.size);
+                        // Auto-update for now (could add UI confirmation later)
+                        if let Err(e) = ota_manager::perform_update("http://192.168.255.16:3000") {
+                            warn!("OTA update failed: {}", e);
+                        }
+                    } else {
+                        info!("Firmware is up to date (v{})", ota_manager::get_version());
+                    }
+                }
+                Err(e) => {
+                    warn!("OTA check failed: {}", e);
+                }
+            }
         }
 
         // Poll NFC every 20 iterations (~100ms at 5ms delay)

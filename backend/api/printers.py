@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
+from pydantic import BaseModel
 import asyncio
 import io
 import logging
@@ -30,8 +31,8 @@ _printer_manager = None
 # Cache for cover images: {serial: {(subtask_name, plate_num): bytes}}
 _cover_cache: dict[str, dict[tuple[str, int], bytes]] = {}
 
-# Cover image size for ESP32 display (must match placeholder image size)
-COVER_SIZE = (100, 100)
+# Cover image size for ESP32 display (must match EEZ design: 70x70)
+COVER_SIZE = (70, 70)
 
 
 def resize_cover_image(image_data: bytes) -> bytes:
@@ -98,6 +99,9 @@ async def list_printers():
         tray_now = None
         tray_now_left = None
         tray_now_right = None
+        active_extruder = None
+        stg_cur = -1
+        stg_cur_name = None
 
         # Get live state if connected
         if connected and _printer_manager:
@@ -111,6 +115,9 @@ async def list_printers():
                 tray_now = state.tray_now
                 tray_now_left = state.tray_now_left
                 tray_now_right = state.tray_now_right
+                active_extruder = state.active_extruder
+                stg_cur = state.stg_cur
+                stg_cur_name = state.stg_cur_name
                 # Add cover URL if printing
                 if gcode_state in ("RUNNING", "PAUSE", "PAUSED") and subtask_name:
                     cover_url = f"/api/printers/{printer.serial}/cover"
@@ -127,6 +134,9 @@ async def list_printers():
             tray_now=tray_now,
             tray_now_left=tray_now_left,
             tray_now_right=tray_now_right,
+            active_extruder=active_extruder,
+            stg_cur=stg_cur,
+            stg_cur_name=stg_cur_name,
         ))
 
     return result
@@ -206,15 +216,19 @@ async def disconnect_printer(serial: str):
         await _printer_manager.disconnect(serial)
 
 
+class AutoConnectRequest(BaseModel):
+    auto_connect: bool
+
+
 @router.post("/{serial}/auto-connect", response_model=Printer)
-async def toggle_auto_connect(serial: str):
-    """Toggle auto-connect setting."""
+async def set_auto_connect(serial: str, request: AutoConnectRequest):
+    """Set auto-connect setting."""
     db = await get_db()
     printer = await db.get_printer(serial)
     if not printer:
         raise HTTPException(status_code=404, detail="Printer not found")
 
-    return await db.update_printer(serial, PrinterUpdate(auto_connect=not printer.auto_connect))
+    return await db.update_printer(serial, PrinterUpdate(auto_connect=request.auto_connect))
 
 
 @router.post("/{serial}/ams/{ams_id}/tray/{tray_id}/filament", status_code=204)

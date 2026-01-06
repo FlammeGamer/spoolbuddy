@@ -17,6 +17,9 @@
 #include "vars.h"
 #include <stdio.h>
 #include <string.h>
+#include "esp_log.h"
+
+static const char *TAG = "ui";
 
 // =============================================================================
 // IMPORTANT: STALE POINTER WARNING
@@ -272,7 +275,12 @@ void ui_init() {
     loadScreen(SCREEN_ID_MAIN);
 }
 
+static int tick_count = 0;
 void ui_tick() {
+    tick_count++;
+    if (tick_count % 500 == 0) {
+        ESP_LOGI(TAG, "ui_tick #%d", tick_count);
+    }
     if (pendingScreen != 0) {
         enum ScreensEnum screen = pendingScreen;
         pendingScreen = 0;
@@ -393,7 +401,9 @@ void ui_tick() {
         }
 
         // Update backend status UI (main screen printer info)
+        ESP_LOGI(TAG, "Calling update_backend_ui");
         update_backend_ui();
+        ESP_LOGI(TAG, "update_backend_ui returned");
 
         // Update WiFi icon for CURRENT screen only (other screen objects are freed)
         WifiStatus status;

@@ -36,6 +36,10 @@ CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
 CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
 CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
 
+# Custom partition table for single-app OTA (8MB flash too small for dual OTA)
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="/opt/claude/projects/SpoolStation/firmware/partitions.csv"
+
 # Watchdog timers - disabled to allow heavy UI rendering
 CONFIG_ESP_TASK_WDT_EN=n
 

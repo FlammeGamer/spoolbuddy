@@ -37,6 +37,14 @@ _previous_states: Dict[str, PrinterState] = {}
 # mDNS service for device discovery
 _zeroconf: Optional[AsyncZeroconf] = None
 _mdns_service: Optional[ServiceInfo] = None
+# Track ESP32 display connection (last seen timestamp)
+_display_last_seen: float = 0
+_display_connected: bool = False
+DISPLAY_TIMEOUT_SEC = 10  # Consider disconnected after 10s of no requests
+# Pending commands for display (checked on heartbeat)
+_display_pending_command: Optional[str] = None
+# Device firmware version (reported by device in heartbeat)
+_display_firmware_version: Optional[str] = None
 
 
 def _get_local_ip() -> str:
@@ -50,6 +58,63 @@ def _get_local_ip() -> str:
         return ip
     except Exception:
         return "127.0.0.1"
+
+
+def update_display_heartbeat():
+    """Update display last seen time and broadcast if connection state changed."""
+    global _display_last_seen, _display_connected
+    import time
+
+    now = time.time()
+    was_connected = _display_connected
+    _display_last_seen = now
+    _display_connected = True
+
+    # Broadcast connection change
+    if not was_connected:
+        logger.info("ESP32 display connected")
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(broadcast_message({"type": "device_connected"}))
+        except RuntimeError:
+            pass
+
+
+def is_display_connected() -> bool:
+    """Check if display is connected (seen within timeout)."""
+    import time
+    if _display_last_seen == 0:
+        return False
+    return (time.time() - _display_last_seen) < DISPLAY_TIMEOUT_SEC
+
+
+def queue_display_command(command: str):
+    """Queue a command for the display to execute on next heartbeat."""
+    global _display_pending_command
+    _display_pending_command = command
+    logger.info(f"Queued display command: {command}")
+
+
+def pop_display_command() -> Optional[str]:
+    """Get and clear the pending display command."""
+    global _display_pending_command
+    cmd = _display_pending_command
+    _display_pending_command = None
+    return cmd
+
+
+async def check_display_timeout():
+    """Background task to check for display timeout and broadcast disconnect."""
+    global _display_connected
+    import time
+
+    while True:
+        await asyncio.sleep(2)  # Check every 2 seconds
+
+        if _display_connected and not is_display_connected():
+            _display_connected = False
+            logger.info("ESP32 display disconnected (timeout)")
+            await broadcast_message({"type": "device_disconnected"})
 
 
 async def broadcast_message(message: dict):
@@ -250,6 +315,9 @@ async def lifespan(app: FastAPI):
     # Auto-connect printers
     asyncio.create_task(auto_connect_printers())
 
+    # Start display timeout checker
+    asyncio.create_task(check_display_timeout())
+
     yield
 
     # Shutdown
@@ -307,6 +375,35 @@ async def get_server_time():
         "minute": now.minute,
         "second": now.second,
         "timestamp": int(now.timestamp())
+    }
+
+
+@app.get("/api/display/heartbeat")
+async def display_heartbeat(version: Optional[str] = None):
+    """Heartbeat endpoint for ESP32 display to indicate it's connected."""
+    global _display_firmware_version
+    update_display_heartbeat()
+    if version:
+        _display_firmware_version = version
+    cmd = pop_display_command()
+    if cmd:
+        logger.info(f"Sending command to display: {cmd}")
+        return {"ok": True, "command": cmd}
+    return {"ok": True}
+
+
+def get_display_firmware_version() -> Optional[str]:
+    """Get the last reported firmware version from the display."""
+    return _display_firmware_version
+
+
+@app.get("/api/display/status")
+async def display_status():
+    """Get display connection status."""
+    return {
+        "connected": is_display_connected(),
+        "last_seen": _display_last_seen if _display_last_seen > 0 else None,
+        "firmware_version": _display_firmware_version,
     }
 
 
@@ -379,6 +476,27 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     websocket_clients.add(websocket)
     logger.info("WebSocket client connected")
+
+    # Send initial state to new client
+    try:
+        display_connected = is_display_connected()
+        logger.info(f"Sending initial_state: device.connected={display_connected}")
+        initial_state = {
+            "type": "initial_state",
+            "device": {
+                "connected": display_connected,
+                "last_weight": None,
+                "weight_stable": False,
+                "current_tag_id": None,
+            },
+            "printers": {
+                serial: conn.connected
+                for serial, conn in printer_manager._connections.items()
+            }
+        }
+        await websocket.send_text(json.dumps(initial_state))
+    except Exception as e:
+        logger.warning(f"Failed to send initial state: {e}")
 
     try:
         while True:

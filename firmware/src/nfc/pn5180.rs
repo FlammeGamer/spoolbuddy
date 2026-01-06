@@ -6,28 +6,31 @@
 //! - BUSY - Indicates when chip is processing (active high)
 //! - RST - Hardware reset (active low)
 //!
-//! CrowPanel Advance 7.0" Wireless Module Header pinout:
+//! CrowPanel Advance 7.0" Header pinout:
+//!
+//! NOTE: J9 pins (IO4/5/6) are internally used by the RGB LCD display!
+//! We use UART0-OUT and J11 headers instead for SPI.
 //!
 //! ```text
-//!         J9 (Left)              J11 (Right)
-//!         ┌────────┐             ┌────────┐
-//! Pin 1   │  IO20  │             │  IO19  │
-//! Pin 2   │  IO5   │  ← SCK      │  IO16  │
-//! Pin 3   │  IO4   │  ← MISO     │  IO15  │   ← RST
-//! Pin 4   │  IO6   │  ← MOSI     │   NC   │
-//! Pin 5   │  3V3   │  ← VCC      │  IO2   │   ← BUSY
-//! Pin 6   │  GND   │  ← GND      │  IO8   │   ← CS (NSS)
-//! Pin 7   │   5V   │             │   NC   │
-//!         └────────┘             └────────┘
+//!    UART0-OUT              J11 (Right)
+//!    ┌────────┐             ┌────────┐
+//!    │  IO44  │  ← MISO     │  IO19  │
+//!    │  IO43  │  ← SCK      │  IO16  │  ← MOSI
+//!    │  3V3   │  ← VCC      │  IO15  │  ← RST
+//!    │  GND   │  ← GND      │   NC   │
+//!    └────────┘             │  IO2   │  ← BUSY
+//!                           │  IO8   │  ← CS (NSS)
+//!                           │   NC   │
+//!                           └────────┘
 //! ```
 //!
-//! GPIO assignments (DIP switch S1=0, S0=1 for Wireless Module mode):
-//! - IO5  (J9 Pin 2)  -> SPI SCK
-//! - IO4  (J9 Pin 3)  -> SPI MISO
-//! - IO6  (J9 Pin 4)  -> SPI MOSI
-//! - IO8  (J11 Pin 6) -> NSS (chip select)
-//! - IO2  (J11 Pin 5) -> BUSY
-//! - IO15 (J11 Pin 3) -> RST
+//! GPIO assignments:
+//! - IO43 (UART0-OUT)  -> SPI SCK
+//! - IO44 (UART0-OUT)  -> SPI MISO
+//! - IO16 (J11 Pin 2)  -> SPI MOSI
+//! - IO8  (J11 Pin 6)  -> NSS (chip select)
+//! - IO2  (J11 Pin 5)  -> BUSY
+//! - IO15 (J11 Pin 3)  -> RST
 //!
 //! Commands are sent as:
 //! [CMD_BYTE] [PAYLOAD...]
@@ -45,14 +48,14 @@ use log::{info, warn};
 // These pins are exposed on the Wireless Module Headers (J9 + J11)
 // Requires DIP switch setting: S1=0, S0=1
 
-/// SPI Clock pin (J9 Pin 2)
-pub const PIN_SCK: u8 = 5;   // IO5
+/// SPI Clock pin (UART0-OUT)
+pub const PIN_SCK: u8 = 43;   // IO43 (was IO5 on J9, but J9 is used by RGB LCD)
 
-/// SPI MISO pin (J9 Pin 3)
-pub const PIN_MISO: u8 = 4;  // IO4
+/// SPI MISO pin (UART0-OUT)
+pub const PIN_MISO: u8 = 44;  // IO44 (was IO4 on J9, but J9 is used by RGB LCD)
 
-/// SPI MOSI pin (J9 Pin 4)
-pub const PIN_MOSI: u8 = 6;  // IO6
+/// SPI MOSI pin (J11 Pin 2)
+pub const PIN_MOSI: u8 = 16;  // IO16 (was IO6 on J9, but J9 is used by RGB LCD)
 
 /// Chip Select pin (J11 Pin 6) - directly controlled, active low
 pub const PIN_NSS: u8 = 8;   // IO8
@@ -379,7 +382,7 @@ where
     /// - Random data = electrical noise or bad connection
     pub fn spi_diagnostic_test(&mut self) -> Result<(), Pn5180Error> {
         info!("=== SPI DIAGNOSTIC TEST ===");
-        info!("Pin assignments: SCK=GPIO5, MOSI=GPIO6, MISO=GPIO4, NSS=GPIO8");
+        info!("Pin assignments: SCK=GPIO43, MOSI=GPIO16, MISO=GPIO44, NSS=GPIO8");
 
         // Test -1: Bit-bang SPI test to verify physical wiring
         // This bypasses the ESP32 SPI peripheral entirely
@@ -405,19 +408,19 @@ where
             let spi3_rst = (rst_en1 >> 23) & 1;  // Bit 23 is SPI3_RST (1=in reset)
             info!("  PERIP_RST_EN1: 0x{:08X} (SPI3_RST={})", rst_en1, spi3_rst);
 
-            // Read GPIO5 (SCK) IO_MUX register to check function select
-            let io_mux_gpio5 = 0x60009018 as *const u32;  // GPIO5 IO_MUX
-            let mux5 = core::ptr::read_volatile(io_mux_gpio5);
-            let mcu_sel5 = (mux5 >> 12) & 0x7;
-            info!("  GPIO5 IO_MUX: 0x{:08X} (MCU_SEL={} -> {})",
-                mux5, mcu_sel5, if mcu_sel5 == 1 { "GPIO" } else { "other" });
+            // Read GPIO43 (SCK) IO_MUX register to check function select
+            let io_mux_gpio43 = 0x600090B0 as *const u32;  // GPIO43 IO_MUX
+            let mux43 = core::ptr::read_volatile(io_mux_gpio43);
+            let mcu_sel43 = (mux43 >> 12) & 0x7;
+            info!("  GPIO43 IO_MUX: 0x{:08X} (MCU_SEL={} -> {})",
+                mux43, mcu_sel43, if mcu_sel43 == 1 { "GPIO" } else { "other" });
 
-            // Read GPIO6 (MOSI) IO_MUX register
-            let io_mux_gpio6 = 0x6000901C as *const u32;  // GPIO6 IO_MUX
-            let mux6 = core::ptr::read_volatile(io_mux_gpio6);
-            let mcu_sel6 = (mux6 >> 12) & 0x7;
-            info!("  GPIO6 IO_MUX: 0x{:08X} (MCU_SEL={} -> {})",
-                mux6, mcu_sel6, if mcu_sel6 == 1 { "GPIO" } else { "other" });
+            // Read GPIO16 (MOSI) IO_MUX register
+            let io_mux_gpio16 = 0x60009044 as *const u32;  // GPIO16 IO_MUX
+            let mux16 = core::ptr::read_volatile(io_mux_gpio16);
+            let mcu_sel16 = (mux16 >> 12) & 0x7;
+            info!("  GPIO16 IO_MUX: 0x{:08X} (MCU_SEL={} -> {})",
+                mux16, mcu_sel16, if mcu_sel16 == 1 { "GPIO" } else { "other" });
 
             // Read SPI3 clock divider register (CLOCK at offset 0x0C!)
             // ESP32-S3: SPI2=0x60024000, SPI3=0x60025000
@@ -439,42 +442,47 @@ where
             info!("  SPI3_CTRL: 0x{:08X}", spi_ctrl);
 
             // Check actual GPIO output levels
+            // GPIO43 is in GPIO_OUT1 (bits 32-53), GPIO16 and GPIO8 are in GPIO_OUT (bits 0-31)
             let gpio_out = core::ptr::read_volatile(0x60004004 as *const u32);
+            let gpio_out1 = core::ptr::read_volatile(0x60004010 as *const u32);
             let gpio_in = core::ptr::read_volatile(0x6000403C as *const u32);
-            info!("  GPIO_OUT: 0x{:08X} (SCK={} MOSI={} NSS={})",
-                gpio_out, (gpio_out >> 5) & 1, (gpio_out >> 6) & 1, (gpio_out >> 8) & 1);
-            info!("  GPIO_IN:  0x{:08X} (MISO={})",
-                gpio_in, (gpio_in >> 4) & 1);
+            let gpio_in1 = core::ptr::read_volatile(0x60004040 as *const u32);
+            info!("  GPIO_OUT1: 0x{:08X} (SCK(43)={})",
+                gpio_out1, (gpio_out1 >> (43 - 32)) & 1);
+            info!("  GPIO_OUT:  0x{:08X} (MOSI(16)={} NSS(8)={})",
+                gpio_out, (gpio_out >> 16) & 1, (gpio_out >> 8) & 1);
+            info!("  GPIO_IN1:  0x{:08X} (MISO(44)={})",
+                gpio_in1, (gpio_in1 >> (44 - 32)) & 1);
         }
 
         info!("  Performing SPI transfer to check clock generation...");
         // Do a test transfer and check MISO before/during/after
-        let gpio_in_before: u32;
+        let gpio_in1_before: u32;
         unsafe {
-            gpio_in_before = core::ptr::read_volatile(0x6000403C as *const u32);
+            gpio_in1_before = core::ptr::read_volatile(0x60004040 as *const u32);  // GPIO_IN1 for GPIO44
         }
-        info!("  MISO before transfer: {}", (gpio_in_before >> 4) & 1);
+        info!("  MISO before transfer: {}", (gpio_in1_before >> (44 - 32)) & 1);
 
         self.nss.set_low().map_err(|_| Pn5180Error::GpioError)?;
         FreeRtos::delay_ms(1);
 
-        // Check MISO right after NSS goes low
-        let gpio_in_nss_low: u32;
+        // Check MISO right after NSS goes low (GPIO44 is in GPIO_IN1)
+        let gpio_in1_nss_low: u32;
         unsafe {
-            gpio_in_nss_low = core::ptr::read_volatile(0x6000403C as *const u32);
+            gpio_in1_nss_low = core::ptr::read_volatile(0x60004040 as *const u32);
         }
-        info!("  MISO after NSS LOW: {}", (gpio_in_nss_low >> 4) & 1);
+        info!("  MISO after NSS LOW: {}", (gpio_in1_nss_low >> (44 - 32)) & 1);
 
         // Do a small transfer
         let mut dummy_rx = [0u8; 4];
         self.spi.transfer(&mut dummy_rx, &[0x07, 0x10, 0x02, 0xFF]).map_err(|_| Pn5180Error::SpiError)?;
 
-        // Check MISO after transfer
-        let gpio_in_after: u32;
+        // Check MISO after transfer (GPIO44 is in GPIO_IN1)
+        let gpio_in1_after: u32;
         unsafe {
-            gpio_in_after = core::ptr::read_volatile(0x6000403C as *const u32);
+            gpio_in1_after = core::ptr::read_volatile(0x60004040 as *const u32);
         }
-        info!("  MISO after transfer: {}", (gpio_in_after >> 4) & 1);
+        info!("  MISO after transfer: {}", (gpio_in1_after >> (44 - 32)) & 1);
         info!("  Transfer result: {:02X?}", dummy_rx);
 
         self.nss.set_high().map_err(|_| Pn5180Error::GpioError)?;
@@ -486,7 +494,7 @@ where
             info!("  The MISO line is not responding to clock pulses.");
             info!("");
             info!("  CRITICAL: Use oscilloscope or logic analyzer to verify:");
-            info!("    1. SCK (GPIO5/J9-Pin2) is actually toggling during transfer");
+            info!("    1. SCK (GPIO43/UART0-OUT) is actually toggling during transfer");
             info!("    2. NSS (GPIO8/J11-Pin6) goes LOW during transfer");
             info!("");
             info!("  If you have a multimeter:");
@@ -696,10 +704,12 @@ where
         // Test 5: Verify connections still needed
         info!("Test 5: Connection verification checklist");
         info!("  Please verify with multimeter:");
-        info!("  [ ] SCK:  J9-Pin2 (GPIO5) <-> PN5180 SCK/CLK pin");
+        info!("  [ ] SCK:  UART0-OUT (GPIO43) <-> PN5180 SCK/CLK pin");
+        info!("  [ ] MISO: UART0-OUT (GPIO44) <-> PN5180 MISO pin");
+        info!("  [ ] MOSI: J11-Pin2 (GPIO16) <-> PN5180 MOSI pin");
         info!("  [ ] NSS:  J11-Pin6 (GPIO8) <-> PN5180 NSS/SS/CS pin");
         info!("  [ ] VCC:  Measure 3.3V at PN5180 VCC pin (should be 3.2-3.4V)");
-        info!("  [ ] GND:  J9-Pin6 <-> PN5180 GND pin");
+        info!("  [ ] GND:  UART0-OUT GND <-> PN5180 GND pin");
         info!("");
 
         // Summary and recommendations

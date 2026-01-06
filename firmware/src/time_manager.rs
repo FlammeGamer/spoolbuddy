@@ -63,6 +63,10 @@ pub fn set_backend_time(hour: u8, minute: u8) {
     *backend_time = Some((hour, minute));
 }
 
+// Timezone offset in seconds (CET = UTC+1 = 3600, CEST = UTC+2 = 7200)
+// TODO: Make this configurable via backend
+const TIMEZONE_OFFSET_SECS: u64 = 3600; // CET (UTC+1)
+
 /// Get current time components (for UI display)
 /// Returns (hour, minute) - tries SNTP first, falls back to backend time
 pub fn get_time() -> Option<(u8, u8)> {
@@ -70,8 +74,8 @@ pub fn get_time() -> Option<(u8, u8)> {
     if is_time_synced() {
         match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
             Ok(duration) => {
-                let secs = duration.as_secs();
-                // Simple UTC time calculation
+                let secs = duration.as_secs() + TIMEZONE_OFFSET_SECS;
+                // Local time calculation with timezone offset
                 let day_secs = secs % 86400;
                 let hour = (day_secs / 3600) as u8;
                 let minute = ((day_secs % 3600) / 60) as u8;

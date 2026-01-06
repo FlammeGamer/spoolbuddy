@@ -1,6 +1,5 @@
 import { createContext, ComponentChildren } from "preact";
-import { useContext, useEffect, useRef, useCallback } from "preact/hooks";
-import { signal } from "@preact/signals";
+import { useContext, useEffect, useRef, useCallback, useState } from "preact/hooks";
 
 export interface AmsTray {
   ams_id: number;
@@ -59,18 +58,98 @@ interface WebSocketMessage {
 
 const WebSocketContext = createContext<WebSocketContextValue | null>(null);
 
-// Global signals for reactive state
-const deviceConnected = signal(false);
-const currentWeight = signal<number | null>(null);
-const weightStable = signal(false);
-const currentTagId = signal<string | null>(null);
-const printerStatuses = signal<Map<string, boolean>>(new Map());
-const printerStates = signal<Map<string, PrinterState>>(new Map());
-
 export function WebSocketProvider({ children }: { children: ComponentChildren }) {
+  // Use useState for reactive state that triggers re-renders
+  const [deviceConnected, setDeviceConnected] = useState(false);
+  const [currentWeight, setCurrentWeight] = useState<number | null>(null);
+  const [weightStable, setWeightStable] = useState(false);
+  const [currentTagId, setCurrentTagId] = useState<string | null>(null);
+  const [printerStatuses, setPrinterStatuses] = useState<Map<string, boolean>>(new Map());
+  const [printerStates, setPrinterStates] = useState<Map<string, PrinterState>>(new Map());
+
   const wsRef = useRef<WebSocket | null>(null);
   const handlersRef = useRef<Set<(message: WebSocketMessage) => void>>(new Set());
   const reconnectTimeoutRef = useRef<number | null>(null);
+
+  // Handle incoming WebSocket messages
+  const handleMessage = useCallback((message: WebSocketMessage) => {
+    switch (message.type) {
+      case "initial_state":
+        if (message.device && typeof message.device === "object") {
+          const device = message.device as {
+            connected?: boolean;
+            last_weight?: number;
+            weight_stable?: boolean;
+            current_tag_id?: string;
+          };
+          setDeviceConnected(device.connected ?? false);
+          setCurrentWeight(device.last_weight ?? null);
+          setWeightStable(device.weight_stable ?? false);
+          setCurrentTagId(device.current_tag_id ?? null);
+        }
+        break;
+
+      case "device_connected":
+        setDeviceConnected(true);
+        break;
+
+      case "device_disconnected":
+        setDeviceConnected(false);
+        setCurrentWeight(null);
+        setCurrentTagId(null);
+        break;
+
+      case "weight":
+        setCurrentWeight(message.grams as number);
+        setWeightStable(message.stable as boolean);
+        break;
+
+      case "tag_detected":
+        setCurrentTagId(message.tag_id as string);
+        break;
+
+      case "tag_removed":
+        setCurrentTagId(null);
+        break;
+
+      case "printer_connected": {
+        const serial = message.serial as string;
+        setPrinterStatuses(prev => {
+          const newMap = new Map(prev);
+          newMap.set(serial, true);
+          return newMap;
+        });
+        break;
+      }
+
+      case "printer_disconnected": {
+        const serial = message.serial as string;
+        setPrinterStatuses(prev => {
+          const newMap = new Map(prev);
+          newMap.set(serial, false);
+          return newMap;
+        });
+        break;
+      }
+
+      case "printer_state": {
+        const serial = message.serial as string;
+        const state = message.state as PrinterState;
+        setPrinterStates(prev => {
+          const newMap = new Map(prev);
+          newMap.set(serial, state);
+          return newMap;
+        });
+        break;
+      }
+
+      case "printer_added":
+      case "printer_updated":
+      case "printer_removed":
+        // These are handled by subscribers (e.g., Printers page)
+        break;
+    }
+  }, []);
 
   const connect = useCallback(() => {
     // Determine WebSocket URL
@@ -91,7 +170,7 @@ export function WebSocketProvider({ children }: { children: ComponentChildren })
 
     ws.onclose = () => {
       console.log("WebSocket disconnected, reconnecting in 3s...");
-      deviceConnected.value = false;
+      setDeviceConnected(false);
       reconnectTimeoutRef.current = window.setTimeout(connect, 3000);
     };
 
@@ -110,80 +189,7 @@ export function WebSocketProvider({ children }: { children: ComponentChildren })
         console.error("Failed to parse WebSocket message:", e);
       }
     };
-  }, []);
-
-  const handleMessage = (message: WebSocketMessage) => {
-    switch (message.type) {
-      case "initial_state":
-        if (message.device && typeof message.device === "object") {
-          const device = message.device as {
-            connected?: boolean;
-            last_weight?: number;
-            weight_stable?: boolean;
-            current_tag_id?: string;
-          };
-          deviceConnected.value = device.connected ?? false;
-          currentWeight.value = device.last_weight ?? null;
-          weightStable.value = device.weight_stable ?? false;
-          currentTagId.value = device.current_tag_id ?? null;
-        }
-        break;
-
-      case "device_connected":
-        deviceConnected.value = true;
-        break;
-
-      case "device_disconnected":
-        deviceConnected.value = false;
-        currentWeight.value = null;
-        currentTagId.value = null;
-        break;
-
-      case "weight":
-        currentWeight.value = message.grams as number;
-        weightStable.value = message.stable as boolean;
-        break;
-
-      case "tag_detected":
-        currentTagId.value = message.tag_id as string;
-        break;
-
-      case "tag_removed":
-        currentTagId.value = null;
-        break;
-
-      case "printer_connected": {
-        const serial = message.serial as string;
-        const newMap = new Map(printerStatuses.value);
-        newMap.set(serial, true);
-        printerStatuses.value = newMap;
-        break;
-      }
-
-      case "printer_disconnected": {
-        const serial = message.serial as string;
-        const newMap = new Map(printerStatuses.value);
-        newMap.set(serial, false);
-        printerStatuses.value = newMap;
-        break;
-      }
-
-      case "printer_state": {
-        const serial = message.serial as string;
-        const state = message.state as PrinterState;
-        const newMap = new Map(printerStates.value);
-        newMap.set(serial, state);
-        printerStates.value = newMap;
-        break;
-      }
-
-      case "printer_added":
-      case "printer_updated":
-      case "printer_removed":
-        // These are handled by subscribers (e.g., Printers page)
-        break;
-    }
-  };
+  }, [handleMessage]);
 
   useEffect(() => {
     connect();
@@ -203,12 +209,12 @@ export function WebSocketProvider({ children }: { children: ComponentChildren })
   }, []);
 
   const value: WebSocketContextValue = {
-    deviceConnected: deviceConnected.value,
-    currentWeight: currentWeight.value,
-    weightStable: weightStable.value,
-    currentTagId: currentTagId.value,
-    printerStatuses: printerStatuses.value,
-    printerStates: printerStates.value,
+    deviceConnected,
+    currentWeight,
+    weightStable,
+    currentTagId,
+    printerStatuses,
+    printerStates,
     subscribe,
   };
 
