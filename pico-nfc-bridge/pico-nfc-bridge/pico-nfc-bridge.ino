@@ -43,9 +43,15 @@ uint8_t tagUid[10];
 uint8_t tagUidLen = 0;
 uint8_t tagSak = 0;
 uint8_t tagType = TAG_TYPE_UNKNOWN;
-bool tagPresent = false;
+bool tagPresent = false;          // Debounced/stable state (reported to ESP32)
 uint8_t lastStatus = 0;
 uint8_t cachedVersion[2] = {0xFF, 0xFF};
+
+// Debounce for stable tag detection
+uint8_t tagDetectCount = 0;       // Consecutive successful detections
+uint8_t tagMissCount = 0;         // Consecutive failed detections
+const uint8_t DETECT_THRESHOLD = 2;   // Reads needed to report "present"
+const uint8_t REMOVE_THRESHOLD = 4;   // Misses needed to report "removed"
 
 // Reset management
 uint8_t consecutiveFailures = 0;
@@ -1026,7 +1032,6 @@ bool scanTag() {
     static uint8_t noTagCount = 0;
 
     if (noTagCount > 3) {
-
         Serial.println("No tag for 3 scans - HARD RESET");
         pn5180_hardReset();
         noTagCount = 0;
@@ -1047,6 +1052,7 @@ bool scanTag() {
     uint8_t sak = 0;
     uint8_t uidLen = activateTypeA(uid, &sak);
 
+    // Handle chip stuck/error state
     if (uidLen == 0xFF) {
         consecutiveFailures++;
         noTagCount++;
@@ -1054,35 +1060,51 @@ bool scanTag() {
             pn5180_hardReset();
             noTagCount = 0;
         }
-        tagPresent = false;
-        tagDataValid = false;
+        // Debounce: increment miss count
+        tagDetectCount = 0;
+        tagMissCount++;
+        if (tagMissCount >= REMOVE_THRESHOLD && tagPresent) {
+            Serial.println("Tag REMOVED (debounced)");
+            tagPresent = false;
+            tagDataValid = false;
+        }
         return false;
     }
 
+    // Tag detected
     if (uidLen > 0 && uidLen <= 10) {
         consecutiveFailures = 0;
         noTagCount = 0;
 
-        // Check if this is a new tag
+        // Check if this is a new/different tag
         bool newTag = (tagUidLen != uidLen) || memcmp(tagUid, uid, uidLen) != 0;
 
+        // Always update tag info on successful read
         tagUidLen = uidLen;
         memcpy(tagUid, uid, uidLen);
         tagSak = sak;
         tagType = getTagType(sak);
-        tagPresent = true;
 
-        Serial.print("scanTag: SAK=0x");
-        Serial.print(sak, HEX);
-        Serial.print(" -> tagType=");
-        Serial.println(tagType);
+        // Debounce: increment detect count, reset miss count
+        tagMissCount = 0;
+        tagDetectCount++;
+
+        if (!tagPresent && tagDetectCount >= DETECT_THRESHOLD) {
+            // State change: tag now present
+            tagPresent = true;
+            Serial.print("Tag DETECTED (debounced): SAK=0x");
+            Serial.print(sak, HEX);
+            Serial.print(" -> tagType=");
+            Serial.println(tagType);
+        }
 
         if (newTag) {
             tagDataValid = false;
             keysGenerated = false;
+            // Reset debounce on new tag (require fresh detection)
+            tagDetectCount = 1;
 
-
-            Serial.print("New tag detected! Type: ");
+            Serial.print("New tag UID! Type: ");
             Serial.println(tagType);
 
             // Generate keys for Bambu tags
@@ -1091,12 +1113,18 @@ bool scanTag() {
             }
         }
 
-        return true;
+        return tagPresent;  // Only return true if debounced state is present
     }
 
+    // No tag found
     noTagCount++;
-    tagPresent = false;
-    tagDataValid = false;
+    tagDetectCount = 0;
+    tagMissCount++;
+    if (tagMissCount >= REMOVE_THRESHOLD && tagPresent) {
+        Serial.println("Tag REMOVED (debounced)");
+        tagPresent = false;
+        tagDataValid = false;
+    }
     return false;
 }
 

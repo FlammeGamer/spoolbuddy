@@ -363,12 +363,38 @@ pub fn send_device_state(tag_uid_hex: Option<&str>, weight: f32, stable: bool) -
     let base_url = manager.server_url.clone();
     drop(manager);
 
-    // Build URL with query params
+    // Build URL with query params, including decoded tag data if available
     let url = if let Some(tag_id) = tag_uid_hex {
-        format!(
-            "{}/api/display/state?weight={:.1}&stable={}&tag_id={}",
-            base_url, weight, stable, tag_id
-        )
+        // Get decoded tag data from NFC manager
+        let vendor = crate::nfc_bridge_manager::get_tag_vendor();
+        let material = crate::nfc_bridge_manager::get_tag_material();
+        let subtype = crate::nfc_bridge_manager::get_tag_subtype();
+        let color = crate::nfc_bridge_manager::get_tag_color_name();
+        let color_rgba = crate::nfc_bridge_manager::get_tag_color_rgba();
+        let spool_weight = crate::nfc_bridge_manager::get_tag_spool_weight();
+        let tag_type = crate::nfc_bridge_manager::get_tag_type();
+
+        if !vendor.is_empty() {
+            // Include decoded tag data (simple URL encoding - replace spaces with %20)
+            let encode = |s: &str| s.replace(' ', "%20").replace('#', "%23");
+            format!(
+                "{}/api/display/state?weight={:.1}&stable={}&tag_id={}&tag_vendor={}&tag_material={}&tag_subtype={}&tag_color={}&tag_color_rgba={}&tag_weight={}&tag_type={}",
+                base_url, weight, stable, tag_id,
+                encode(&vendor),
+                encode(&material),
+                encode(&subtype),
+                encode(&color),
+                color_rgba,
+                spool_weight,
+                encode(&tag_type)
+            )
+        } else {
+            // Just send tag_id without decoded data
+            format!(
+                "{}/api/display/state?weight={:.1}&stable={}&tag_id={}",
+                base_url, weight, stable, tag_id
+            )
+        }
     } else {
         format!(
             "{}/api/display/state?weight={:.1}&stable={}",

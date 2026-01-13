@@ -2,6 +2,7 @@ import asyncio
 import json
 import socket
 import logging
+import time
 from contextlib import asynccontextmanager
 from typing import Set, Optional, Dict
 
@@ -50,9 +51,114 @@ _device_update_available: bool = False
 # Device state (weight, tag) - updated by WebSocket messages from device
 _device_last_weight: Optional[float] = None
 _device_weight_stable: bool = False
-_device_current_tag_id: Optional[str] = None
-# Decoded tag data from last tag_detected event
-_device_tag_data: Optional[Dict] = None
+
+# === Tag Staging System ===
+# When a tag is detected, it goes to "staging" for 30 seconds.
+# This allows the user to interact with the tag even if NFC reads are flaky.
+# Staging only clears on: timeout, different tag detected, or manual clear.
+STAGING_TIMEOUT = 300  # seconds (5 minutes - longer due to flaky NFC detection)
+_staged_tag_id: Optional[str] = None
+_staged_tag_data: Optional[Dict] = None
+_staged_tag_timestamp: float = 0  # time.time() when staged
+
+# Cache of decoded tag data (persists even after staging is cleared)
+# This allows re-staging a tag even if ESP32 only sends tag_id without decoded data
+_tag_data_cache: Dict[str, Dict] = {}
+
+# Blocked tags - after manual clear, block the tag for a few seconds
+# to prevent immediate re-staging from ESP32's continuous detection
+_blocked_tag_id: Optional[str] = None
+_blocked_until: float = 0
+BLOCK_DURATION = 5  # seconds to block after manual clear
+
+# Legacy: keep for backwards compat with existing code
+_device_current_tag_id: Optional[str] = None  # Last tag ID from device (may be None if NFC flaky)
+_device_tag_data: Optional[Dict] = None  # Points to staged data for backwards compat
+
+# Simulation mode - prevents device updates from clearing simulated tag
+_simulating_tag: bool = False
+
+
+def get_staged_tag() -> Optional[Dict]:
+    """Get staged tag if still valid (not timed out). Returns None if expired."""
+    global _staged_tag_id, _staged_tag_data, _staged_tag_timestamp
+    if _staged_tag_data is None:
+        return None
+
+    elapsed = time.time() - _staged_tag_timestamp
+    if elapsed >= STAGING_TIMEOUT:
+        # Staging expired - clear it
+        logger.info(f"Staging expired for tag {_staged_tag_id}")
+        _staged_tag_id = None
+        _staged_tag_data = None
+        _staged_tag_timestamp = 0
+        return None
+
+    return _staged_tag_data
+
+
+def get_staging_remaining() -> float:
+    """Get seconds remaining in staging, or 0 if no staged tag."""
+    if _staged_tag_data is None:
+        return 0
+    remaining = STAGING_TIMEOUT - (time.time() - _staged_tag_timestamp)
+    return max(0, remaining)
+
+
+def stage_tag(tag_id: str, tag_data: Dict) -> bool:
+    """
+    Add tag to staging. Returns True if this is a new/different tag.
+    Same tag resets the 30s timer (keeps staging alive during flaky reads).
+    Returns False without staging if tag is blocked.
+    """
+    global _staged_tag_id, _staged_tag_data, _staged_tag_timestamp, _tag_data_cache
+    global _blocked_tag_id, _blocked_until
+
+    # Check if this tag is blocked (recently cleared)
+    if tag_id == _blocked_tag_id and time.time() < _blocked_until:
+        # Tag is blocked, don't stage
+        return False
+
+    # Clear block if expired
+    if _blocked_tag_id and time.time() >= _blocked_until:
+        logger.info(f"Tag {_blocked_tag_id} block expired")
+        _blocked_tag_id = None
+        _blocked_until = 0
+
+    is_new_tag = _staged_tag_id != tag_id
+
+    _staged_tag_id = tag_id
+    _staged_tag_data = tag_data
+    _staged_tag_timestamp = time.time()  # Always reset timer
+
+    # Cache the decoded data for future re-staging
+    if tag_data and tag_data.get('vendor'):
+        _tag_data_cache[tag_id] = tag_data
+
+    if is_new_tag:
+        logger.info(f"Staged new tag: {tag_id} ({tag_data.get('vendor')} {tag_data.get('material')})")
+
+    return is_new_tag
+
+
+def clear_staging() -> bool:
+    """Manually clear staging. Returns True if there was a staged tag."""
+    global _staged_tag_id, _staged_tag_data, _staged_tag_timestamp
+    global _blocked_tag_id, _blocked_until
+
+    had_tag = _staged_tag_data is not None
+    if had_tag:
+        logger.info(f"Staging cleared manually for tag {_staged_tag_id}")
+        # Block this tag for a few seconds to prevent immediate re-staging
+        _blocked_tag_id = _staged_tag_id
+        _blocked_until = time.time() + BLOCK_DURATION
+        logger.info(f"Tag {_staged_tag_id} blocked for {BLOCK_DURATION}s")
+
+    _staged_tag_id = None
+    _staged_tag_data = None
+    _staged_tag_timestamp = 0
+
+    return had_tag
 
 
 def _get_local_ip() -> str:
@@ -450,7 +556,10 @@ def get_display_firmware_version() -> Optional[str]:
 
 @app.get("/api/display/status")
 async def display_status():
-    """Get display connection status."""
+    """Get display connection status including staged tag info."""
+    staged = get_staged_tag()  # Returns None if expired
+    remaining = get_staging_remaining()
+
     return {
         "connected": is_display_connected(),
         "last_seen": _display_last_seen if _display_last_seen > 0 else None,
@@ -458,8 +567,13 @@ async def display_status():
         "update_available": _device_update_available,
         "weight": _device_last_weight,
         "weight_stable": _device_weight_stable,
-        "tag_id": _device_current_tag_id,
-        "tag_data": _device_tag_data,
+        # Staging info (new)
+        "staged_tag_id": _staged_tag_id if staged else None,
+        "staged_tag_data": staged,
+        "staging_remaining": round(remaining, 1) if staged else 0,
+        # Legacy (backwards compat) - points to staged data
+        "tag_id": _staged_tag_id if staged else None,
+        "tag_data": staged,
     }
 
 
@@ -467,16 +581,90 @@ async def display_status():
 async def update_device_state(
     weight: Optional[float] = None,
     stable: Optional[bool] = None,
-    tag_id: Optional[str] = None
+    tag_id: Optional[str] = None,
+    tag_vendor: Optional[str] = None,
+    tag_material: Optional[str] = None,
+    tag_subtype: Optional[str] = None,
+    tag_color: Optional[str] = None,
+    tag_color_rgba: Optional[int] = None,
+    tag_weight: Optional[int] = None,
+    tag_type: Optional[str] = None,
 ):
     """HTTP endpoint for device to update state (alternative to WebSocket)."""
     update_display_heartbeat()
+
+    # Build tag_data if decoded data provided
+    tag_data = None
+    if tag_id and tag_vendor:
+        tag_data = {
+            "uid": tag_id,
+            "tag_type": tag_type or "bambulab",
+            "vendor": tag_vendor or "",
+            "material": tag_material or "",
+            "subtype": tag_subtype or "",
+            "color_name": tag_color or "",
+            "color_rgba": tag_color_rgba or 0,
+            "spool_weight": tag_weight or 0,
+        }
+        logger.info(f"Received decoded tag data from device: {tag_vendor} {tag_material}")
+
     await handle_device_state({
         "weight": weight,
         "stable": stable if stable is not None else False,
         "tag_id": tag_id,
+        "tag_data": tag_data,
     })
     return {"ok": True}
+
+
+@app.post("/api/test/simulate-tag")
+async def simulate_tag(present: bool = True):
+    """Test endpoint to simulate NFC tag for UI development."""
+    global _device_tag_data, _device_current_tag_id, _simulating_tag
+
+    if present:
+        _simulating_tag = True
+        _device_current_tag_id = "A7:B2:65:00"
+        _device_tag_data = {
+            "uid": "A7:B2:65:00",
+            "tag_type": "bambulab",
+            "vendor": "Bambu",
+            "material": "PLA",
+            "subtype": "Basic",
+            "color_name": "Gray",
+            "color_rgba": 0xA6A9AAFF,
+            "spool_weight": 1000,
+        }
+        logger.info("Simulated tag PRESENT (simulation mode ON)")
+    else:
+        _simulating_tag = False
+        _device_current_tag_id = None
+        _device_tag_data = None
+        logger.info("Simulated tag REMOVED (simulation mode OFF)")
+
+    return {"ok": True, "tag_present": present}
+
+
+@app.post("/api/staging/clear")
+async def api_clear_staging():
+    """Manually clear the staged tag."""
+    had_tag = clear_staging()
+    # Also broadcast to WebSocket clients
+    if had_tag:
+        await broadcast_message({"type": "staging_cleared"})
+    return {"ok": True, "had_tag": had_tag}
+
+
+@app.get("/api/staging")
+async def api_get_staging():
+    """Get current staging status."""
+    staged = get_staged_tag()
+    remaining = get_staging_remaining()
+    return {
+        "tag_id": _staged_tag_id if staged else None,
+        "tag_data": staged,
+        "remaining": round(remaining, 1) if staged else 0,
+    }
 
 
 async def handle_tag_detected(websocket: WebSocket, message: dict):
@@ -580,15 +768,21 @@ async def handle_tag_detected(websocket: WebSocket, message: dict):
 
 
 async def handle_device_state(message: dict):
-    """Handle device_state message from device (weight, tag info)."""
+    """Handle device_state message from device (weight, tag info).
+
+    Uses the staging system: when a tag is detected, it's staged for 30s.
+    Flaky NFC reads (tag_id=None) don't clear staging - only timeout or new tag does.
+    """
     global _device_last_weight, _device_weight_stable, _device_current_tag_id, _device_tag_data
 
     weight = message.get("weight")
     stable = message.get("stable", False)
     tag_id = message.get("tag_id")
+    provided_tag_data = message.get("tag_data")
 
     state_changed = False
 
+    # Update weight
     if weight is not None and weight != _device_last_weight:
         _device_last_weight = weight
         state_changed = True
@@ -597,61 +791,110 @@ async def handle_device_state(message: dict):
         _device_weight_stable = stable
         state_changed = True
 
-    if tag_id != _device_current_tag_id:
-        _device_current_tag_id = tag_id
-        state_changed = True
+    # Don't update tag state if we're in simulation mode
+    if _simulating_tag:
+        return  # Ignore all tag updates in simulation mode
 
-        # Try to look up spool data from database by tag_id
-        if tag_id:
-            try:
-                db = await get_db()
-                spools = await db.list_spools()
-                tag_id_normalized = tag_id.replace(":", "").upper()
+    # Track what device reports (for debugging)
+    _device_current_tag_id = tag_id
 
-                for spool in spools:
-                    spool_tag = spool.tag_id if hasattr(spool, 'tag_id') else spool.get('tag_id', '')
-                    if spool_tag:
-                        if spool_tag.replace(":", "").upper() == tag_id_normalized:
-                            # Found matching spool
-                            spool_dict = spool.model_dump() if hasattr(spool, 'model_dump') else dict(spool)
-                            _device_tag_data = {
-                                "uid": tag_id,
-                                "tag_type": spool_dict.get("tag_type", "database"),
-                                "vendor": spool_dict.get("brand", ""),
-                                "material": spool_dict.get("material", ""),
-                                "subtype": spool_dict.get("subtype", ""),
-                                "color_name": spool_dict.get("color_name", ""),
-                                "spool_weight": spool_dict.get("label_weight", 0),
-                            }
-                            # Convert RGBA hex to int
-                            rgba_str = spool_dict.get("rgba", "")
-                            if rgba_str and len(rgba_str) >= 6:
-                                try:
-                                    if len(rgba_str) == 6:
-                                        rgba_str = rgba_str + "FF"
-                                    _device_tag_data["color_rgba"] = int(rgba_str, 16)
-                                except ValueError:
-                                    _device_tag_data["color_rgba"] = 0
-                            logger.info(f"Tag {tag_id} matched to spool: {spool_dict.get('material')} {spool_dict.get('color_name')}")
-                            break
-                else:
-                    # No matching spool found, clear tag data
-                    _device_tag_data = {"uid": tag_id, "tag_type": "unknown"}
-            except Exception as e:
-                logger.warning(f"Error looking up spool for tag {tag_id}: {e}")
-                _device_tag_data = {"uid": tag_id, "tag_type": "unknown"}
+    # === Staging Logic ===
+    # Only stage when we have BOTH tag_id AND decoded data
+    # Flaky reads (no tag_id) are ignored - staging handles persistence
+
+    if tag_id and provided_tag_data and provided_tag_data.get("vendor"):
+        # Tag with decoded data - stage it
+        is_new = stage_tag(tag_id, provided_tag_data)
+        if is_new:
+            state_changed = True
+            # Broadcast that a new tag was staged
+            await broadcast_message({
+                "type": "tag_staged",
+                "tag_id": tag_id,
+                "tag_data": provided_tag_data,
+                "timeout": STAGING_TIMEOUT,
+            })
+    elif tag_id and not provided_tag_data:
+        # Tag ID but no decoded data yet - check if it's already staged
+        if _staged_tag_id == tag_id:
+            # Same tag, reset timer
+            stage_tag(tag_id, _staged_tag_data)
+        elif tag_id in _tag_data_cache:
+            # We have cached decoded data for this tag - use it
+            cached_data = _tag_data_cache[tag_id]
+            is_new = stage_tag(tag_id, cached_data)
+            logger.info(f"Re-staged tag from cache: {tag_id}")
+            if is_new:
+                state_changed = True
+                await broadcast_message({
+                    "type": "tag_staged",
+                    "tag_id": tag_id,
+                    "tag_data": cached_data,
+                    "timeout": STAGING_TIMEOUT,
+                })
         else:
-            # Tag removed
-            _device_tag_data = None
+            # New tag without decoded data - try database lookup
+            tag_data = await _lookup_tag_in_database(tag_id)
+            if tag_data:
+                is_new = stage_tag(tag_id, tag_data)
+                if is_new:
+                    state_changed = True
+                    await broadcast_message({
+                        "type": "tag_staged",
+                        "tag_id": tag_id,
+                        "tag_data": tag_data,
+                        "timeout": STAGING_TIMEOUT,
+                    })
+    # else: no tag_id - ignore, let staging timeout naturally
 
-    # Broadcast state update to all clients
+    # Keep legacy _device_tag_data in sync with staging for backwards compat
+    _device_tag_data = get_staged_tag()
+
+    # Broadcast weight updates
     if state_changed:
         await broadcast_message({
             "type": "device_state",
             "weight": _device_last_weight,
             "stable": _device_weight_stable,
-            "tag_id": _device_current_tag_id,
         })
+
+
+async def _lookup_tag_in_database(tag_id: str) -> Optional[Dict]:
+    """Look up tag in spool database, return tag_data dict or None."""
+    try:
+        db = await get_db()
+        spools = await db.list_spools()
+        tag_id_normalized = tag_id.replace(":", "").upper()
+
+        for spool in spools:
+            spool_tag = spool.tag_id if hasattr(spool, 'tag_id') else spool.get('tag_id', '')
+            if spool_tag:
+                if spool_tag.replace(":", "").upper() == tag_id_normalized:
+                    spool_dict = spool.model_dump() if hasattr(spool, 'model_dump') else dict(spool)
+                    tag_data = {
+                        "uid": tag_id,
+                        "tag_type": spool_dict.get("tag_type", "database"),
+                        "vendor": spool_dict.get("brand", ""),
+                        "material": spool_dict.get("material", ""),
+                        "subtype": spool_dict.get("subtype", ""),
+                        "color_name": spool_dict.get("color_name", ""),
+                        "spool_weight": spool_dict.get("label_weight", 0),
+                    }
+                    # Convert RGBA hex to int
+                    rgba_str = spool_dict.get("rgba", "")
+                    if rgba_str and len(rgba_str) >= 6:
+                        try:
+                            if len(rgba_str) == 6:
+                                rgba_str = rgba_str + "FF"
+                            tag_data["color_rgba"] = int(rgba_str, 16)
+                        except ValueError:
+                            tag_data["color_rgba"] = 0
+                    logger.info(f"Tag {tag_id} matched to spool: {spool_dict.get('material')} {spool_dict.get('color_name')}")
+                    return tag_data
+    except Exception as e:
+        logger.warning(f"Error looking up spool for tag {tag_id}: {e}")
+
+    return None
 
 
 @app.websocket("/ws/ui")

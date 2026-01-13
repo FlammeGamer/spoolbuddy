@@ -12,6 +12,11 @@
 // External Rust FFI functions - NFC
 extern bool nfc_is_initialized(void);
 extern bool nfc_tag_present(void);
+
+// Staging state (from backend) - USE THIS for popup, not raw tag detection
+extern bool staging_is_active(void);
+extern float staging_get_remaining(void);
+extern void staging_clear(void);
 extern uint8_t nfc_get_uid_hex(uint8_t *buf, uint8_t buf_len);
 
 // Decoded tag data (Rust FFI on ESP32, mock on simulator)
@@ -49,6 +54,7 @@ static void close_popup(void);
 static lv_obj_t *tag_popup = NULL;
 static lv_obj_t *popup_tag_label = NULL;
 static lv_obj_t *popup_weight_label = NULL;
+static lv_obj_t *popup_clear_btn_label = NULL;  // For updating countdown
 static lv_timer_t *close_timer = NULL;
 
 // Button click handlers
@@ -68,6 +74,15 @@ static void configure_ams_click_handler(lv_event_t *e) {
     popup_close_handler(NULL);
     // Navigate to scan_result screen (Encode Tag)
     pendingScreen = SCREEN_ID_SCAN_RESULT;
+}
+
+static void clear_staging_click_handler(lv_event_t *e) {
+    (void)e;
+    printf("[ui_nfc_card] Clear staging button clicked\n");
+    // Clear staging via backend API
+    staging_clear();
+    // Close popup
+    close_popup();
 }
 
 // Timer callback to close popup after showing feedback
@@ -144,6 +159,7 @@ static void close_popup(void) {
         tag_popup = NULL;
         popup_tag_label = NULL;
         popup_weight_label = NULL;
+        popup_clear_btn_label = NULL;
     }
 }
 
@@ -173,7 +189,7 @@ static void create_tag_popup(void) {
 
     // Create popup card (centered)
     lv_obj_t *card = lv_obj_create(tag_popup);
-    lv_obj_set_size(card, 400, 280);
+    lv_obj_set_size(card, 450, 300);
     lv_obj_center(card);
     lv_obj_set_style_bg_color(card, lv_color_hex(0x1a1a1a), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(card, 255, LV_PART_MAIN);
@@ -301,9 +317,9 @@ static void create_tag_popup(void) {
     static char stored_tag_id[32];
     strncpy(stored_tag_id, (const char*)uid_str, sizeof(stored_tag_id) - 1);
 
-    // Buttons container
+    // Buttons container - use percentage width to fit within card padding
     lv_obj_t *btn_container = lv_obj_create(card);
-    lv_obj_set_size(btn_container, 360, 50);
+    lv_obj_set_size(btn_container, LV_PCT(100), 50);
     lv_obj_align(btn_container, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_set_style_bg_opa(btn_container, 0, LV_PART_MAIN);
     lv_obj_set_style_border_width(btn_container, 0, LV_PART_MAIN);
@@ -336,15 +352,30 @@ static void create_tag_popup(void) {
 
     // "Configure AMS" button
     lv_obj_t *btn_ams = lv_btn_create(btn_container);
-    lv_obj_set_size(btn_ams, 170, 42);
+    lv_obj_set_size(btn_ams, 130, 42);
     lv_obj_set_style_bg_color(btn_ams, lv_color_hex(0x1E88E5), LV_PART_MAIN);
     lv_obj_set_style_radius(btn_ams, 8, LV_PART_MAIN);
     lv_obj_add_event_cb(btn_ams, configure_ams_click_handler, LV_EVENT_CLICKED, NULL);
 
     lv_obj_t *ams_label = lv_label_create(btn_ams);
-    lv_label_set_text(ams_label, "Configure AMS");
+    lv_label_set_text(ams_label, "Config AMS");
     lv_obj_set_style_text_font(ams_label, &lv_font_montserrat_14, LV_PART_MAIN);
     lv_obj_center(ams_label);
+
+    // "Clear" button - clears staging and closes popup (shows countdown)
+    lv_obj_t *btn_clear = lv_btn_create(btn_container);
+    lv_obj_set_size(btn_clear, 110, 42);
+    lv_obj_set_style_bg_color(btn_clear, lv_color_hex(0x666666), LV_PART_MAIN);
+    lv_obj_set_style_radius(btn_clear, 8, LV_PART_MAIN);
+    lv_obj_add_flag(btn_clear, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(btn_clear, clear_staging_click_handler, LV_EVENT_CLICKED, NULL);
+
+    popup_clear_btn_label = lv_label_create(btn_clear);
+    char clear_text[32];
+    snprintf(clear_text, sizeof(clear_text), "Clear (%.0fs)", staging_get_remaining());
+    lv_label_set_text(popup_clear_btn_label, clear_text);
+    lv_obj_set_style_text_font(popup_clear_btn_label, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_center(popup_clear_btn_label);
 }
 
 // Update weight display in popup if open
@@ -376,25 +407,38 @@ void ui_nfc_card_cleanup(void) {
 void ui_nfc_card_update(void) {
     if (!nfc_is_initialized()) return;
 
-    bool tag_present = nfc_tag_present();
+    // Use STAGING state for popup control, NOT raw tag detection
+    // Staging is more stable - persists for 300s even if NFC reads are flaky
+    bool staging_active = staging_is_active();
 
-    // Tag state changed
-    if (tag_present != last_tag_present) {
-        last_tag_present = tag_present;
+    // Staging state changed
+    if (staging_active != last_tag_present) {
+        printf("[ui_nfc_card] Staging changed: %d -> %d (remaining=%.1fs)\n",
+               last_tag_present, staging_active, staging_get_remaining());
+        last_tag_present = staging_active;
 
-        if (tag_present) {
-            // Tag detected - show popup (unless dismissed for this tag)
+        if (staging_active) {
+            // Tag staged - show popup (unless dismissed for this tag)
             if (!popup_dismissed_for_current_tag) {
+                printf("[ui_nfc_card] Creating popup (staging active)\n");
                 create_tag_popup();
             }
         } else {
-            // Tag removed - close popup and reset dismissed flag
+            // Staging expired - close popup and reset dismissed flag
+            printf("[ui_nfc_card] Closing popup (staging expired)\n");
             close_popup();
             popup_dismissed_for_current_tag = false;
         }
-    } else if (tag_present && tag_popup) {
-        // Tag still present - update weight in popup
+    } else if (staging_active && tag_popup) {
+        // Staging still active - update weight and countdown in popup
         update_popup_weight();
+
+        // Update clear button countdown
+        if (popup_clear_btn_label) {
+            char clear_text[32];
+            snprintf(clear_text, sizeof(clear_text), "Clear (%.0fs)", staging_get_remaining());
+            lv_label_set_text(popup_clear_btn_label, clear_text);
+        }
     }
 
     // Always update scale status label on main screen (shows current weight)
@@ -417,4 +461,18 @@ void ui_nfc_card_update(void) {
     if (objects.main_screen_nfc_scale_nfc_label) {
         lv_label_set_text(objects.main_screen_nfc_scale_nfc_label, "Ready");
     }
+}
+
+// Show popup externally (e.g., from status bar click)
+void ui_nfc_card_show_popup(void) {
+    if (staging_is_active() && !tag_popup) {
+        printf("[ui_nfc_card] Showing popup from external request\n");
+        popup_dismissed_for_current_tag = false;
+        create_tag_popup();
+    }
+}
+
+// Check if popup is currently shown
+bool ui_nfc_card_popup_visible(void) {
+    return tag_popup != NULL;
 }

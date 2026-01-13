@@ -361,6 +361,57 @@ pub fn clear_decoded_tag_data() {
 }
 
 // =============================================================================
+// Rust-callable getters for sending to backend
+// =============================================================================
+
+/// Get tag vendor as String
+pub fn get_tag_vendor() -> String {
+    let data = DECODED_TAG.lock().unwrap();
+    let end = data.vendor.iter().position(|&b| b == 0).unwrap_or(data.vendor.len());
+    String::from_utf8_lossy(&data.vendor[..end]).to_string()
+}
+
+/// Get tag material as String
+pub fn get_tag_material() -> String {
+    let data = DECODED_TAG.lock().unwrap();
+    let end = data.material.iter().position(|&b| b == 0).unwrap_or(data.material.len());
+    String::from_utf8_lossy(&data.material[..end]).to_string()
+}
+
+/// Get tag material subtype as String
+pub fn get_tag_subtype() -> String {
+    let data = DECODED_TAG.lock().unwrap();
+    let end = data.material_subtype.iter().position(|&b| b == 0).unwrap_or(data.material_subtype.len());
+    String::from_utf8_lossy(&data.material_subtype[..end]).to_string()
+}
+
+/// Get tag color name as String
+pub fn get_tag_color_name() -> String {
+    let data = DECODED_TAG.lock().unwrap();
+    let end = data.color_name.iter().position(|&b| b == 0).unwrap_or(data.color_name.len());
+    String::from_utf8_lossy(&data.color_name[..end]).to_string()
+}
+
+/// Get tag color RGBA
+pub fn get_tag_color_rgba() -> u32 {
+    let data = DECODED_TAG.lock().unwrap();
+    data.color_rgba
+}
+
+/// Get tag spool weight
+pub fn get_tag_spool_weight() -> i32 {
+    let data = DECODED_TAG.lock().unwrap();
+    data.spool_weight
+}
+
+/// Get tag type as String
+pub fn get_tag_type() -> String {
+    let data = DECODED_TAG.lock().unwrap();
+    let end = data.tag_type.iter().position(|&b| b == 0).unwrap_or(data.tag_type.len());
+    String::from_utf8_lossy(&data.tag_type[..end]).to_string()
+}
+
+// =============================================================================
 // Decoded Tag Data FFI Functions
 // =============================================================================
 

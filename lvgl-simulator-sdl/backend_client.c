@@ -37,6 +37,16 @@ static uint32_t g_tag_color_rgba = 0;
 static int g_tag_spool_weight = 0;
 static char g_tag_type[32] = "";
 
+// Staging state - separate from raw NFC tag detection
+// UI should use staging_is_active() for popup control
+static bool g_staging_active = false;
+static float g_staging_remaining = 0;
+
+// When staging is cleared locally, prevent poll from overwriting for a few seconds
+static bool g_staging_cleared_locally = false;
+static time_t g_staging_cleared_time = 0;
+#define STAGING_CLEAR_HOLDOFF_SEC 3
+
 // Response buffer for curl
 typedef struct {
     char *data;
@@ -229,6 +239,8 @@ static cJSON *fetch_json(const char *url) {
     buf.data = malloc(1);
     buf.size = 0;
 
+    // Reset curl options to ensure GET (previous calls may have set POST)
+    curl_easy_reset(g_curl);
     curl_easy_setopt(g_curl, CURLOPT_URL, url);
     curl_easy_setopt(g_curl, CURLOPT_WRITEFUNCTION, write_callback);
     curl_easy_setopt(g_curl, CURLOPT_WRITEDATA, &buf);
@@ -343,11 +355,44 @@ int backend_poll(void) {
         cJSON *item = cJSON_GetObjectItem(json, "connected");
         g_state.device.display_connected = item ? cJSON_IsTrue(item) : false;
 
-        // Sync NFC state from real device
+        // Sync NFC state from staging system
+        // Use staging_remaining to determine if tag is "present" - more stable than raw tag_data
+        cJSON *staging_remaining = cJSON_GetObjectItem(json, "staging_remaining");
         cJSON *tag_data = cJSON_GetObjectItem(json, "tag_data");
-        if (tag_data && !cJSON_IsNull(tag_data)) {
+
+        float remaining = staging_remaining ? staging_remaining->valuedouble : 0;
+        // Only check if staging is active (remaining > 0), NOT if tag_data exists
+        bool has_staged_tag = remaining > 0;
+
+        // Update global staging state (used by UI directly)
+        // But respect local clear holdoff to prevent race condition
+        if (g_staging_cleared_locally) {
+            time_t now = time(NULL);
+            if (difftime(now, g_staging_cleared_time) < STAGING_CLEAR_HOLDOFF_SEC) {
+                // Within holdoff period - don't overwrite cleared state
+                printf("[backend] Ignoring staging update (holdoff active: %.0fs remaining)\n",
+                       STAGING_CLEAR_HOLDOFF_SEC - difftime(now, g_staging_cleared_time));
+            } else {
+                // Holdoff expired - resume normal updates
+                g_staging_cleared_locally = false;
+                g_staging_active = has_staged_tag;
+                g_staging_remaining = remaining;
+            }
+        } else {
+            g_staging_active = has_staged_tag;
+            g_staging_remaining = remaining;
+        }
+
+        printf("[backend] Staging: remaining=%.1fs, has_staged_tag=%s\n",
+               remaining, has_staged_tag ? "YES" : "no");
+
+        if (has_staged_tag) {
             // Real device has a tag - sync to simulator
+            bool was_present = g_nfc_tag_present;
             g_nfc_tag_present = true;
+            if (!was_present) {
+                printf("[backend] NFC tag synced from device - popup should appear\n");
+            }
 
             item = cJSON_GetObjectItem(tag_data, "uid");
             if (item && item->valuestring) {
@@ -382,9 +427,9 @@ int backend_poll(void) {
             item = cJSON_GetObjectItem(tag_data, "tag_type");
             if (item && item->valuestring) strncpy(g_tag_type, item->valuestring, sizeof(g_tag_type) - 1);
         } else {
-            // No tag on real device - clear simulator NFC state (unless manually toggled)
-            // Only clear if we were syncing from real device
-            if (g_nfc_tag_present && g_tag_vendor[0] != '\0') {
+            // Staging expired or no tag - clear simulator NFC state
+            if (g_nfc_tag_present) {
+                printf("[backend] Staging expired (remaining=%.1fs) - closing popup\n", remaining);
                 g_nfc_tag_present = false;
                 g_tag_vendor[0] = '\0';
                 g_tag_material[0] = '\0';
@@ -786,6 +831,45 @@ bool nfc_tag_present(void) {
     return g_nfc_tag_present;
 }
 
+bool staging_is_active(void) {
+    return g_staging_active;
+}
+
+float staging_get_remaining(void) {
+    return g_staging_remaining;
+}
+
+void staging_clear(void) {
+    // Set local state FIRST to ensure UI updates immediately
+    // This prevents race condition with poll thread
+    g_staging_active = false;
+    g_staging_remaining = 0;
+    g_staging_cleared_locally = true;
+    g_staging_cleared_time = time(NULL);
+    printf("[backend] Staging cleared locally (holdoff active)\n");
+
+    // Now send clear request to backend using a separate curl handle
+    // (g_curl is used by poll thread and not thread-safe)
+    CURL *curl = curl_easy_init();
+    if (!curl) return;
+
+    char url[256];
+    snprintf(url, sizeof(url), "%s/api/staging/clear", g_base_url);
+
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 2L);
+
+    CURLcode res = curl_easy_perform(curl);
+    if (res == CURLE_OK) {
+        printf("[backend] Staging cleared via API\n");
+    } else {
+        printf("[backend] Warning: API clear failed (%d), but local state already cleared\n", res);
+    }
+    curl_easy_cleanup(curl);
+}
+
 uint8_t nfc_get_uid_len(void) {
     return g_nfc_tag_present ? g_nfc_uid_len : 0;
 }
@@ -1000,19 +1084,3 @@ int ota_get_progress(void) { return 0; }
 int ota_check_for_update(void) { return 0; }
 int ota_start_update(void) { return -1; }
 
-// =============================================================================
-// Simulator Help
-// =============================================================================
-
-void sim_print_help(void) {
-    printf("\n");
-    printf("=== Simulator Keyboard Controls ===\n");
-    printf("  N     - Toggle NFC tag present\n");
-    printf("  +/=   - Increase scale weight by 50g\n");
-    printf("  -     - Decrease scale weight by 50g\n");
-    printf("  S     - Toggle scale initialized\n");
-    printf("  H     - Show this help\n");
-    printf("  ESC   - Exit simulator\n");
-    printf("===================================\n");
-    printf("\n");
-}

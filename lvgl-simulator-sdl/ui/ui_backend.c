@@ -25,6 +25,9 @@ static const char *TAG = "ui_backend";
 static const char *TAG = "ui_backend";
 // Variables shared with ui.c
 extern int16_t currentScreen;
+// Functions from ui_nfc_card.c
+extern void ui_nfc_card_show_popup(void);
+extern bool ui_nfc_card_popup_visible(void);
 #endif
 
 // Update counter for rate limiting UI updates
@@ -98,6 +101,9 @@ void update_backend_ui(void) {
         last_connected_mask = 0;
     }
 
+    // Update status bar on every tick (not rate-limited) for responsive staging updates
+    update_status_bar();
+
     // Rate limiting for other updates:
     // - Every 20 ticks (~100ms) when waiting for data
     // - Every 100 ticks (~500ms) when we have data
@@ -137,8 +143,7 @@ void update_backend_ui(void) {
     // Update notification bell periodically (in addition to screen changes)
     update_notification_bell();
 
-    // Update status bar messages
-    update_status_bar();
+    // Note: update_status_bar() is called before rate limiting for responsiveness
 
     // Update settings menu firmware indicator
     update_settings_menu_indicator();
@@ -2267,6 +2272,36 @@ static void led_pulse_anim_cb(void *var, int32_t value) {
 }
 
 /**
+ * @brief Click handler for status bar when staging is active
+ */
+static void staging_status_click_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED) {
+        if (staging_is_active()) {
+            printf("[ui_backend] Status bar clicked - showing popup\n");
+            ui_nfc_card_show_popup();
+        }
+    } else if (code == LV_EVENT_LONG_PRESSED) {
+        if (staging_is_active()) {
+            printf("[ui_backend] Status bar long-pressed - clearing staging\n");
+            staging_clear();
+        }
+    }
+}
+
+// Track if click handler is installed
+static bool staging_click_handler_installed = false;
+
+// Clear button for status bar
+static lv_obj_t *staging_clear_btn = NULL;
+
+static void staging_clear_btn_click(lv_event_t *e) {
+    (void)e;
+    printf("[ui_backend] Clear button clicked - clearing staging\n");
+    staging_clear();
+}
+
+/**
  * @brief Update status bar with important messages
  *
  * Shows firmware update notification in the bottom status bar on the main screen.
@@ -2287,8 +2322,61 @@ static void update_status_bar(void) {
     }
 
     int update_available = ota_is_update_available();
+    bool staging_active = staging_is_active();
 
-    if (update_available) {
+    // Debug: track state changes
+    static bool last_staging_state = false;
+    if (staging_active != last_staging_state) {
+        printf("[status_bar] Staging state changed: %d -> %d\n", last_staging_state, staging_active);
+        last_staging_state = staging_active;
+    }
+
+    if (staging_active) {
+        // Show staging info: material + remaining time + clickable indicator
+        float remaining = staging_get_remaining();
+        const char *vendor = nfc_get_tag_vendor();
+        const char *material = nfc_get_tag_material();
+        const char *subtype = nfc_get_tag_material_subtype();
+
+        char status_msg[128];
+        if (subtype && subtype[0]) {
+            snprintf(status_msg, sizeof(status_msg), LV_SYMBOL_RIGHT " %s %s %s (%.0fs) - tap to view",
+                     vendor, material, subtype, remaining);
+        } else {
+            snprintf(status_msg, sizeof(status_msg), LV_SYMBOL_RIGHT " %s %s (%.0fs) - tap to view",
+                     vendor, material, remaining);
+        }
+
+        lv_label_set_text(objects.bottom_bar_message, status_msg);
+        lv_obj_set_style_text_color(objects.bottom_bar_message, lv_color_hex(0x00FF88), 0);  // Green
+
+        // Make the bottom bar clickable
+        if (!staging_click_handler_installed && objects.bottom_bar) {
+            lv_obj_add_flag(objects.bottom_bar, LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_add_event_cb(objects.bottom_bar, staging_status_click_handler, LV_EVENT_CLICKED, NULL);
+            lv_obj_add_event_cb(objects.bottom_bar, staging_status_click_handler, LV_EVENT_LONG_PRESSED, NULL);
+            staging_click_handler_installed = true;
+        }
+
+        // Show LED with green color, gentle pulse
+        if (objects.bottom_bar_message_dot) {
+            lv_obj_clear_flag(objects.bottom_bar_message_dot, LV_OBJ_FLAG_HIDDEN);
+            lv_led_set_color(objects.bottom_bar_message_dot, lv_color_hex(0x00FF88));
+
+            if (!led_anim_active) {
+                lv_anim_t anim;
+                lv_anim_init(&anim);
+                lv_anim_set_var(&anim, objects.bottom_bar_message_dot);
+                lv_anim_set_values(&anim, 255, 180);
+                lv_anim_set_time(&anim, 2000);
+                lv_anim_set_playback_time(&anim, 2000);
+                lv_anim_set_repeat_count(&anim, LV_ANIM_REPEAT_INFINITE);
+                lv_anim_set_exec_cb(&anim, led_pulse_anim_cb);
+                lv_anim_start(&anim);
+                led_anim_active = true;
+            }
+        }
+    } else if (update_available) {
         // Set message text and color (yellow for update notification)
         lv_label_set_text(objects.bottom_bar_message, "Update available! Settings -> Firmware Update");
         lv_obj_set_style_text_color(objects.bottom_bar_message, lv_color_hex(0xFFD700), 0);  // Gold/yellow
@@ -2314,6 +2402,7 @@ static void update_status_bar(void) {
         }
     } else {
         // Show default status message
+        printf("[status_bar] Setting 'System running' (staging=%d, update=%d)\n", staging_active, update_available);
         lv_label_set_text(objects.bottom_bar_message, "System running");
         lv_obj_set_style_text_color(objects.bottom_bar_message, lv_color_hex(0x666666), 0);  // Muted gray
 

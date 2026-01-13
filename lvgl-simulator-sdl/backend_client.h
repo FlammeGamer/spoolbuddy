@@ -225,6 +225,19 @@ int ota_get_progress(void);
 int ota_check_for_update(void);
 int ota_start_update(void);
 
+// =============================================================================
+// Staging functions (for NFC tag staging system)
+// =============================================================================
+
+bool staging_is_active(void);
+float staging_get_remaining(void);
+void staging_clear(void);  // Clear staging via backend API
+
+// Tag data getters (from staged tag)
+const char *nfc_get_tag_vendor(void);
+const char *nfc_get_tag_material(void);
+const char *nfc_get_tag_material_subtype(void);
+
 #ifdef __cplusplus
 }
 #endif
