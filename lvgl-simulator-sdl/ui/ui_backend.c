@@ -64,6 +64,15 @@ static char last_action_message[128] = {0};
 static uint32_t last_action_timestamp = 0;
 #define LAST_ACTION_DISPLAY_MS 30000  // Show last action for 30 seconds
 
+// Status bar info structure for sharing between screens
+typedef struct {
+    char message[128];
+    uint32_t text_color;
+    uint32_t led_color;
+    bool should_pulse;
+    uint8_t led_brightness;
+} StatusBarInfo;
+
 // Forward declarations
 static void update_main_screen_backend_status(BackendStatus *status);
 static void update_clock_displays(void);
@@ -75,6 +84,7 @@ static void update_notification_bell(void);
 static void update_status_bar(void);
 static void update_settings_menu_indicator(void);
 static void reset_main_screen_dynamic_state(void);  // Reset stale pointers on screen recreation
+static void staging_status_click_handler(lv_event_t *e);  // Click handler for status bar staging
 
 /**
  * @brief Set a message to display in the bottom status bar
@@ -90,6 +100,129 @@ void ui_set_status_message(const char *message) {
         last_action_message[sizeof(last_action_message) - 1] = '\0';
         last_action_timestamp = lv_tick_get();
         printf("[status_bar] Set last action: %s\n", last_action_message);
+    }
+}
+
+/**
+ * @brief Get current status bar content (shared by all screens)
+ *
+ * Generates the appropriate status message based on current state:
+ * - NFC staging active: show tag info with countdown
+ * - Spool just added: show confirmation message
+ * - OTA update available: show update notification
+ * - Last action message: show recent action feedback
+ * - Default: show "System running"
+ *
+ * @param info Output structure to fill with status bar content
+ */
+static void get_status_bar_content(StatusBarInfo *info) {
+    if (!info) return;
+
+    int update_available = ota_is_update_available();
+    bool staging_active = staging_is_active();
+
+    // Check if last action message has expired
+    if (last_action_message[0] != '\0') {
+        uint32_t elapsed = lv_tick_elaps(last_action_timestamp);
+        if (elapsed > LAST_ACTION_DISPLAY_MS) {
+            last_action_message[0] = '\0';  // Clear expired message
+        }
+    }
+
+    if (staging_active) {
+        // Show staging info: material + remaining time + clickable indicator
+        float remaining = staging_get_remaining();
+        const char *vendor = nfc_get_tag_vendor();
+        const char *material = nfc_get_tag_material();
+        const char *subtype = nfc_get_tag_material_subtype();
+
+        bool just_added = nfc_is_spool_just_added();
+
+        // For "just added" messages, use stored vendor/material (they're reliable)
+        // Fall back to tag cache for non-just-added cases
+        const char *display_vendor = just_added ? nfc_get_just_added_vendor() : vendor;
+        const char *display_material = just_added ? nfc_get_just_added_material() : material;
+        bool has_spool_info = (display_vendor && display_vendor[0] && display_material && display_material[0]);
+
+        if (just_added) {
+            // Spool was just added/linked - show confirmation message
+            if (has_spool_info) {
+                snprintf(info->message, sizeof(info->message), LV_SYMBOL_OK " Added: %s %s (%.0fs)",
+                         display_vendor, display_material, remaining);
+            } else {
+                const char *tag_id = nfc_get_just_added_tag_id();
+                if (tag_id && tag_id[0]) {
+                    char short_tag[12];
+                    strncpy(short_tag, tag_id, 8);
+                    short_tag[8] = '\0';
+                    snprintf(info->message, sizeof(info->message), LV_SYMBOL_OK " Added spool with tag #%s (%.0fs)",
+                             short_tag, remaining);
+                } else {
+                    snprintf(info->message, sizeof(info->message), LV_SYMBOL_OK " Spool added (%.0fs)", remaining);
+                }
+            }
+        } else if (has_spool_info) {
+            // Known spool - show vendor/material info
+            if (subtype && subtype[0]) {
+                snprintf(info->message, sizeof(info->message), LV_SYMBOL_RIGHT " %s %s %s (%.0fs) - tap to view",
+                         vendor, material, subtype, remaining);
+            } else {
+                snprintf(info->message, sizeof(info->message), LV_SYMBOL_RIGHT " %s %s (%.0fs) - tap to view",
+                         vendor, material, remaining);
+            }
+        } else {
+            // Unknown tag - show generic message
+            snprintf(info->message, sizeof(info->message), LV_SYMBOL_RIGHT " New tag detected (%.0fs) - tap to add", remaining);
+        }
+
+        info->text_color = 0x00FF88;  // Green
+        info->led_color = 0x00FF88;
+        info->should_pulse = true;
+        info->led_brightness = 255;
+    } else if (nfc_is_spool_just_added()) {
+        // Staging expired but spool was just added - show persistent confirmation message
+        const char *display_vendor = nfc_get_just_added_vendor();
+        const char *display_material = nfc_get_just_added_material();
+        bool has_spool_info = (display_vendor && display_vendor[0] && display_material && display_material[0]);
+
+        if (has_spool_info) {
+            snprintf(info->message, sizeof(info->message), LV_SYMBOL_OK " Added: %s %s",
+                     display_vendor, display_material);
+        } else {
+            const char *tag_id = nfc_get_just_added_tag_id();
+            if (tag_id && tag_id[0]) {
+                char short_tag[12];
+                strncpy(short_tag, tag_id, 8);
+                short_tag[8] = '\0';
+                snprintf(info->message, sizeof(info->message), LV_SYMBOL_OK " Added spool with tag #%s", short_tag);
+            } else {
+                snprintf(info->message, sizeof(info->message), LV_SYMBOL_OK " Spool added");
+            }
+        }
+
+        info->text_color = 0x00FF88;  // Green
+        info->led_color = 0x00FF88;
+        info->should_pulse = false;
+        info->led_brightness = 255;
+    } else if (update_available) {
+        snprintf(info->message, sizeof(info->message), "Update available! Settings -> Firmware Update");
+        info->text_color = 0xFFD700;  // Gold/yellow
+        info->led_color = 0xFFD700;
+        info->should_pulse = true;
+        info->led_brightness = 255;
+    } else if (last_action_message[0] != '\0') {
+        strncpy(info->message, last_action_message, sizeof(info->message) - 1);
+        info->message[sizeof(info->message) - 1] = '\0';
+        info->text_color = 0x00CCFF;  // Cyan/blue
+        info->led_color = 0x00CCFF;
+        info->should_pulse = false;
+        info->led_brightness = 255;
+    } else {
+        snprintf(info->message, sizeof(info->message), "System running");
+        info->text_color = 0x666666;  // Muted gray
+        info->led_color = 0x666666;
+        info->should_pulse = false;
+        info->led_brightness = 180;  // Dimmed
     }
 }
 
@@ -125,6 +258,36 @@ void update_backend_ui(void) {
 
     // Update status bar on every tick (not rate-limited) for responsive staging updates
     update_status_bar();
+
+    // Also update AMS screen bottom bar every tick for responsive countdown
+    if (screen_id == SCREEN_ID_AMS_OVERVIEW && objects.ams_screen_bottom_bar_message) {
+        StatusBarInfo status_info;
+        get_status_bar_content(&status_info);
+        lv_label_set_text(objects.ams_screen_bottom_bar_message, status_info.message);
+        lv_obj_set_style_text_color(objects.ams_screen_bottom_bar_message, lv_color_hex(status_info.text_color), 0);
+        if (objects.ams_screen_bottom_bar_led) {
+            lv_led_set_color(objects.ams_screen_bottom_bar_led, lv_color_hex(status_info.led_color));
+            lv_led_set_brightness(objects.ams_screen_bottom_bar_led, status_info.led_brightness);
+        }
+
+        // Install click handler if staging active (for "tap to view")
+        static lv_obj_t *ams_click_target = NULL;
+        if (objects.ams_screen_bottom_bar && staging_is_active()) {
+            if (objects.ams_screen_bottom_bar != ams_click_target) {
+                lv_obj_add_flag(objects.ams_screen_bottom_bar, LV_OBJ_FLAG_CLICKABLE);
+                lv_obj_add_event_cb(objects.ams_screen_bottom_bar, staging_status_click_handler, LV_EVENT_CLICKED, NULL);
+                lv_obj_add_event_cb(objects.ams_screen_bottom_bar, staging_status_click_handler, LV_EVENT_LONG_PRESSED, NULL);
+                ams_click_target = objects.ams_screen_bottom_bar;
+                // Make children pass through clicks
+                lv_obj_add_flag(objects.ams_screen_bottom_bar_message, LV_OBJ_FLAG_EVENT_BUBBLE);
+                lv_obj_clear_flag(objects.ams_screen_bottom_bar_message, LV_OBJ_FLAG_CLICKABLE);
+                if (objects.ams_screen_bottom_bar_led) {
+                    lv_obj_add_flag(objects.ams_screen_bottom_bar_led, LV_OBJ_FLAG_EVENT_BUBBLE);
+                    lv_obj_clear_flag(objects.ams_screen_bottom_bar_led, LV_OBJ_FLAG_CLICKABLE);
+                }
+            }
+        }
+    }
 
     // Rate limiting for other updates:
     // - Every 20 ticks (~100ms) when waiting for data
@@ -1295,6 +1458,21 @@ static void format_fill_level(char *buf, size_t buf_size, uint8_t remain) {
 }
 
 /**
+ * @brief Set fill level label with center alignment
+ * Sets text and ensures the label is center-aligned with a fixed width
+ * for proper alignment with the slot name above it.
+ */
+static void set_fill_level_label(lv_obj_t *label, const char *text) {
+    if (!label) return;
+    lv_label_set_text(label, text);
+    // Set fixed width and center alignment for proper centering under slot name
+    // Slot name is at x+2 with width 18, centering at x+11
+    // Fill level is at x+0, so width=22 centers at x+11 to match
+    lv_obj_set_width(label, 22);
+    lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
+}
+
+/**
  * @brief Update AMS overview screen with backend data
  *
  * Shows/hides AMS panels based on actual data and updates:
@@ -1427,14 +1605,12 @@ static void update_ams_overview_display(void) {
                         }
 
                         // Update fill level - empty slots show "---", loaded slots show percentage
-                        if (slot_fill_levels[j]) {
-                            if (is_empty) {
-                                lv_label_set_text(slot_fill_levels[j], "---");
-                            } else {
-                                char buf[16];
-                                format_fill_level(buf, sizeof(buf), info->trays[j].remain);
-                                lv_label_set_text(slot_fill_levels[j], buf);
-                            }
+                        if (is_empty) {
+                            set_fill_level_label(slot_fill_levels[j], "---");
+                        } else {
+                            char buf[16];
+                            format_fill_level(buf, sizeof(buf), info->trays[j].remain);
+                            set_fill_level_label(slot_fill_levels[j], buf);
                         }
 
                         // Highlight active slot
@@ -1539,14 +1715,12 @@ static void update_ams_overview_display(void) {
                         }
 
                         // Update fill level - empty slots show "---", loaded slots show percentage
-                        if (slot_fill_levels[j]) {
-                            if (is_empty) {
-                                lv_label_set_text(slot_fill_levels[j], "---");
-                            } else {
-                                char buf[16];
-                                format_fill_level(buf, sizeof(buf), info->trays[j].remain);
-                                lv_label_set_text(slot_fill_levels[j], buf);
-                            }
+                        if (is_empty) {
+                            set_fill_level_label(slot_fill_levels[j], "---");
+                        } else {
+                            char buf[16];
+                            format_fill_level(buf, sizeof(buf), info->trays[j].remain);
+                            set_fill_level_label(slot_fill_levels[j], buf);
                         }
 
                         int global_tray = get_global_tray_index(1, j);
@@ -1650,14 +1824,12 @@ static void update_ams_overview_display(void) {
                         }
 
                         // Update fill level - empty slots show "---", loaded slots show percentage
-                        if (slot_fill_levels[j]) {
-                            if (is_empty) {
-                                lv_label_set_text(slot_fill_levels[j], "---");
-                            } else {
-                                char buf[16];
-                                format_fill_level(buf, sizeof(buf), info->trays[j].remain);
-                                lv_label_set_text(slot_fill_levels[j], buf);
-                            }
+                        if (is_empty) {
+                            set_fill_level_label(slot_fill_levels[j], "---");
+                        } else {
+                            char buf[16];
+                            format_fill_level(buf, sizeof(buf), info->trays[j].remain);
+                            set_fill_level_label(slot_fill_levels[j], buf);
                         }
 
                         int global_tray = get_global_tray_index(2, j);
@@ -1744,14 +1916,12 @@ static void update_ams_overview_display(void) {
                         }
 
                         // Update fill level - empty slots show "---", loaded slots show percentage
-                        if (slot_fill_levels[j]) {
-                            if (is_empty) {
-                                lv_label_set_text(slot_fill_levels[j], "---");
-                            } else {
-                                char buf[16];
-                                format_fill_level(buf, sizeof(buf), info->trays[j].remain);
-                                lv_label_set_text(slot_fill_levels[j], buf);
-                            }
+                        if (is_empty) {
+                            set_fill_level_label(slot_fill_levels[j], "---");
+                        } else {
+                            char buf[16];
+                            format_fill_level(buf, sizeof(buf), info->trays[j].remain);
+                            set_fill_level_label(slot_fill_levels[j], buf);
                         }
 
                         int global_tray = get_global_tray_index(3, j);
@@ -1827,11 +1997,9 @@ static void update_ams_overview_display(void) {
                         }
 
                         // Update fill level (255 = unknown -> "---")
-                        if (objects.ams_screen_ams_panel_ht_a_label_fill_level) {
-                            char buf[16];
-                            format_fill_level(buf, sizeof(buf), info->trays[0].remain);
-                            lv_label_set_text(objects.ams_screen_ams_panel_ht_a_label_fill_level, buf);
-                        }
+                        char buf[16];
+                        format_fill_level(buf, sizeof(buf), info->trays[0].remain);
+                        set_fill_level_label(objects.ams_screen_ams_panel_ht_a_label_fill_level, buf);
                     } else {
                         // Empty slot - show stripes
                         set_slot_stripes_visible(ht_a_stripes, true);
@@ -1839,9 +2007,7 @@ static void update_ams_overview_display(void) {
                         if (objects.ams_screen_ams_panel_ht_a_label_material) {
                             lv_label_set_text(objects.ams_screen_ams_panel_ht_a_label_material, "");
                         }
-                        if (objects.ams_screen_ams_panel_ht_a_label_fill_level) {
-                            lv_label_set_text(objects.ams_screen_ams_panel_ht_a_label_fill_level, "");
-                        }
+                        set_fill_level_label(objects.ams_screen_ams_panel_ht_a_label_fill_level, "");
                     }
 
                     int global_tray = get_global_tray_index(128, 0);
@@ -1916,11 +2082,9 @@ static void update_ams_overview_display(void) {
                         }
 
                         // Update fill level (255 = unknown -> "---")
-                        if (objects.ams_screen_ams_panel_ht_b_label_fill_level) {
-                            char buf[16];
-                            format_fill_level(buf, sizeof(buf), info->trays[0].remain);
-                            lv_label_set_text(objects.ams_screen_ams_panel_ht_b_label_fill_level, buf);
-                        }
+                        char buf[16];
+                        format_fill_level(buf, sizeof(buf), info->trays[0].remain);
+                        set_fill_level_label(objects.ams_screen_ams_panel_ht_b_label_fill_level, buf);
                     } else {
                         // Empty slot - show stripes
                         set_slot_stripes_visible(ht_b_stripes, true);
@@ -1928,9 +2092,7 @@ static void update_ams_overview_display(void) {
                         if (objects.ams_screen_ams_panel_ht_b_label_material) {
                             lv_label_set_text(objects.ams_screen_ams_panel_ht_b_label_material, "");
                         }
-                        if (objects.ams_screen_ams_panel_ht_b_label_fill_level) {
-                            lv_label_set_text(objects.ams_screen_ams_panel_ht_b_label_fill_level, "");
-                        }
+                        set_fill_level_label(objects.ams_screen_ams_panel_ht_b_label_fill_level, "");
                     }
 
                     int global_tray = get_global_tray_index(129, 0);
@@ -1991,25 +2153,40 @@ static void update_ams_overview_display(void) {
         }
     }
 
-    // Update bottom bar message (matching main screen style)
+    // Update bottom bar message (using shared status bar content)
     if (objects.ams_screen_bottom_bar_message) {
-        int update_available = ota_is_update_available();
+        StatusBarInfo status_info;
+        get_status_bar_content(&status_info);
 
-        if (update_available) {
-            lv_label_set_text(objects.ams_screen_bottom_bar_message, "Update available! Settings -> Firmware Update");
-            lv_obj_set_style_text_color(objects.ams_screen_bottom_bar_message, lv_color_hex(0xFFD700), 0);  // Gold/yellow
-        } else {
-            lv_label_set_text(objects.ams_screen_bottom_bar_message, "System running");
-            lv_obj_set_style_text_color(objects.ams_screen_bottom_bar_message, lv_color_hex(0x666666), 0);  // Muted gray
-        }
+        lv_label_set_text(objects.ams_screen_bottom_bar_message, status_info.message);
+        lv_obj_set_style_text_color(objects.ams_screen_bottom_bar_message, lv_color_hex(status_info.text_color), 0);
 
         // Update LED indicator if present
         if (objects.ams_screen_bottom_bar_led) {
-            if (update_available) {
-                lv_led_set_color(objects.ams_screen_bottom_bar_led, lv_color_hex(0xFFD700));  // Gold/yellow
-            } else {
-                lv_led_set_color(objects.ams_screen_bottom_bar_led, lv_color_hex(0x666666));  // Muted gray
-                lv_led_set_brightness(objects.ams_screen_bottom_bar_led, 180);  // Dimmed
+            lv_led_set_color(objects.ams_screen_bottom_bar_led, lv_color_hex(status_info.led_color));
+            lv_led_set_brightness(objects.ams_screen_bottom_bar_led, status_info.led_brightness);
+        }
+
+        // Make bottom bar clickable when staging is active (for "tap to view")
+        // Uses same click handler as main screen
+        static lv_obj_t *ams_click_handler_target = NULL;
+        if (objects.ams_screen_bottom_bar && staging_is_active()) {
+            if (objects.ams_screen_bottom_bar != ams_click_handler_target) {
+                lv_obj_add_flag(objects.ams_screen_bottom_bar, LV_OBJ_FLAG_CLICKABLE);
+                lv_obj_add_event_cb(objects.ams_screen_bottom_bar, staging_status_click_handler, LV_EVENT_CLICKED, NULL);
+                lv_obj_add_event_cb(objects.ams_screen_bottom_bar, staging_status_click_handler, LV_EVENT_LONG_PRESSED, NULL);
+                ams_click_handler_target = objects.ams_screen_bottom_bar;
+                printf("[status_bar] Click handler installed on ams_screen_bottom_bar %p\n", (void*)objects.ams_screen_bottom_bar);
+
+                // Make sure child elements don't intercept clicks
+                if (objects.ams_screen_bottom_bar_message) {
+                    lv_obj_add_flag(objects.ams_screen_bottom_bar_message, LV_OBJ_FLAG_EVENT_BUBBLE);
+                    lv_obj_clear_flag(objects.ams_screen_bottom_bar_message, LV_OBJ_FLAG_CLICKABLE);
+                }
+                if (objects.ams_screen_bottom_bar_led) {
+                    lv_obj_add_flag(objects.ams_screen_bottom_bar_led, LV_OBJ_FLAG_EVENT_BUBBLE);
+                    lv_obj_clear_flag(objects.ams_screen_bottom_bar_led, LV_OBJ_FLAG_CLICKABLE);
+                }
             }
         }
     }
@@ -2299,14 +2476,22 @@ static void led_pulse_anim_cb(void *var, int32_t value) {
 static void staging_status_click_handler(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
     bool staging = staging_is_active();
-    printf("[ui_backend] Status bar event: code=%d, staging=%d\n", code, staging);
+    bool popup_visible = ui_nfc_card_popup_visible();
+    printf("[ui_backend] Status bar event: code=%d, staging=%d, popup_visible=%d\n",
+           code, staging, popup_visible);
 
     if (code == LV_EVENT_CLICKED) {
-        if (staging) {
-            printf("[ui_backend] Status bar clicked - showing popup\n");
-            ui_nfc_card_show_popup();
+        // Show popup if staging is active OR if we still have a "just added" state
+        // (allows reopening popup even after staging countdown ends)
+        if (staging || nfc_is_spool_just_added()) {
+            if (!popup_visible) {
+                printf("[ui_backend] Status bar clicked - showing popup\n");
+                ui_nfc_card_show_popup();
+            } else {
+                printf("[ui_backend] Status bar clicked but popup already visible\n");
+            }
         } else {
-            printf("[ui_backend] Status bar clicked but staging not active!\n");
+            printf("[ui_backend] Status bar clicked but staging not active and no just-added state!\n");
         }
     } else if (code == LV_EVENT_LONG_PRESSED) {
         if (staging) {
@@ -2421,6 +2606,16 @@ static void update_status_bar(void) {
             staging_click_handler_installed = true;
             staging_click_handler_target = objects.bottom_bar;
             printf("[status_bar] Click handler installed on bottom_bar %p\n", (void*)objects.bottom_bar);
+
+            // Make sure child elements don't intercept clicks
+            if (objects.bottom_bar_message) {
+                lv_obj_add_flag(objects.bottom_bar_message, LV_OBJ_FLAG_EVENT_BUBBLE);
+                lv_obj_clear_flag(objects.bottom_bar_message, LV_OBJ_FLAG_CLICKABLE);
+            }
+            if (objects.bottom_bar_message_dot) {
+                lv_obj_add_flag(objects.bottom_bar_message_dot, LV_OBJ_FLAG_EVENT_BUBBLE);
+                lv_obj_clear_flag(objects.bottom_bar_message_dot, LV_OBJ_FLAG_CLICKABLE);
+            }
         }
 
         // Show LED with green color, gentle pulse

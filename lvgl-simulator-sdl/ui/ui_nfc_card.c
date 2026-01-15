@@ -809,25 +809,29 @@ void ui_nfc_card_update(void) {
         }
     }
 
-    // Always update scale status label on main screen (shows current weight)
-    if (objects.main_screen_nfc_scale_scale_label) {
-        if (scale_is_initialized()) {
-            float weight = scale_get_weight();
-            char weight_str[16];
-            snprintf(weight_str, sizeof(weight_str), "%.1fg", weight);
-            lv_label_set_text(objects.main_screen_nfc_scale_scale_label, weight_str);
-            lv_obj_set_style_text_color(objects.main_screen_nfc_scale_scale_label,
-                lv_color_hex(0xFF00FF00), LV_PART_MAIN);
-        } else {
-            lv_label_set_text(objects.main_screen_nfc_scale_scale_label, "N/A");
-            lv_obj_set_style_text_color(objects.main_screen_nfc_scale_scale_label,
-                lv_color_hex(0xFFFF6600), LV_PART_MAIN);
+    // Only update scale status labels when main screen is actually active
+    // (other screens delete main screen objects, leaving stale pointers)
+    if (objects.main_screen && lv_scr_act() == objects.main_screen) {
+        // Update scale status label (shows current weight)
+        if (objects.main_screen_nfc_scale_scale_label) {
+            if (scale_is_initialized()) {
+                float weight = scale_get_weight();
+                char weight_str[16];
+                snprintf(weight_str, sizeof(weight_str), "%.1fg", weight);
+                lv_label_set_text(objects.main_screen_nfc_scale_scale_label, weight_str);
+                lv_obj_set_style_text_color(objects.main_screen_nfc_scale_scale_label,
+                    lv_color_hex(0xFF00FF00), LV_PART_MAIN);
+            } else {
+                lv_label_set_text(objects.main_screen_nfc_scale_scale_label, "N/A");
+                lv_obj_set_style_text_color(objects.main_screen_nfc_scale_scale_label,
+                    lv_color_hex(0xFFFF6600), LV_PART_MAIN);
+            }
         }
-    }
 
-    // NFC status always shows "Ready"
-    if (objects.main_screen_nfc_scale_nfc_label) {
-        lv_label_set_text(objects.main_screen_nfc_scale_nfc_label, "Ready");
+        // NFC status always shows "Ready"
+        if (objects.main_screen_nfc_scale_nfc_label) {
+            lv_label_set_text(objects.main_screen_nfc_scale_nfc_label, "Ready");
+        }
     }
 }
 

@@ -409,10 +409,8 @@ void ui_tick() {
         update_backend_ui();
         UI_LOGI("update_backend_ui returned");
 
-        // Update NFC card on main screen
-        if (screen_id == SCREEN_ID_MAIN_SCREEN) {
-            ui_nfc_card_update();
-        }
+        // Update NFC card popup (global - can be shown on any screen)
+        ui_nfc_card_update();
 
         // Update NFC status and weight on scan_result screen
         if (screen_id == SCREEN_ID_SCAN_RESULT) {
