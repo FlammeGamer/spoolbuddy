@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.14)
 project(spoolbuddy_simulator C)
 
 set(CMAKE_C_STANDARD 99)
+
+# Enable testing
+enable_testing()
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Option to enable/disable backend client (requires libcurl)
@@ -136,3 +139,7 @@ endif()
 
 # Suppress warnings from generated code
 target_compile_options(simulator PRIVATE -w)
+
+# Add tests subdirectory (EXCLUDE_FROM_ALL = don't build by default)
+# Run "make unit_tests" or "make integration_tests" to build tests
+add_subdirectory(tests EXCLUDE_FROM_ALL)
