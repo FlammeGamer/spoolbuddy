@@ -11,6 +11,7 @@ vi.mock('../../lib/toast', () => ({
   useToast: () => ({
     showToast: vi.fn(),
   }),
+  ToastProvider: ({ children }: { children: preact.ComponentChildren }) => children,
 }))
 
 // Mock the SpoolsTable component to avoid React-table compatibility issues

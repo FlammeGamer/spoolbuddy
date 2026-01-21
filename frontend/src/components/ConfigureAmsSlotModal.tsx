@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'preact/hooks'
-import { X, Loader2, Settings, ChevronDown, CheckCircle2, RotateCcw } from 'lucide-preact'
-import { api, CalibrationProfile, SlicerPreset } from '../lib/api'
+import { X, Loader2, Settings, ChevronDown, CheckCircle2, RotateCcw, Palette } from 'lucide-preact'
+import { api, CalibrationProfile, SlicerPreset, ColorEntry } from '../lib/api'
 
 interface SlotInfo {
   amsId: number
@@ -151,6 +151,8 @@ export function ConfigureAmsSlotModal({
   const [clearLoading, setClearLoading] = useState(false)
   const [presetsLoading, setPresetsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [catalogColors, setCatalogColors] = useState<ColorEntry[]>([])
+  const [catalogColorsLoading, setCatalogColorsLoading] = useState(false)
 
   // Fetch filament presets when modal opens
   useEffect(() => {
@@ -180,6 +182,7 @@ export function ConfigureAmsSlotModal({
       setShowSuccess(false)
       setShowExtendedColors(false)
       setError(null)
+      setCatalogColors([])
     }
   }, [isOpen])
 
@@ -282,6 +285,32 @@ export function ConfigureAmsSlotModal({
       setSelectedCaliIdx(-1)
     }
   }, [selectedPresetId, matchingCalibrations])
+
+  // Fetch catalog colors when preset changes (has brand/material info)
+  useEffect(() => {
+    const fetchCatalogColors = async () => {
+      if (!selectedPresetInfo?.brand && !selectedPresetInfo?.material) {
+        setCatalogColors([])
+        return
+      }
+
+      setCatalogColorsLoading(true)
+      try {
+        const colors = await api.searchColors(
+          selectedPresetInfo.brand || undefined,
+          selectedPresetInfo.material || undefined
+        )
+        setCatalogColors(colors)
+      } catch (e) {
+        console.error('Failed to fetch catalog colors:', e)
+        setCatalogColors([])
+      } finally {
+        setCatalogColorsLoading(false)
+      }
+    }
+
+    fetchCatalogColors()
+  }, [selectedPresetInfo?.brand, selectedPresetInfo?.material])
 
   // Handle re-read slot (trigger RFID scan)
   const handleReread = async () => {
@@ -574,6 +603,43 @@ export function ConfigureAmsSlotModal({
                 <label class="block text-sm text-[var(--text-muted)] mb-2 font-medium">
                   Custom Color (optional)
                 </label>
+
+                {/* Catalog colors (matching brand/material) */}
+                {(catalogColors.length > 0 || catalogColorsLoading) && (
+                  <div class="mb-3">
+                    <div class="flex items-center gap-1.5 text-xs text-[var(--text-muted)] mb-1.5">
+                      <Palette class="w-3 h-3" />
+                      <span>
+                        {selectedPresetInfo?.brand || selectedPresetInfo?.material
+                          ? `Colors for ${[selectedPresetInfo.brand, selectedPresetInfo.material].filter(Boolean).join(' ')}`
+                          : 'Catalog colors'}
+                      </span>
+                      {catalogColorsLoading && <span class="animate-pulse">...</span>}
+                    </div>
+                    {catalogColors.length > 0 && (
+                      <div class="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
+                        {catalogColors.map((color) => (
+                          <button
+                            key={color.id}
+                            onClick={() => {
+                              const hex = color.hex_color.replace('#', '').toUpperCase()
+                              setColorHex(hex)
+                              setColorInput(color.color_name)
+                            }}
+                            class={`w-7 h-7 rounded-md border-2 transition-all ${
+                              colorHex === color.hex_color.replace('#', '').toUpperCase()
+                                ? 'border-[var(--accent-color)] scale-110'
+                                : 'border-white/20 hover:border-white/40'
+                            }`}
+                            style={{ backgroundColor: color.hex_color }}
+                            title={`${color.color_name}${color.material ? ` (${color.material})` : ''}`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Basic colors */}
                 <div class="flex flex-wrap gap-1.5 mb-2">
                   {QUICK_COLORS_BASIC.map((color) => (

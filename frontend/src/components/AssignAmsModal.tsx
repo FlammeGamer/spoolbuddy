@@ -563,6 +563,23 @@ export function AssignAmsModal({ isOpen, onClose, spool }: AssignAmsModalProps) 
     onClose();
   }, [onClose]);
 
+  // Handle escape key and body scroll
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, handleClose]);
+
   if (!isOpen) return null;
 
   // Filter to connected printers only

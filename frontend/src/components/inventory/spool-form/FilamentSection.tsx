@@ -2,6 +2,8 @@ import { Cloud, CloudOff } from 'lucide-preact'
 import type { FilamentSectionProps } from './types'
 import { MATERIALS, WEIGHTS } from './constants'
 import { parsePresetName } from './utils'
+import { CustomSelect } from '../../ui/CustomSelect'
+import { CustomAutocomplete } from '../../ui/CustomAutocomplete'
 
 export function FilamentSection({
   formData,
@@ -43,49 +45,52 @@ export function FilamentSection({
           {loadingCloudPresets ? (
             <div class="input bg-[var(--bg-tertiary)] animate-pulse h-[38px]" />
           ) : (
-            <>
-              <input
-                type="text"
-                list="slicer-presets"
-                class={`input ${!formData.slicer_filament ? 'border-[var(--warning-color)]/50' : ''}`}
-                placeholder="Type to search presets..."
-                value={presetInputValue}
-                onInput={(e) => {
-                  const inputValue = (e.target as HTMLInputElement).value
-                  setPresetInputValue(inputValue)
-
-                  // Look up option by displayName first, then by code
-                  let option = filamentOptions.find(o => o.displayName === inputValue)
-                  if (!option) {
-                    option = filamentOptions.find(o => o.code === inputValue)
-                  }
-                  if (!option) {
-                    const inputLower = inputValue.toLowerCase()
-                    option = filamentOptions.find(o => o.displayName.toLowerCase() === inputLower)
-                  }
-
-                  if (option) {
-                    updateField('slicer_filament', option.code)
-                    // Auto-fill from preset
-                    const parsed = parsePresetName(option.name)
-                    if (parsed.brand) updateField('brand', parsed.brand)
-                    if (parsed.material) updateField('material', parsed.material)
-                    if (parsed.variant) {
-                      updateField('subtype', parsed.variant)
-                    } else {
-                      updateField('subtype', '')
-                    }
+            <CustomAutocomplete
+              options={filamentOptions.map(o => ({ value: o.code, label: o.displayName }))}
+              value={presetInputValue}
+              onChange={(val) => {
+                setPresetInputValue(val)
+                // Look up option by code or displayName
+                let option = filamentOptions.find(o => o.code === val)
+                if (!option) {
+                  option = filamentOptions.find(o => o.displayName === val)
+                }
+                if (!option) {
+                  const valLower = val.toLowerCase()
+                  option = filamentOptions.find(o => o.displayName.toLowerCase() === valLower)
+                }
+                if (option) {
+                  updateField('slicer_filament', option.code)
+                  const parsed = parsePresetName(option.name)
+                  if (parsed.brand) updateField('brand', parsed.brand)
+                  if (parsed.material) updateField('material', parsed.material)
+                  if (parsed.variant) {
+                    updateField('subtype', parsed.variant)
                   } else {
-                    updateField('slicer_filament', inputValue)
+                    updateField('subtype', '')
                   }
-                }}
-              />
-              <datalist id="slicer-presets">
-                {filamentOptions.map(({ code, displayName }) => (
-                  <option key={code} value={displayName}>{displayName}</option>
-                ))}
-              </datalist>
-            </>
+                } else {
+                  updateField('slicer_filament', val)
+                }
+              }}
+              onSelect={(opt) => {
+                const option = filamentOptions.find(o => o.code === opt.value)
+                if (option) {
+                  setPresetInputValue(option.displayName)
+                  updateField('slicer_filament', option.code)
+                  const parsed = parsePresetName(option.name)
+                  if (parsed.brand) updateField('brand', parsed.brand)
+                  if (parsed.material) updateField('material', parsed.material)
+                  if (parsed.variant) {
+                    updateField('subtype', parsed.variant)
+                  } else {
+                    updateField('subtype', '')
+                  }
+                }
+              }}
+              placeholder="Type to search presets..."
+              className={!formData.slicer_filament ? '[&>input]:border-[var(--warning-color)]/50' : ''}
+            />
           )}
 
           {selectedPresetOption && (
@@ -105,16 +110,15 @@ export function FilamentSection({
         <div class="form-row">
           <div class="form-field">
             <label class="form-label">Material</label>
-            <select
-              class="select"
+            <CustomSelect
+              options={[
+                { value: '', label: 'Select...' },
+                ...MATERIALS.map(m => ({ value: m, label: m }))
+              ]}
               value={formData.material}
-              onChange={(e) => updateField('material', (e.target as HTMLSelectElement).value)}
-            >
-              <option value="">Select...</option>
-              {MATERIALS.map(m => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
+              onChange={(val) => updateField('material', val as string)}
+              placeholder="Select..."
+            />
           </div>
           <div class="form-field">
             <label class="form-label">Variant</label>
@@ -132,28 +136,27 @@ export function FilamentSection({
         <div class="form-row">
           <div class="form-field">
             <label class="form-label">Brand</label>
-            <select
-              class="select"
+            <CustomSelect
+              options={[
+                { value: '', label: 'Select...' },
+                ...availableBrands.map(brand => ({ value: brand, label: brand }))
+              ]}
               value={formData.brand}
-              onChange={(e) => updateField('brand', (e.target as HTMLSelectElement).value)}
-            >
-              <option value="">Select...</option>
-              {availableBrands.map(brand => (
-                <option key={brand} value={brand}>{brand}</option>
-              ))}
-            </select>
+              onChange={(val) => updateField('brand', val as string)}
+              placeholder="Select..."
+              searchable
+            />
           </div>
           <div class="form-field">
             <label class="form-label">Spool Weight</label>
-            <select
-              class="select"
+            <CustomSelect
+              options={WEIGHTS.map(w => ({
+                value: w,
+                label: w >= 1000 ? `${w / 1000}kg` : `${w}g`
+              }))}
               value={formData.label_weight}
-              onChange={(e) => updateField('label_weight', parseInt((e.target as HTMLSelectElement).value))}
-            >
-              {WEIGHTS.map(w => (
-                <option key={w} value={w}>{w >= 1000 ? `${w / 1000}kg` : `${w}g`}</option>
-              ))}
-            </select>
+              onChange={(val) => updateField('label_weight', val as number)}
+            />
           </div>
         </div>
       </div>

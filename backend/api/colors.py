@@ -112,6 +112,45 @@ async def lookup_color(manufacturer: str, color_name: str, material: str | None 
     return ColorLookupResult(found=False)
 
 
+@router.get("/search")
+async def search_colors(manufacturer: str | None = None, material: str | None = None) -> list[ColorEntry]:
+    """Search colors by manufacturer and/or material."""
+    db = await get_db()
+
+    # Build query based on provided filters
+    query = (
+        "SELECT id, manufacturer, color_name, hex_color, material, is_default, created_at FROM color_catalog WHERE 1=1"
+    )
+    params: list = []
+
+    if manufacturer:
+        # Case-insensitive partial match for manufacturer
+        query += " AND LOWER(manufacturer) LIKE LOWER(?)"
+        params.append(f"%{manufacturer}%")
+
+    if material:
+        # Case-insensitive partial match for material
+        query += " AND LOWER(material) LIKE LOWER(?)"
+        params.append(f"%{material}%")
+
+    query += " ORDER BY manufacturer, color_name LIMIT 100"
+
+    async with db.conn.execute(query, params) as cursor:
+        rows = await cursor.fetchall()
+        return [
+            ColorEntry(
+                id=row[0],
+                manufacturer=row[1],
+                color_name=row[2],
+                hex_color=row[3],
+                material=row[4],
+                is_default=bool(row[5]),
+                created_at=row[6],
+            )
+            for row in rows
+        ]
+
+
 class SyncResult(BaseModel):
     """Result of sync operation."""
 

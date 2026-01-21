@@ -149,3 +149,73 @@ class TestUsageHistory:
 
         history = await test_db.get_usage_history(spool.id, limit=5)
         assert len(history) == 5
+
+
+class TestSetSpoolWeight:
+    """Test set_spool_weight uses Default Core Weight from settings."""
+
+    async def test_set_spool_weight_uses_default_core_weight(self, test_db, spool_factory):
+        """Test that set_spool_weight uses Default Core Weight from settings, not spool's core_weight."""
+        # Create a spool with label_weight=1000, individual core_weight=200
+        spool = await spool_factory(label_weight=1000, core_weight=200, weight_used=0)
+
+        # Set Default Core Weight in settings to 300 (different from spool's 200)
+        await test_db.set_setting("spoolbuddy-default-core-weight", "300")
+
+        # Set scale weight to 800g
+        updated = await test_db.set_spool_weight(spool.id, 800)
+
+        assert updated is not None
+        assert updated.weight_current == 800
+        # weight_used should be calculated as: default_core_weight + label_weight - scale_weight
+        # = 300 + 1000 - 800 = 500
+        assert updated.weight_used == 500
+        # consumed_since_weight should be reset to 0
+        assert updated.consumed_since_weight == 0
+
+    async def test_set_spool_weight_uses_default_250_when_not_set(self, test_db, spool_factory):
+        """Test that set_spool_weight uses default 250g when setting not configured."""
+        # Create a spool with label_weight=1000
+        spool = await spool_factory(label_weight=1000, core_weight=200, weight_used=0)
+
+        # Don't set any default core weight setting - should use 250g default
+
+        # Set scale weight to 700g
+        updated = await test_db.set_spool_weight(spool.id, 700)
+
+        assert updated is not None
+        assert updated.weight_current == 700
+        # weight_used should be: 250 + 1000 - 700 = 550
+        assert updated.weight_used == 550
+
+    async def test_set_spool_weight_resets_consumed_since_weight(self, test_db, spool_factory):
+        """Test that set_spool_weight resets consumed_since_weight to zero."""
+        # Create a spool with some consumed_since_weight
+        spool = await spool_factory(label_weight=1000, weight_used=100, consumed_since_weight=50)
+
+        # Set scale weight
+        updated = await test_db.set_spool_weight(spool.id, 900)
+
+        assert updated is not None
+        assert updated.consumed_since_weight == 0
+
+    async def test_set_spool_weight_nonexistent_spool(self, test_db):
+        """Test that set_spool_weight returns None for nonexistent spool."""
+        result = await test_db.set_spool_weight("nonexistent-id", 500)
+        assert result is None
+
+    async def test_set_spool_weight_clamps_weight_used_to_zero(self, test_db, spool_factory):
+        """Test that weight_used is clamped to zero when scale weight is high."""
+        # Create a spool where scale weight would produce negative weight_used
+        spool = await spool_factory(label_weight=1000, weight_used=0)
+
+        # Set Default Core Weight to 250
+        await test_db.set_setting("spoolbuddy-default-core-weight", "250")
+
+        # Set scale weight very high (1500g) which would produce negative weight_used
+        # weight_used = 250 + 1000 - 1500 = -250, should clamp to 0
+        updated = await test_db.set_spool_weight(spool.id, 1500)
+
+        assert updated is not None
+        assert updated.weight_current == 1500
+        assert updated.weight_used == 0  # Clamped to zero

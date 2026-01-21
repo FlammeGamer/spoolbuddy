@@ -859,19 +859,25 @@ class Database:
         2. Resetting consumed_since_weight to 0
         3. Calculating weight_used so that: gross = core_weight + (label_weight - weight_used)
            => weight_used = core_weight + label_weight - gross
+
+        Uses the Default Core Weight from settings (same as dashboard display) for consistency.
         """
         spool = await self.get_spool(spool_id)
         if not spool:
             return None
+
+        # Use Default Core Weight from settings (same as frontend dashboard)
+        # This ensures sync calculations match what the user sees
+        default_core_weight_str = await self.get_setting("spoolbuddy-default-core-weight")
+        default_core_weight = int(default_core_weight_str) if default_core_weight_str else 250
 
         # Calculate what weight_used should be to match the scale reading
         # gross_weight = core_weight + net_weight
         # net_weight = label_weight - weight_used - consumed_since_weight
         # After sync: gross = core_weight + (label_weight - weight_used_new - 0)
         # So: weight_used_new = core_weight + label_weight - gross
-        core_weight = spool.core_weight or 0
         label_weight = spool.label_weight or 0
-        weight_used_new = max(0, core_weight + label_weight - weight)
+        weight_used_new = max(0, default_core_weight + label_weight - weight)
 
         now = int(time.time())
         await self.conn.execute(

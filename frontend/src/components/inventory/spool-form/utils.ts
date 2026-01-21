@@ -9,6 +9,8 @@ export function parsePresetName(name: string): { brand: string; material: string
   let cleanName = name.replace(/@.*$/, '').trim()
   // Remove (Custom) tag
   cleanName = cleanName.replace(/\(Custom\)/i, '').trim()
+  // Remove leading # or * markers
+  cleanName = cleanName.replace(/^[#*]+\s*/, '').trim()
 
   // Materials list - order matters (longer/more specific first)
   const materials = [

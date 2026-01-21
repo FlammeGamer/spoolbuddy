@@ -857,6 +857,13 @@ class ApiClient {
     return this.request<ColorLookupResult>(`/colors/lookup?${params.toString()}`);
   }
 
+  async searchColors(manufacturer?: string, material?: string): Promise<ColorEntry[]> {
+    const params = new URLSearchParams();
+    if (manufacturer) params.append("manufacturer", manufacturer);
+    if (material) params.append("material", material);
+    return this.request<ColorEntry[]>(`/colors/search?${params.toString()}`);
+  }
+
   // AMS History API
   async getAMSHistory(printerSerial: string, amsId: number, hours: number = 24): Promise<AMSHistoryResponse> {
     return this.request<AMSHistoryResponse>(`/printers/${printerSerial}/ams/${amsId}/history?hours=${hours}`);

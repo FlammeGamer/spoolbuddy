@@ -2,19 +2,23 @@ import { render, RenderOptions } from '@testing-library/preact'
 import { ComponentChildren, ComponentChild } from 'preact'
 import { Router } from 'wouter-preact'
 import { WebSocketProvider } from '../lib/websocket'
+import { ToastProvider } from '../lib/toast'
 
 /**
  * AllProviders wrapper for testing components that need:
  * - WebSocket context
  * - Router context
+ * - Toast context
  */
 export function AllProviders({ children }: { children: ComponentChildren }) {
   return (
-    <WebSocketProvider>
-      <Router>
-        {children}
-      </Router>
-    </WebSocketProvider>
+    <ToastProvider>
+      <WebSocketProvider>
+        <Router>
+          {children}
+        </Router>
+      </WebSocketProvider>
+    </ToastProvider>
   )
 }
 

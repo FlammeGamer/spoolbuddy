@@ -53,6 +53,22 @@ describe('Dashboard', () => {
         expect(screen.getByText('Place a spool on the scale to identify it')).toBeInTheDocument()
       })
     })
+
+    it('shows "Ready to scan" text in empty state', async () => {
+      renderWithProviders(<Dashboard />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Ready to scan')).toBeInTheDocument()
+      })
+    })
+
+    it('shows NFC hint in empty state', async () => {
+      renderWithProviders(<Dashboard />)
+
+      await waitFor(() => {
+        expect(screen.getByText('NFC tag will be read automatically')).toBeInTheDocument()
+      })
+    })
   })
 
   describe('Printers Section', () => {

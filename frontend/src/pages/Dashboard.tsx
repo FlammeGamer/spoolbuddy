@@ -1,26 +1,83 @@
-import { useEffect, useState, useRef } from "preact/hooks";
+import { useEffect, useState, useMemo } from "preact/hooks";
 import { Link } from "wouter-preact";
 import { api, Spool, Printer, CloudAuthStatus } from "../lib/api";
 import { useWebSocket } from "../lib/websocket";
-import { Cloud, CloudOff, X, Download } from "lucide-preact";
+import { useToast } from "../lib/toast";
+import { Cloud, CloudOff, X, Download, Check, AlertTriangle, RefreshCw } from "lucide-preact";
 import { SpoolIcon } from "../components/AmsCard";
 import { AssignAmsModal } from "../components/AssignAmsModal";
+import { LinkSpoolModal } from "../components/LinkSpoolModal";
 
 // Storage keys for dashboard settings
-const SPOOL_DISPLAY_DURATION_KEY = 'spoolbuddy-spool-display-duration';
 const DEFAULT_CORE_WEIGHT_KEY = 'spoolbuddy-default-core-weight';
 
-function getSpoolDisplayDuration(): number {
-  try {
-    const stored = localStorage.getItem(SPOOL_DISPLAY_DURATION_KEY);
-    if (stored) {
-      const seconds = parseInt(stored, 10);
-      if (seconds >= 0 && seconds <= 300) return seconds;
-    }
-  } catch {
-    // Ignore errors
-  }
-  return 10; // Default 10 seconds
+// Color palette for the cycling spool animation
+const SPOOL_COLORS = [
+  '#00AE42', // Green (Bambu)
+  '#FF6B35', // Orange
+  '#3B82F6', // Blue
+  '#EF4444', // Red
+  '#A855F7', // Purple
+  '#FBBF24', // Yellow
+  '#14B8A6', // Teal
+  '#EC4899', // Pink
+  '#F97316', // Amber
+  '#22C55E', // Lime
+];
+
+// Empty state component with color-cycling spool
+function ColorCyclingSpool() {
+  const [colorIndex, setColorIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setColorIndex((prev) => (prev + 1) % SPOOL_COLORS.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const currentColor = SPOOL_COLORS[colorIndex];
+
+  return (
+    <div class="flex flex-col items-center text-center">
+      {/* Animated spool with NFC waves */}
+      <div class="relative mb-6 flex items-center justify-center" style={{ width: 160, height: 160 }}>
+        {/* NFC wave rings */}
+        <div class="absolute w-24 h-24 rounded-full border-2 border-[var(--accent-color)]/30 animate-ping" style={{ animationDuration: '2.5s' }} />
+        <div class="absolute w-32 h-32 rounded-full border border-[var(--accent-color)]/20 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.4s' }} />
+        <div class="absolute w-40 h-40 rounded-full border border-[var(--accent-color)]/10 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.8s' }} />
+
+        {/* Spool icon with color transition and glow */}
+        <div class="relative">
+          <div
+            class="absolute -inset-4 rounded-full blur-2xl opacity-30 transition-colors duration-1000"
+            style={{ backgroundColor: currentColor }}
+          />
+          <div class="transition-all duration-1000">
+            <SpoolIcon color={currentColor} isEmpty={false} size={100} />
+          </div>
+        </div>
+      </div>
+
+      {/* Text content */}
+      <div class="space-y-2">
+        <p class="text-lg font-medium text-[var(--text-secondary)]">
+          Ready to scan
+        </p>
+        <p class="text-sm text-[var(--text-muted)]">
+          Place a spool on the scale to identify it
+        </p>
+      </div>
+
+      {/* Subtle hint */}
+      <div class="mt-6 flex items-center gap-2 text-xs text-[var(--text-muted)]/60">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>NFC tag will be read automatically</span>
+      </div>
+    </div>
+  );
 }
 
 function getDefaultCoreWeight(): number {
@@ -47,22 +104,18 @@ export function Dashboard() {
   });
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignModalSpool, setAssignModalSpool] = useState<Spool | null>(null);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const { showToast } = useToast();
 
-  // Spool display timer state
-  const [lastKnownSpool, setLastKnownSpool] = useState<Spool | null>(null);
-  const [lastKnownWeight, setLastKnownWeight] = useState<number | null>(null);
-  const [displayCountdown, setDisplayCountdown] = useState<number | null>(null);
-  const timerRef = useRef<number | null>(null);
-  // Refs to track spool/weight synchronously (avoid React state batching delays)
-  const lastKnownSpoolRef = useRef<Spool | null>(null);
-  const lastKnownWeightRef = useRef<number | null>(null);
-  // Track if we've ever seen a tag in this session (prevents timer on initial load)
-  const hadTagInSessionRef = useRef<boolean>(false);
-  // Track the current tag ID to detect when switching to a different spool
-  const currentTagIdRef = useRef<string | null>(null);
-  // Debounce ref for tag removal (prevents timer bounce from flaky NFC reads)
-  const tagRemovalDebounceRef = useRef<number | null>(null);
-  const TAG_REMOVAL_DEBOUNCE_MS = 1500; // Wait 1.5s before considering tag truly removed
+  // Current Spool card state - persists until user closes or new tag detected
+  const [displayedTagId, setDisplayedTagId] = useState<string | null>(null);
+  const [displayedWeight, setDisplayedWeight] = useState<number | null>(null);
+  const [cardDismissed, setCardDismissed] = useState(false);
+
+  // Compute spools without tags for the Link To Spool feature
+  const untaggedSpools = useMemo(() => {
+    return spools.filter(s => !s.tag_id && !s.archived_at);
+  }, [spools]);
 
   // Find spool by tag_id in the loaded spools list
   const findSpoolByTagId = (tagId: string | null, spoolList: Spool[]): Spool | null => {
@@ -76,158 +129,101 @@ export function Dashboard() {
     loadCloudStatus();
   }, []);
 
-  // Compute currentSpool directly from currentTagId and spools
-  const computedSpool = currentTagId ? findSpoolByTagId(currentTagId, spools) : null;
+  // Compute displayed spool from displayedTagId
+  const displayedSpool = displayedTagId ? findSpoolByTagId(displayedTagId, spools) : null;
 
-  // Track weight while spool is on scale - only update when stable
+  // Handle tag detection - show card when tag detected, keep until user closes or new tag
   useEffect(() => {
-    if (currentTagId && currentWeight !== null && weightStable) {
-      // Spool is on scale with stable reading - save this weight
-      lastKnownWeightRef.current = Math.round(Math.max(0, currentWeight));
-    }
-  }, [currentTagId, currentWeight, weightStable]);
-
-  // Handle spool display timer when tag is removed (with debounce for flaky NFC)
-  useEffect(() => {
-    const previousTagId = currentTagIdRef.current;
-    const isNewTag = currentTagId && currentTagId !== previousTagId;
-
     if (currentTagId) {
-      // Update the current tag ref
-      currentTagIdRef.current = currentTagId;
-
-      // Tag detected - mark that we've had a tag in this session
-      hadTagInSessionRef.current = true;
-
-      // Cancel any pending tag removal debounce
-      if (tagRemovalDebounceRef.current) {
-        clearTimeout(tagRemovalDebounceRef.current);
-        tagRemovalDebounceRef.current = null;
+      // New tag detected - check if it's different from current display
+      if (currentTagId !== displayedTagId) {
+        // Show the new tag and reset dismissed state
+        setDisplayedTagId(currentTagId);
+        setDisplayedWeight(null);
+        setCardDismissed(false);
       }
-
-      // Clear any running countdown timer
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
+      // Update weight when stable
+      if (currentWeight !== null && weightStable) {
+        setDisplayedWeight(Math.round(Math.max(0, currentWeight)));
       }
-      setDisplayCountdown(null);
-
-      // If switching to a different tag, clear all old state
-      if (isNewTag) {
-        setLastKnownSpool(null);
-        setLastKnownWeight(null);
-        lastKnownSpoolRef.current = null;
-        lastKnownWeightRef.current = null;
-      }
-
-      if (computedSpool) {
-        // Save to both state and ref (ref is synchronous for next effect run)
-        setLastKnownSpool(computedSpool);
-        lastKnownSpoolRef.current = computedSpool;
-      }
-    } else if (hadTagInSessionRef.current && previousTagId && !tagRemovalDebounceRef.current) {
-      // Tag removed - start debounce before starting timer
-      const spoolFromRef = lastKnownSpoolRef.current;
-      const weightFromRef = lastKnownWeightRef.current;
-      const removedTagId = previousTagId;
-
-      tagRemovalDebounceRef.current = window.setTimeout(() => {
-        tagRemovalDebounceRef.current = null;
-
-        // Only start timer if spoolFromRef matches the tag that was removed
-        if (spoolFromRef && spoolFromRef.tag_id === removedTagId) {
-          // Ensure state matches ref
-          setLastKnownSpool(spoolFromRef);
-          if (weightFromRef !== null) {
-            setLastKnownWeight(weightFromRef);
-          }
-          // Start countdown
-          const duration = getSpoolDisplayDuration();
-          if (duration > 0) {
-            setDisplayCountdown(duration);
-            timerRef.current = window.setInterval(() => {
-              setDisplayCountdown(prev => {
-                if (prev === null || prev <= 1) {
-                  // Timer expired - clear interval (state cleanup handled by effect below)
-                  if (timerRef.current) {
-                    clearInterval(timerRef.current);
-                    timerRef.current = null;
-                  }
-                  return 0; // Set to 0 to trigger cleanup effect
-                }
-                return prev - 1;
-              });
-            }, 1000);
-          } else {
-            // Duration is 0 - clear immediately
-            setLastKnownSpool(null);
-            setLastKnownWeight(null);
-            lastKnownSpoolRef.current = null;
-            lastKnownWeightRef.current = null;
-          }
-        }
-        // Clear the tag ref after processing removal
-        currentTagIdRef.current = null;
-      }, TAG_REMOVAL_DEBOUNCE_MS);
     }
+    // Note: We don't clear displayedTagId when currentTagId becomes null
+    // The card persists until user clicks Close or a new tag is detected
+  }, [currentTagId, currentWeight, weightStable, displayedTagId]);
 
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      if (tagRemovalDebounceRef.current) {
-        clearTimeout(tagRemovalDebounceRef.current);
-      }
-    };
-  }, [currentTagId, computedSpool?.id]);
+  // Close handler for the Current Spool card
+  const handleCloseSpoolCard = () => {
+    setCardDismissed(true);
+    setDisplayedTagId(null);
+    setDisplayedWeight(null);
+  };
 
-  // Clean up when countdown reaches 0
-  useEffect(() => {
-    if (displayCountdown === 0) {
-      setLastKnownSpool(null);
-      setLastKnownWeight(null);
-      setDisplayCountdown(null);
-      lastKnownSpoolRef.current = null;
-      lastKnownWeightRef.current = null;
+  // Link tag to an existing spool
+  const handleLinkTagToSpool = async (spool: Spool) => {
+    if (!displayedTagId) return;
+
+    try {
+      await api.updateSpool(spool.id, { ...spool, tag_id: displayedTagId });
+      showToast('success', `Linked tag to ${spool.brand || 'Unknown'} ${spool.material}`);
+      setShowLinkModal(false);
+      // Refresh spools to show updated data and the card will now show as known spool
+      loadSpools();
+    } catch (e) {
+      console.error('Failed to link tag:', e);
+      showToast('error', 'Failed to link tag to spool');
     }
-  }, [displayCountdown]);
+  };
 
-  // The displayed spool: current if tag present, or last known (shown immediately, cleared when timer expires)
-  const displayedSpool = computedSpool || lastKnownSpool;
-  const isShowingLastKnown = !currentTagId && lastKnownSpool !== null;
+  // Sync weight: trust scale weight and reset tracking
+  const handleSyncWeight = async (spool: Spool) => {
+    // Use live scale weight, not stored weight
+    const weightToSync = currentWeight !== null ? Math.round(Math.max(0, currentWeight)) : spool.weight_current;
+    if (weightToSync === null) return;
+    try {
+      await api.setSpoolWeight(spool.id, weightToSync);
+      // Reset weight tracking to allow fresh comparison
+      setWeightUpdatedForSpool(null);
+      // Update displayed weight to match synced weight
+      setDisplayedWeight(weightToSync);
+      await loadSpools();
+      showToast('success', `Synced weight for ${spool.brand || ''} ${spool.material}`);
+    } catch (e) {
+      showToast('error', e instanceof Error ? e.message : 'Failed to sync weight');
+    }
+  };
 
   // Track if we've updated weight for current spool to avoid duplicate updates
   const [weightUpdatedForSpool, setWeightUpdatedForSpool] = useState<string | null>(null);
 
   // Reset weight tracking when spool changes
   useEffect(() => {
-    if (computedSpool?.id !== weightUpdatedForSpool) {
+    if (displayedSpool?.id !== weightUpdatedForSpool) {
       setWeightUpdatedForSpool(null);
     }
-  }, [computedSpool?.id]);
+  }, [displayedSpool?.id]);
 
   // Update spool weight in backend when known spool is detected on scale
   useEffect(() => {
-    // Only update weight once per spool detection, when weight is stable
-    if (computedSpool && currentWeight !== null && weightStable && weightUpdatedForSpool !== computedSpool.id) {
+    // Only update weight once per spool detection, when weight is stable and tag is currently on scale
+    if (displayedSpool && currentTagId && currentWeight !== null && weightStable && weightUpdatedForSpool !== displayedSpool.id) {
       const newWeight = Math.round(Math.max(0, currentWeight));
       // Only update if weight is different (any change counts)
-      if (computedSpool.weight_current === null || computedSpool.weight_current !== newWeight) {
+      if (displayedSpool.weight_current === null || displayedSpool.weight_current !== newWeight) {
         // Use setSpoolWeight to properly sync and reset consumed_since_weight
-        api.setSpoolWeight(computedSpool.id, newWeight)
+        api.setSpoolWeight(displayedSpool.id, newWeight)
           .then(() => {
             // Mark as updated to prevent duplicate updates
-            setWeightUpdatedForSpool(computedSpool.id);
+            setWeightUpdatedForSpool(displayedSpool.id);
             // Refresh spools list to keep it in sync
             loadSpools();
           })
           .catch(err => console.error('Failed to update spool weight:', err));
       } else {
         // Weight is same, just mark as processed
-        setWeightUpdatedForSpool(computedSpool.id);
+        setWeightUpdatedForSpool(displayedSpool.id);
       }
     }
-  }, [computedSpool?.id, currentWeight, weightStable, weightUpdatedForSpool]);
+  }, [displayedSpool?.id, currentTagId, currentWeight, weightStable, weightUpdatedForSpool]);
 
   const loadCloudStatus = async () => {
     try {
@@ -446,7 +442,7 @@ export function Dashboard() {
                 </div>
                 <div class="flex items-center gap-2">
                   <span class="text-lg font-mono font-semibold text-[var(--text-primary)]">
-                    {currentWeight !== null ? `${Math.round(Math.max(0, currentWeight))}g` : '—'}
+                    {currentWeight !== null ? `${Math.abs(currentWeight) <= 20 ? 0 : Math.round(Math.max(0, currentWeight))}g` : '—'}
                   </span>
                   {weightStable && currentWeight !== null && (
                     <span class="w-2 h-2 rounded-full bg-green-500" title="Stable" />
@@ -524,96 +520,173 @@ export function Dashboard() {
 
         {/* Right column: Current Spool - HERO */}
         <div class="lg:col-span-2">
-          <div class="card p-6 h-full">
-            <div class="flex items-center justify-between mb-6">
+          <div class="card p-6 h-full min-h-[400px] flex flex-col">
+            <div class="flex items-center justify-between mb-4">
               <h2 class="text-sm font-semibold text-[var(--text-primary)] uppercase tracking-wide">Current Spool</h2>
-              {isShowingLastKnown && displayCountdown !== null && displayCountdown > 0 && (
-                <span class="text-xs text-[var(--text-muted)] bg-[var(--bg-tertiary)] px-2.5 py-1 rounded-full">
-                  {displayCountdown}s
-                </span>
-              )}
             </div>
+            <div class="flex-1 flex items-center justify-center">
 
-            {displayedSpool ? (
-              (() => {
-                const grossWeight = isShowingLastKnown
-                  ? (lastKnownWeight ?? lastKnownWeightRef.current ?? null)
-                  : (currentWeight !== null ? Math.round(Math.max(0, currentWeight)) : null);
-                const coreWeight = displayedSpool.core_weight && displayedSpool.core_weight > 0
-                  ? displayedSpool.core_weight
-                  : getDefaultCoreWeight();
-                const remaining = grossWeight !== null
-                  ? Math.round(Math.max(0, grossWeight - coreWeight))
-                  : null;
-                const labelWeight = Math.round(displayedSpool.label_weight || 1000);
-                const fillPercent = remaining !== null ? Math.min(100, Math.round((remaining / labelWeight) * 100)) : null;
-                const fillColor = fillPercent !== null
-                  ? fillPercent > 50 ? '#22c55e' : fillPercent > 20 ? '#eab308' : '#ef4444'
-                  : '#808080';
+            {displayedTagId && !cardDismissed ? (
+              displayedSpool ? (
+                // Known spool from inventory
+                (() => {
+                  // Always use live scale weight when tag is on scale, fall back to stored weight_current
+                  const isTagOnScale = currentTagId === displayedTagId && currentWeight !== null;
+                  const liveWeight = isTagOnScale ? Math.round(Math.max(0, currentWeight)) : null;
+                  const storedWeight = displayedSpool.weight_current;
+                  const grossWeight = liveWeight ?? storedWeight ?? displayedWeight;
+                  // Always use Default Core Weight from settings for dashboard calculation
+                  const coreWeight = getDefaultCoreWeight();
+                  const remaining = grossWeight !== null
+                    ? Math.round(Math.max(0, grossWeight - coreWeight))
+                    : null;
+                  const labelWeight = Math.round(displayedSpool.label_weight || 1000);
+                  const fillPercent = remaining !== null ? Math.min(100, Math.round((remaining / labelWeight) * 100)) : null;
+                  const fillColor = fillPercent !== null
+                    ? fillPercent > 50 ? '#22c55e' : fillPercent > 20 ? '#eab308' : '#ef4444'
+                    : '#808080';
 
-                return (
-                  <div class="flex flex-col lg:flex-row items-center gap-8">
-                    {/* Left: Large spool visualization */}
-                    <div class="flex flex-col items-center">
-                      <div class="relative">
-                        <SpoolIcon
-                          color={displayedSpool.rgba ? `#${displayedSpool.rgba.slice(0, 6)}` : '#808080'}
-                          isEmpty={false}
-                          size={120}
-                        />
-                        {/* Fill percentage badge */}
-                        {fillPercent !== null && (
-                          <div
-                            class="absolute -bottom-2 -right-2 px-2.5 py-1 rounded-full text-xs font-bold text-white shadow-lg"
-                            style={{ backgroundColor: fillColor }}
-                          >
-                            {fillPercent}%
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Right: Spool details */}
-                    <div class="flex-1 text-center lg:text-left space-y-4">
-                      {/* Name and type */}
-                      <div>
-                        <h3 class="text-xl font-semibold text-[var(--text-primary)]">
-                          {displayedSpool.color_name || "Unknown color"}
-                        </h3>
-                        <p class="text-sm text-[var(--text-secondary)]">
-                          {displayedSpool.brand} • {displayedSpool.material}
-                          {displayedSpool.subtype && ` ${displayedSpool.subtype}`}
-                        </p>
-                      </div>
-
-                      {/* Weight info */}
-                      {grossWeight !== null && (
-                        <div class="space-y-3">
-                          <div class="flex items-baseline gap-2 justify-center lg:justify-start">
-                            <span class="text-4xl font-bold font-mono text-[var(--text-primary)]">{remaining}g</span>
-                            <span class="text-sm text-[var(--text-muted)]">of {labelWeight}g</span>
-                          </div>
-
-                          {/* Fill bar */}
-                          <div class="max-w-sm mx-auto lg:mx-0">
-                            <div class="h-2.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
-                              <div
-                                class="h-full rounded-full transition-all duration-500"
-                                style={{ width: `${fillPercent}%`, backgroundColor: fillColor }}
-                              />
+                  return (
+                    <div class="flex flex-col items-center space-y-4 max-w-md">
+                      {/* Top section: Spool icon + main info - centered */}
+                      <div class="flex items-start gap-5">
+                        {/* Spool visualization */}
+                        <div class="relative flex-shrink-0">
+                          <SpoolIcon
+                            color={displayedSpool.rgba ? `#${displayedSpool.rgba.slice(0, 6)}` : '#808080'}
+                            isEmpty={false}
+                            size={100}
+                          />
+                          {fillPercent !== null && (
+                            <div
+                              class="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full text-xs font-bold text-white shadow-lg"
+                              style={{ backgroundColor: fillColor }}
+                            >
+                              {fillPercent}%
                             </div>
-                          </div>
+                          )}
                         </div>
-                      )}
 
-                      {displayedSpool.location && (
-                        <p class="text-sm text-[var(--text-muted)]">
-                          📍 {displayedSpool.location}
-                        </p>
-                      )}
+                        {/* Main info */}
+                        <div class="flex-1 min-w-0 pt-1">
+                          <h3 class="text-lg font-semibold text-[var(--text-primary)]">
+                            {displayedSpool.color_name || "Unknown color"}
+                          </h3>
+                          <p class="text-sm text-[var(--text-secondary)]">
+                            {displayedSpool.brand} • {displayedSpool.material}
+                            {displayedSpool.subtype && ` ${displayedSpool.subtype}`}
+                          </p>
+
+                          {/* Filament remaining - big number */}
+                          {remaining !== null && (
+                            <div class="mt-3">
+                              <div class="flex items-baseline gap-2">
+                                <span class="text-3xl font-bold font-mono text-[var(--text-primary)]">{remaining}g</span>
+                                <span class="text-sm text-[var(--text-muted)]">/ {labelWeight}g</span>
+                              </div>
+                              <p class="text-xs text-[var(--text-muted)] mt-0.5">Filament remaining</p>
+
+                              {/* Fill bar */}
+                              <div class="mt-2 max-w-xs">
+                                <div class="h-2 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
+                                  <div
+                                    class="h-full rounded-full transition-all duration-500"
+                                    style={{ width: `${fillPercent}%`, backgroundColor: fillColor }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Details grid */}
+                      {(() => {
+                        // Use live weight from outer scope, or fall back to stored weight
+                        const scaleWeightDisplay = liveWeight ?? displayedSpool.weight_current;
+                        // Calculate expected gross weight using Default Core Weight (same as remaining calculation)
+                        // net_weight = label_weight - weight_used - consumed_since_weight
+                        const netWeight = Math.max(0,
+                          (displayedSpool.label_weight || 0) -
+                          (displayedSpool.weight_used || 0) -
+                          (displayedSpool.consumed_since_weight || 0)
+                        );
+                        const calculatedWeight = netWeight + coreWeight; // Uses default core weight from outer scope
+                        // Recalculate difference and match based on live weight
+                        const difference = scaleWeightDisplay !== null ? scaleWeightDisplay - calculatedWeight : null;
+                        const isMatch = difference !== null ? Math.abs(difference) <= 50 : null;
+                        const diffStr = difference !== null ? (difference > 0 ? `+${Math.round(difference)}` : Math.round(difference)) : '?';
+                        const scaleTooltip = isMatch
+                          ? `Scale: ${scaleWeightDisplay !== null ? Math.round(scaleWeightDisplay) : '—'}g\nCalculated: ${Math.round(calculatedWeight)}g\nDifference: ${diffStr}g (within tolerance)`
+                          : `Scale: ${scaleWeightDisplay !== null ? Math.round(scaleWeightDisplay) : '—'}g\nCalculated: ${Math.round(calculatedWeight)}g\nDifference: ${diffStr}g (mismatch!)`;
+
+                        return (
+                          <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm bg-[var(--bg-tertiary)] rounded-lg p-3">
+                            <div class="flex justify-between">
+                              <span class="text-[var(--text-muted)]">Gross weight</span>
+                              <span class="font-mono text-[var(--text-primary)]">{grossWeight !== null ? `${grossWeight}g` : '—'}</span>
+                            </div>
+                            <div class="flex justify-between">
+                              <span class="text-[var(--text-muted)]">Core weight</span>
+                              <span class="font-mono text-[var(--text-primary)]">{coreWeight}g</span>
+                            </div>
+                            <div class="flex justify-between">
+                              <span class="text-[var(--text-muted)]">Spool size</span>
+                              <span class="font-mono text-[var(--text-primary)]">{labelWeight}g</span>
+                            </div>
+                            <div class="flex justify-between items-center" title={scaleTooltip}>
+                              <span class="text-[var(--text-muted)]">Scale</span>
+                              {scaleWeightDisplay !== null ? (
+                                <span class={`flex items-center gap-1 font-mono ${isMatch ? 'text-green-500' : 'text-yellow-500'}`}>
+                                  {Math.round(scaleWeightDisplay)}g
+                                  {isMatch ? (
+                                    <Check class="w-3 h-3" />
+                                  ) : (
+                                    <>
+                                      <AlertTriangle class="w-3 h-3" />
+                                      <button
+                                        onClick={() => handleSyncWeight(displayedSpool)}
+                                        class="p-1 hover:bg-[var(--accent-color)]/20 rounded transition-colors text-[var(--accent-color)]"
+                                        title="Sync: trust scale weight and reset tracking"
+                                      >
+                                        <RefreshCw class="w-3.5 h-3.5" />
+                                      </button>
+                                    </>
+                                  )}
+                                </span>
+                              ) : (
+                                <span class="text-[var(--text-muted)]">—</span>
+                              )}
+                            </div>
+                            <div class="flex justify-between items-center">
+                              <span class="text-[var(--text-muted)]">K Profile</span>
+                              {displayedSpool.ext_has_k ? (
+                                <span class="flex items-center gap-1 text-green-500">
+                                  <Check class="w-3 h-3" />
+                                  Yes
+                                </span>
+                              ) : (
+                                <span class="text-[var(--text-muted)]">No</span>
+                              )}
+                            </div>
+                            <div class="flex justify-between items-center">
+                              <span class="text-[var(--text-muted)]">Tag</span>
+                              <span class="font-mono text-xs text-[var(--text-secondary)] truncate max-w-[120px]" title={displayedTagId || ''}>
+                                {displayedTagId ? displayedTagId.slice(-8) : '—'}
+                              </span>
+                            </div>
+                            {displayedSpool.location && (
+                              <div class="flex justify-between col-span-2">
+                                <span class="text-[var(--text-muted)]">Location</span>
+                                <span class="text-[var(--text-primary)]">{displayedSpool.location}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Action buttons */}
-                      <div class="flex flex-wrap gap-2 justify-center lg:justify-start pt-2">
+                      <div class="flex gap-2 justify-center">
                         <button
                           onClick={() => {
                             setAssignModalSpool(displayedSpool);
@@ -621,70 +694,92 @@ export function Dashboard() {
                           }}
                           class="btn btn-primary"
                         >
-                          Assign to AMS
+                          Configure AMS
                         </button>
                         <Link
-                          href={`/inventory?edit=${displayedSpool.id}`}
+                          href={`/inventory?edit=${encodeURIComponent(displayedSpool.id)}`}
+                          class="btn btn-primary"
+                        >
+                          Edit Spool
+                        </Link>
+                        <button
+                          onClick={handleCloseSpoolCard}
                           class="btn btn-secondary"
                         >
-                          Edit
-                        </Link>
+                          Close
+                        </button>
                       </div>
                     </div>
-                  </div>
-                );
-              })()
-            ) : currentTagId ? (
-              // New spool detected
-              (() => {
-                const defaultCoreWeight = getDefaultCoreWeight();
-                const grossWeight = currentWeight !== null ? Math.round(Math.max(0, currentWeight)) : null;
-                const estimatedRemaining = grossWeight !== null
-                  ? Math.round(Math.max(0, grossWeight - defaultCoreWeight))
-                  : null;
+                  );
+                })()
+              ) : (
+                // Unknown tag - not in inventory
+                (() => {
+                  const defaultCoreWeight = getDefaultCoreWeight();
+                  // Prefer live weight when tag is on scale, fall back to stored weight when removed
+                  const grossWeight = (currentTagId === displayedTagId && currentWeight !== null)
+                    ? Math.round(Math.max(0, currentWeight))
+                    : displayedWeight;
+                  const estimatedRemaining = grossWeight !== null
+                    ? Math.round(Math.max(0, grossWeight - defaultCoreWeight))
+                    : null;
 
-                return (
-                  <div class="flex flex-col items-center justify-center py-8 text-center space-y-5">
-                    <div class="w-20 h-20 rounded-2xl bg-[var(--accent-color)]/15 flex items-center justify-center">
-                      <svg class="w-10 h-10 text-[var(--accent-color)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 class="text-lg font-semibold text-[var(--text-primary)]">New Spool Detected</h3>
-                      <p class="text-sm text-[var(--text-muted)] font-mono mt-1">{currentTagId}</p>
-                    </div>
-                    {grossWeight !== null && (
-                      <div class="text-sm text-[var(--text-secondary)]">
-                        <span class="font-mono font-semibold">{grossWeight}g</span> on scale
-                        {estimatedRemaining !== null && estimatedRemaining > 0 && (
-                          <span class="text-[var(--text-muted)]"> • ~{estimatedRemaining}g filament</span>
-                        )}
+                  return (
+                    <div class="flex flex-col items-center text-center space-y-5">
+                      <div class="w-20 h-20 rounded-2xl bg-[var(--accent-color)]/15 flex items-center justify-center">
+                        <svg class="w-10 h-10 text-[var(--accent-color)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
                       </div>
-                    )}
-                    <Link
-                      href={`/inventory?add=true&tagId=${encodeURIComponent(currentTagId)}${currentWeight !== null ? `&weight=${Math.round(Math.max(0, currentWeight))}` : ''}`}
-                      class="btn btn-primary"
-                    >
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
-                      Add to Inventory
-                    </Link>
-                  </div>
-                );
-              })()
+                      <div>
+                        <h3 class="text-lg font-semibold text-[var(--text-primary)]">New Tag Detected</h3>
+                        <p class="text-sm text-[var(--text-muted)] font-mono mt-1">{displayedTagId}</p>
+                      </div>
+                      {grossWeight !== null && (
+                        <div class="text-sm text-[var(--text-secondary)]">
+                          <span class="font-mono font-semibold">{grossWeight}g</span> on scale
+                          {estimatedRemaining !== null && estimatedRemaining > 0 && (
+                            <span class="text-[var(--text-muted)]"> • ~{estimatedRemaining}g filament</span>
+                          )}
+                        </div>
+                      )}
+                      <div class="flex flex-wrap gap-2 justify-center">
+                        <Link
+                          href={`/inventory?add=true&tagId=${encodeURIComponent(displayedTagId)}${grossWeight !== null ? `&weight=${grossWeight}` : ''}`}
+                          class="btn btn-primary"
+                        >
+                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                          Add Spool
+                        </Link>
+                        <button
+                          onClick={() => setShowLinkModal(true)}
+                          disabled={untaggedSpools.length === 0}
+                          class={`btn ${untaggedSpools.length > 0 ? 'btn-primary' : 'btn-secondary'}`}
+                          title={untaggedSpools.length === 0 ? 'No spools without tags in inventory' : ''}
+                        >
+                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                          </svg>
+                          Link To Spool
+                        </button>
+                        <button
+                          onClick={handleCloseSpoolCard}
+                          class="btn btn-secondary"
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()
+              )
             ) : (
-              // No tag - empty state
-              <div class="flex flex-col items-center justify-center py-12 text-center">
-                <div class="mb-6 opacity-40">
-                  <SpoolIcon color="#808080" isEmpty={true} size={100} />
-                </div>
-                <p class="text-[var(--text-muted)] text-sm">
-                  Place a spool on the scale to identify it
-                </p>
-              </div>
+              // No tag - empty state with color-cycling spool
+              <ColorCyclingSpool />
             )}
+            </div>
           </div>
         </div>
       </div>
@@ -698,6 +793,17 @@ export function Dashboard() {
             setAssignModalSpool(null);
           }}
           spool={assignModalSpool}
+        />
+      )}
+
+      {/* Link Tag to Spool Modal */}
+      {displayedTagId && (
+        <LinkSpoolModal
+          isOpen={showLinkModal}
+          onClose={() => setShowLinkModal(false)}
+          tagId={displayedTagId}
+          untaggedSpools={untaggedSpools}
+          onLink={handleLinkTagToSpool}
         />
       )}
     </div>

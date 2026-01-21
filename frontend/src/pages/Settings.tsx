@@ -896,10 +896,27 @@ export function Settings() {
     }
   }, [activeTab]);
 
-  const cancelCalibration = () => {
+  const cancelCalibration = useCallback(() => {
     setCalibrationStep('idle');
     setCalibrating(false);
-  };
+  }, []);
+
+  // Handle escape key and body scroll for calibration modal
+  useEffect(() => {
+    if (calibrationStep === 'idle') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') cancelCalibration();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [calibrationStep, cancelCalibration]);
 
   const handleCalibrationNext = async () => {
     if (calibrationStep === 'empty') {
@@ -1829,7 +1846,7 @@ export function Settings() {
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-4">
                       <div class="text-3xl font-mono font-bold text-[var(--text-primary)]">
-                        {currentWeight !== null ? `${Math.round(currentWeight)}g` : "—"}
+                        {currentWeight !== null ? `${Math.abs(currentWeight) <= 20 ? 0 : Math.round(currentWeight)}g` : "—"}
                       </div>
                       {weightStable && currentWeight !== null && (
                         <span class="flex items-center gap-1.5 text-xs text-green-500 bg-green-500/10 px-2 py-1 rounded-full">
@@ -2172,8 +2189,8 @@ export function Settings() {
 
       {/* Calibration Modal */}
       {calibrationStep !== 'idle' && (
-        <div class="modal-overlay">
-          <div class="modal max-w-md">
+        <div class="modal-overlay" onClick={cancelCalibration}>
+          <div class="modal max-w-md" onClick={(e) => e.stopPropagation()}>
             {/* Header */}
             <div class="modal-header">
               <div class="flex items-center gap-3">

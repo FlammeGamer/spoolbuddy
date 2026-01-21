@@ -16,6 +16,7 @@ import {
   findPresetOption,
   loadRecentColors,
   saveRecentColor,
+  isMatchingCalibration,
   // Components
   FilamentSection,
   ColorSection,
@@ -83,6 +84,22 @@ export function AddSpoolModal({
 
   const { showToast, updateToast } = useToast()
   const isEditing = !!editSpool
+
+  // Count only selected profiles that are actually visible (matching current formData and from connected printers)
+  const validSelectedCount = useMemo(() => {
+    let count = 0
+    for (const { printer, calibrations } of printersWithCalibrations) {
+      if (!printer.connected) continue
+      for (const cal of calibrations) {
+        if (!isMatchingCalibration(cal, formData)) continue
+        const key = `${printer.serial}:${cal.cali_idx}:${cal.extruder_id ?? 'null'}`
+        if (selectedProfiles.has(key)) {
+          count++
+        }
+      }
+    }
+    return count
+  }, [printersWithCalibrations, selectedProfiles, formData])
 
   // Load recent colors on mount
   useEffect(() => {
@@ -459,9 +476,9 @@ export function AddSpoolModal({
           onClick={() => setActiveTab('pa_profile')}
         >
           PA Profile (K)
-          {selectedProfiles.size > 0 && (
+          {validSelectedCount > 0 && (
             <span class="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-[var(--accent-color)] text-white">
-              {selectedProfiles.size}
+              {validSelectedCount}
             </span>
           )}
         </button>
