@@ -419,6 +419,7 @@ export function Printers() {
                                     activeExtruder={state.active_extruder}
                                     amsThresholds={amsThresholds}
                                     onHistoryClick={handleHistoryClick(printer.serial)}
+                                    trayReadingBits={state.tray_reading_bits}
                                   />
                                 ))}
                             </div>
@@ -442,6 +443,7 @@ export function Printers() {
                                   activeExtruder={state.active_extruder}
                                   amsThresholds={amsThresholds}
                                   onHistoryClick={handleHistoryClick(printer.serial)}
+                                  trayReadingBits={state.tray_reading_bits}
                                 />
                               ))}
                             {/* External spool - Ext for single nozzle, Ext-L for dual nozzle */}
@@ -451,6 +453,7 @@ export function Printers() {
                               numExtruders={numExtruders}
                               printerSerial={printer.serial}
                               calibrations={calibrations[printer.serial] || []}
+                              trayReadingBits={state.tray_reading_bits}
                             />
                             {/* Ext-R for dual-nozzle printers only */}
                             {numExtruders >= 2 && (
@@ -460,6 +463,7 @@ export function Printers() {
                                 numExtruders={numExtruders}
                                 printerSerial={printer.serial}
                                 calibrations={calibrations[printer.serial] || []}
+                                trayReadingBits={state.tray_reading_bits}
                               />
                             )}
                           </div>

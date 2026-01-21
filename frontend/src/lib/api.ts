@@ -80,15 +80,20 @@ export interface SetSlotRequest {
   tray_id: number;
   tray_info_idx: string;
   tray_type: string;
+  tray_sub_brands: string;  // Preset name for slicer display (e.g., "Bambu PLA Basic")
   tray_color: string;
   nozzle_temp_min: number;
   nozzle_temp_max: number;
+  setting_id: string;  // Full setting ID with version (e.g., "GFSL05_07")
 }
 
 export interface SetCalibrationRequest {
   cali_idx: number;  // -1 for default (0.02), or calibration profile index
-  filament_id?: string;  // Filament preset ID (optional)
+  filament_id?: string;  // K profile's filament_id (optional)
   nozzle_diameter?: string;  // Nozzle diameter (default "0.4")
+  setting_id?: string;  // K profile's setting_id for slicer compatibility (optional)
+  k_value?: number;  // Direct K value to set (0.0 = skip direct setting)
+  nozzle_temp_max?: number;  // Max nozzle temp for extrusion_cali_set
 }
 
 export interface AssignSpoolRequest {
@@ -108,6 +113,7 @@ export interface CalibrationProfile {
   name: string;
   nozzle_diameter: string | null;
   extruder_id?: number;  // 0=right, 1=left (for dual nozzle printers)
+  setting_id?: string | null;  // K profile's setting_id for slicer compatibility
 }
 
 // K-profile stored with spool
@@ -441,9 +447,10 @@ class ApiClient {
   }
 
   async setSlotFilament(serial: string, request: SetSlotRequest): Promise<void> {
-    return this.request<void>(`/printers/${serial}/set-slot`, {
+    const { ams_id, tray_id, ...filamentData } = request
+    return this.request<void>(`/printers/${serial}/ams/${ams_id}/tray/${tray_id}/filament`, {
       method: "POST",
-      body: JSON.stringify(request),
+      body: JSON.stringify(filamentData),
     });
   }
 
@@ -455,10 +462,31 @@ class ApiClient {
   }
 
   // AMS slot operations
-  async resetSlot(serial: string, amsId: number, trayId: number): Promise<void> {
+
+  /** Trigger RFID re-read on an AMS slot (sends ams_get_rfid command) */
+  async rereadSlot(serial: string, amsId: number, trayId: number): Promise<void> {
     return this.request<void>(`/printers/${serial}/ams/${amsId}/tray/${trayId}/reset`, {
       method: "POST",
     });
+  }
+
+  /** Clear/reset an AMS slot to empty state by setting empty filament info */
+  async clearSlot(serial: string, amsId: number, trayId: number): Promise<void> {
+    return this.request<void>(`/printers/${serial}/ams/${amsId}/tray/${trayId}/filament`, {
+      method: "POST",
+      body: JSON.stringify({
+        tray_info_idx: "",
+        tray_type: "",
+        tray_color: "FFFFFFFF",
+        nozzle_temp_min: 0,
+        nozzle_temp_max: 0,
+      }),
+    });
+  }
+
+  /** @deprecated Use rereadSlot instead */
+  async resetSlot(serial: string, amsId: number, trayId: number): Promise<void> {
+    return this.rereadSlot(serial, amsId, trayId);
   }
 
   async setCalibration(serial: string, amsId: number, trayId: number, request: SetCalibrationRequest): Promise<void> {
@@ -570,6 +598,10 @@ class ApiClient {
 
   async getFilamentPresets(): Promise<SlicerPreset[]> {
     return this.request<SlicerPreset[]>("/cloud/filaments");
+  }
+
+  async getSettingDetail(settingId: string): Promise<{ setting_id: string; filament_id?: string; base_id?: string; name?: string }> {
+    return this.request<{ setting_id: string; filament_id?: string; base_id?: string; name?: string }>(`/cloud/settings/${encodeURIComponent(settingId)}`);
   }
 
   // Updates API

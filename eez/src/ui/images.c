@@ -1,6 +1,6 @@
 #include "images.h"
 
-const ext_img_desc_t images[40] = {
+const ext_img_desc_t images[42] = {
     { "humidity", &img_humidity },
     { "spool_base", &img_spool_base },
     { "spool_clean", &img_spool_clean },
@@ -41,4 +41,6 @@ const ext_img_desc_t images[40] = {
     { "wifi_signal_2", &img_wifi_signal_2 },
     { "wifi_signal_3", &img_wifi_signal_3 },
     { "wifi_signal_4", &img_wifi_signal_4 },
+    { "circle", &img_circle },
+    { "circle_dotted", &img_circle_dotted },
 };

@@ -93,6 +93,7 @@ class Calibration:
     name: str
     extruder_id: Optional[int] = None
     nozzle_diameter: Optional[str] = None
+    setting_id: Optional[str] = None  # Full setting ID for slicer compatibility
 
 
 # Grace period before reporting printer as disconnected (handles brief MQTT interruptions)
@@ -265,6 +266,7 @@ class PrinterConnection:
         cali_idx: int = -1,
         filament_id: str = "",
         nozzle_diameter: str = "0.4",
+        setting_id: str = "",
     ) -> bool:
         """Set calibration profile (k-value) for an AMS slot.
 
@@ -272,8 +274,9 @@ class PrinterConnection:
             ams_id: AMS unit ID
             tray_id: Tray ID within AMS
             cali_idx: Calibration index (-1 for default/no profile)
-            filament_id: Filament preset ID
+            filament_id: Filament preset ID (K profile's filament_id)
             nozzle_diameter: Nozzle diameter
+            setting_id: K profile's setting ID for slicer compatibility
 
         Returns:
             True if command was sent successfully
@@ -282,16 +285,14 @@ class PrinterConnection:
             logger.error(f"Cannot set calibration: not connected to {self.serial}")
             return False
 
-        # Calculate slot_id and original_tray_id based on AMS type
+        # Calculate slot_id based on AMS type
+        # IMPORTANT: tray_id in extrusion_cali_sel should be the LOCAL tray index (0-3), not global
         if ams_id <= 3:
             slot_id = tray_id
-            original_tray_id = ams_id * 4 + tray_id
         elif ams_id >= 128 and ams_id <= 135:
             slot_id = 0
-            original_tray_id = (ams_id - 128) * 4 + tray_id
         else:
             slot_id = 0
-            original_tray_id = ams_id
 
         command = {
             "print": {
@@ -300,21 +301,28 @@ class PrinterConnection:
                 "filament_id": filament_id,
                 "nozzle_diameter": nozzle_diameter,
                 "ams_id": ams_id,
-                "tray_id": original_tray_id,
+                "tray_id": tray_id,  # Local tray index (0-3), not global
                 "slot_id": slot_id,
                 "sequence_id": "1",
             }
         }
+        # Include setting_id if provided (helps slicer show correct K profile)
+        if setting_id:
+            command["print"]["setting_id"] = setting_id
 
         topic = f"device/{self.serial}/request"
         payload_json = json.dumps(command)
-        logger.info(f"[{self.serial}] MQTT extrusion_cali_sel: {payload_json}")
+        logger.info(
+            f"[{self.serial}] Publishing extrusion_cali_sel: AMS {ams_id}, tray {tray_id}, "
+            f"cali_idx={cali_idx}, filament_id={filament_id}, setting_id={setting_id}"
+        )
+        logger.info(f"[{self.serial}] MQTT extrusion_cali_sel command: {payload_json}")
         try:
             result = self._client.publish(topic, payload_json)
             if result.rc == mqtt.MQTT_ERR_SUCCESS:
                 logger.info(
                     f"Set calibration on {self.serial}: AMS {ams_id}, tray {tray_id}, "
-                    f"original_tray_id={original_tray_id}, cali_idx={cali_idx}"
+                    f"slot_id={slot_id}, cali_idx={cali_idx}"
                 )
                 return True
             else:
@@ -328,7 +336,7 @@ class PrinterConnection:
         """Get list of available calibration profiles.
 
         Returns:
-            List of calibration profiles with cali_idx, name, k_value, filament_id
+            List of calibration profiles with cali_idx, name, k_value, filament_id, setting_id
         """
         return [
             {
@@ -337,9 +345,64 @@ class PrinterConnection:
                 "k_value": cal.k_value,
                 "name": cal.name,
                 "nozzle_diameter": cal.nozzle_diameter,
+                "setting_id": cal.setting_id,
             }
             for cal in self._calibrations.values()
         ]
+
+    def set_k_value(
+        self,
+        tray_id: int,
+        k_value: float,
+        nozzle_diameter: str = "0.4",
+        nozzle_temp: int = 220,
+    ) -> bool:
+        """Directly set K value (pressure advance) for a tray.
+
+        This command sets the K value directly without selecting from stored profiles.
+        Use this to ensure the K value is actually applied to the tray.
+
+        Args:
+            tray_id: Global tray ID (ams_id * 4 + slot for regular AMS)
+            k_value: Pressure advance K value (e.g., 0.020)
+            nozzle_diameter: Nozzle diameter string (e.g., "0.4")
+            nozzle_temp: Nozzle temperature for calibration reference
+
+        Returns:
+            True if command was sent successfully
+        """
+        if not self._client or not self._connected:
+            logger.error(f"Cannot set K value: not connected to {self.serial}")
+            return False
+
+        command = {
+            "print": {
+                "command": "extrusion_cali_set",
+                "tray_id": tray_id,
+                "k_value": k_value,
+                "n_coef": 0.0,
+                "nozzle_diameter": nozzle_diameter,
+                "bed_temp": 60,
+                "nozzle_temp": nozzle_temp,
+                "max_volumetric_speed": 20.0,
+                "sequence_id": "1",
+            }
+        }
+
+        topic = f"device/{self.serial}/request"
+        payload_json = json.dumps(command)
+        logger.info(f"[{self.serial}] Publishing extrusion_cali_set: tray {tray_id}, k_value={k_value}")
+        logger.info(f"[{self.serial}] MQTT extrusion_cali_set command: {payload_json}")
+        try:
+            result = self._client.publish(topic, payload_json)
+            if result.rc == mqtt.MQTT_ERR_SUCCESS:
+                return True
+            else:
+                logger.error(f"Failed to publish extrusion_cali_set: {result.rc}")
+                return False
+        except Exception as e:
+            logger.error(f"Error setting K value on {self.serial}: {e}")
+            return False
 
     async def get_kprofiles(self, nozzle_diameter: str = "0.4", timeout: float = 5.0, max_retries: int = 3) -> list[dict]:
         """Request K-profiles from printer with retry logic.
@@ -422,6 +485,7 @@ class PrinterConnection:
         tray_info_idx: str = "",
         setting_id: str = "",
         tray_type: str = "",
+        tray_sub_brands: str = "",
         tray_color: str = "FFFFFFFF",
         nozzle_temp_min: int = 190,
         nozzle_temp_max: int = 230,
@@ -434,6 +498,7 @@ class PrinterConnection:
             tray_info_idx: Filament ID (e.g., "GFL05") - short format
             setting_id: Setting ID (e.g., "GFSL05_07") - full format with version
             tray_type: Material type (e.g., "PLA", "PETG")
+            tray_sub_brands: Preset name for slicer display (e.g., "Bambu PLA Basic")
             tray_color: RGBA hex color (e.g., "FF0000FF" for red)
             nozzle_temp_min: Minimum nozzle temperature
             nozzle_temp_max: Maximum nozzle temperature
@@ -461,6 +526,7 @@ class PrinterConnection:
                 "slot_id": slot_id,
                 "tray_info_idx": tray_info_idx,
                 "tray_type": tray_type,
+                "tray_sub_brands": tray_sub_brands,
                 "tray_color": tray_color,
                 "nozzle_temp_min": nozzle_temp_min,
                 "nozzle_temp_max": nozzle_temp_max,
@@ -473,7 +539,11 @@ class PrinterConnection:
 
         topic = f"device/{self.serial}/request"
         payload_json = json.dumps(command)
-        logger.info(f"[{self.serial}] MQTT ams_filament_setting: {payload_json}")
+        logger.info(
+            f"[{self.serial}] Publishing ams_filament_setting: AMS {ams_id}, tray {tray_id}, "
+            f"tray_info_idx={tray_info_idx}, tray_sub_brands={tray_sub_brands}, setting_id={setting_id}"
+        )
+        logger.info(f"[{self.serial}] MQTT ams_filament_setting command: {payload_json}")
         try:
             result = self._client.publish(topic, payload_json)
             if result.rc == mqtt.MQTT_ERR_SUCCESS:
@@ -860,6 +930,7 @@ class PrinterConnection:
                 name=filament.get("name", ""),
                 extruder_id=filament.get("extruder_id"),
                 nozzle_diameter=response_nozzle,
+                setting_id=filament.get("setting_id"),
             )
             self._calibrations[cali_idx] = calibration
             profiles.append({
@@ -869,6 +940,7 @@ class PrinterConnection:
                 "name": calibration.name,
                 "nozzle_diameter": response_nozzle,
                 "extruder_id": calibration.extruder_id,
+                "setting_id": calibration.setting_id,
             })
 
         # Update kprofiles list
@@ -1211,6 +1283,7 @@ class PrinterManager:
         tray_info_idx: str = "",
         setting_id: str = "",
         tray_type: str = "",
+        tray_sub_brands: str = "",
         tray_color: str = "FFFFFFFF",
         nozzle_temp_min: int = 190,
         nozzle_temp_max: int = 230,
@@ -1227,6 +1300,7 @@ class PrinterManager:
             tray_info_idx=tray_info_idx,
             setting_id=setting_id,
             tray_type=tray_type,
+            tray_sub_brands=tray_sub_brands,
             tray_color=tray_color,
             nozzle_temp_min=nozzle_temp_min,
             nozzle_temp_max=nozzle_temp_max,
@@ -1249,6 +1323,7 @@ class PrinterManager:
         cali_idx: int = -1,
         filament_id: str = "",
         nozzle_diameter: str = "0.4",
+        setting_id: str = "",
     ) -> bool:
         """Set calibration profile for an AMS slot on a printer."""
         conn = self._connections.get(serial)
@@ -1262,6 +1337,28 @@ class PrinterManager:
             cali_idx=cali_idx,
             filament_id=filament_id,
             nozzle_diameter=nozzle_diameter,
+            setting_id=setting_id,
+        )
+
+    def set_k_value(
+        self,
+        serial: str,
+        tray_id: int,
+        k_value: float,
+        nozzle_diameter: str = "0.4",
+        nozzle_temp: int = 220,
+    ) -> bool:
+        """Directly set K value for a tray on a printer."""
+        conn = self._connections.get(serial)
+        if not conn:
+            logger.error(f"Printer {serial} not connected")
+            return False
+
+        return conn.set_k_value(
+            tray_id=tray_id,
+            k_value=k_value,
+            nozzle_diameter=nozzle_diameter,
+            nozzle_temp=nozzle_temp,
         )
 
     def get_calibrations(self, serial: str) -> list[dict]:

@@ -66,9 +66,9 @@ typedef struct _objects_t {
     lv_obj_t *main_screen_ams_a;
     lv_obj_t *main_screen_ams_a_label;
     lv_obj_t *main_screen_ams_a_slot_1;
-    lv_obj_t *main_screen_ams_a_slot_2;
     lv_obj_t *main_screen_ams_a_slot_3;
     lv_obj_t *main_screen_ams_a_slot_4;
+    lv_obj_t *main_screen_ams_a_slot_2;
     lv_obj_t *main_screen_ams_c;
     lv_obj_t *main_screen_ams_c_label;
     lv_obj_t *main_screen_ams_c_slot_1;

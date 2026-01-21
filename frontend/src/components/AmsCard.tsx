@@ -1,7 +1,8 @@
 import { useState } from "preact/hooks";
 import { AmsUnit, AmsTray } from "../lib/websocket";
-import { api, CalibrationProfile, AMSThresholds } from "../lib/api";
+import { CalibrationProfile, AMSThresholds } from "../lib/api";
 import { Droplets, Thermometer } from "lucide-preact";
+import { ConfigureAmsSlotModal } from "./ConfigureAmsSlotModal";
 
 interface AmsCardProps {
   unit: AmsUnit;
@@ -16,6 +17,24 @@ interface AmsCardProps {
   compact?: boolean; // Smaller size for secondary row
   amsThresholds?: AMSThresholds; // Thresholds for humidity/temperature coloring
   onHistoryClick?: (amsId: number, amsLabel: string, mode: 'humidity' | 'temperature') => void;
+  trayReadingBits?: number | null; // Bitmask of trays currently being read (RFID scanning)
+}
+
+// Calculate bit position for a tray in tray_reading_bits
+function getTrayBit(amsId: number, trayId: number): number {
+  if (amsId <= 3) {
+    // Regular AMS: bits 0-15 (AMS A = 0-3, AMS B = 4-7, etc.)
+    return 1 << (amsId * 4 + trayId);
+  }
+  // HT and external slots - bit position unclear, return 0 for now
+  return 0;
+}
+
+// Check if a specific tray is currently being read
+function isTrayReading(amsId: number, trayId: number, trayReadingBits: number | null | undefined): boolean {
+  if (trayReadingBits === null || trayReadingBits === undefined) return false;
+  const bit = getTrayBit(amsId, trayId);
+  return bit > 0 && (trayReadingBits & bit) !== 0;
 }
 
 // Get active tray index within an AMS unit
@@ -351,59 +370,39 @@ function SensorIndicator({ humidity, temperature, thresholds, amsId, amsLabel, o
   );
 }
 
-// Slot action menu component
+// Slot action menu component - opens modal for configuration
 interface SlotMenuProps {
   printerSerial: string;
   amsId: number;
   trayId: number;
   calibrations: CalibrationProfile[];
   currentKValue: number | null;
+  tray?: AmsTray | null;
+  trayCount?: number;
+  isReading?: boolean; // True when slot is being read (RFID scanning)
 }
 
-function SlotMenu({ printerSerial, amsId, trayId, calibrations, currentKValue }: SlotMenuProps) {
+function SlotMenu({ printerSerial, amsId, trayId, calibrations, currentKValue, tray, trayCount = 4, isReading = false }: SlotMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const handleReset = async (e: Event) => {
-    e.stopPropagation();
-    setLoading(true);
-    try {
-      await api.resetSlot(printerSerial, amsId, trayId);
-    } catch (err) {
-      console.error("Failed to reset slot:", err);
-    } finally {
-      setLoading(false);
-      setIsOpen(false);
-    }
-  };
-
-  const handleSetCalibration = async (caliIdx: number, filamentId: string = "") => {
-    setLoading(true);
-    try {
-      await api.setCalibration(printerSerial, amsId, trayId, {
-        cali_idx: caliIdx,
-        filament_id: filamentId,
-      });
-    } catch (err) {
-      console.error("Failed to set calibration:", err);
-    } finally {
-      setLoading(false);
-      setIsOpen(false);
-    }
-  };
 
   return (
-    <div class="relative inline-block">
+    <>
       <button
         onClick={(e) => {
           e.stopPropagation();
-          setIsOpen(!isOpen);
+          if (!isReading) {
+            setIsOpen(true);
+          }
         }}
-        class="p-1 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-        title="Slot options"
-        disabled={loading}
+        class={`p-1 rounded transition-colors ${
+          isReading
+            ? "text-[var(--accent-color)] cursor-wait"
+            : "hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+        }`}
+        title={isReading ? "Reading RFID..." : "Slot options"}
+        disabled={isReading}
       >
-        {loading ? (
+        {isReading ? (
           <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -415,82 +414,28 @@ function SlotMenu({ printerSerial, amsId, trayId, calibrations, currentKValue }:
         )}
       </button>
 
-      {isOpen && (
-        <>
-          {/* Backdrop to close menu */}
-          <div
-            class="fixed inset-0 z-40 bg-black/50"
-            onClick={() => setIsOpen(false)}
-          />
-          {/* Menu - fixed position in center of screen for visibility */}
-          <div class="fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-[var(--bg-secondary)] rounded-lg shadow-xl border border-[var(--border-color)] py-2 min-w-[240px] max-h-[80vh] overflow-y-auto">
-            <div class="px-4 py-2 border-b border-[var(--border-color)] font-medium text-[var(--text-primary)]">
-              Slot {trayId + 1} Options
-            </div>
-
-            <button
-              onClick={handleReset}
-              class="w-full px-4 py-3 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] flex items-center gap-3"
-            >
-              <svg class="w-5 h-5 text-[var(--text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Re-read RFID Tag
-            </button>
-
-            <div class="border-t border-[var(--border-color)] my-2" />
-
-            <div class="px-4 py-2 text-xs text-[var(--text-muted)] font-medium uppercase">K-Profile Selection</div>
-
-            <button
-              onClick={() => handleSetCalibration(-1)}
-              class={`w-full px-4 py-3 text-left text-sm hover:bg-[var(--bg-tertiary)] flex items-center justify-between ${
-                currentKValue === null || currentKValue === 0.02 ? "text-[var(--accent-color)] bg-[var(--accent-color)]/10" : "text-[var(--text-secondary)]"
-              }`}
-            >
-              <span>Default (K = 0.020)</span>
-              {(currentKValue === null || currentKValue === 0.02) && (
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                </svg>
-              )}
-            </button>
-
-            {calibrations.length > 0 && (
-              <>
-                {calibrations.map((cal) => (
-                  <button
-                    key={cal.cali_idx}
-                    onClick={() => handleSetCalibration(cal.cali_idx, cal.filament_id)}
-                    class={`w-full px-4 py-3 text-left text-sm hover:bg-[var(--bg-tertiary)] flex items-center justify-between ${
-                      currentKValue !== null && Math.abs(currentKValue - cal.k_value) < 0.001 ? "text-[var(--accent-color)] bg-[var(--accent-color)]/10" : "text-[var(--text-secondary)]"
-                    }`}
-                    title={cal.name || cal.filament_id}
-                  >
-                    <span class="truncate mr-2">{cal.name || cal.filament_id || `Profile ${cal.cali_idx}`}</span>
-                    <span class="text-[var(--text-muted)] flex-shrink-0 font-mono text-xs">K = {cal.k_value.toFixed(3)}</span>
-                  </button>
-                ))}
-              </>
-            )}
-
-            <div class="border-t border-[var(--border-color)] mt-2 pt-2">
-              <button
-                onClick={() => setIsOpen(false)}
-                class="w-full px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)]"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
+      <ConfigureAmsSlotModal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        printerSerial={printerSerial}
+        slotInfo={{
+          amsId,
+          trayId,
+          trayCount,
+          trayType: tray?.tray_type || undefined,
+          trayColor: tray?.tray_color || undefined,
+          traySubBrands: undefined, // Not available in SpoolStation's tray data
+          trayInfoIdx: tray?.tray_info_idx || undefined,
+        }}
+        calibrations={calibrations}
+        currentKValue={currentKValue}
+      />
+    </>
   );
 }
 
 // Regular AMS card (4 slots)
-function RegularAmsCard({ unit, numExtruders = 1, printerSerial, calibrations = [], trayNow, trayNowLeft, trayNowRight, activeExtruder, amsThresholds, onHistoryClick }: AmsCardProps) {
+function RegularAmsCard({ unit, numExtruders = 1, printerSerial, calibrations = [], trayNow, trayNowLeft, trayNowRight, activeExtruder, amsThresholds, onHistoryClick, trayReadingBits }: AmsCardProps) {
   const amsName = getAmsName(unit.id);
 
   // Get active tray for this AMS unit (handles both single and dual-nozzle)
@@ -590,6 +535,9 @@ function RegularAmsCard({ unit, numExtruders = 1, printerSerial, calibrations = 
                     trayId={idx}
                     calibrations={calibrations}
                     currentKValue={kValue ?? null}
+                    tray={tray}
+                    trayCount={4}
+                    isReading={isTrayReading(unit.id, idx, trayReadingBits)}
                   />
                 </div>
               )}
@@ -616,7 +564,7 @@ function RegularAmsCard({ unit, numExtruders = 1, printerSerial, calibrations = 
 }
 
 // HT AMS card (single slot) - 50% width of regular AMS
-function HtAmsCard({ unit, numExtruders = 1, printerSerial, calibrations = [], trayNow, trayNowLeft, trayNowRight, activeExtruder, amsThresholds, onHistoryClick }: AmsCardProps) {
+function HtAmsCard({ unit, numExtruders = 1, printerSerial, calibrations = [], trayNow, trayNowLeft, trayNowRight, activeExtruder, amsThresholds, onHistoryClick, trayReadingBits }: AmsCardProps) {
   const amsName = getAmsName(unit.id);
   const tray = unit.trays[0];
   const isEmpty = !tray || isTrayEmpty(tray);
@@ -685,6 +633,9 @@ function HtAmsCard({ unit, numExtruders = 1, printerSerial, calibrations = [], t
                 trayId={0}
                 calibrations={calibrations}
                 currentKValue={kValue ?? null}
+                tray={tray}
+                trayCount={1}
+                isReading={isTrayReading(unit.id, 0, trayReadingBits)}
               />
             )}
           </div>
@@ -705,14 +656,14 @@ function HtAmsCard({ unit, numExtruders = 1, printerSerial, calibrations = [], t
   );
 }
 
-export function AmsCard({ unit, printerModel, numExtruders = 1, printerSerial, calibrations = [], trayNow, trayNowLeft, trayNowRight, activeExtruder, amsThresholds, onHistoryClick }: AmsCardProps) {
+export function AmsCard({ unit, printerModel, numExtruders = 1, printerSerial, calibrations = [], trayNow, trayNowLeft, trayNowRight, activeExtruder, amsThresholds, onHistoryClick, trayReadingBits }: AmsCardProps) {
   const isHt = isHtAms(unit.id);
 
   if (isHt) {
-    return <HtAmsCard unit={unit} printerModel={printerModel} numExtruders={numExtruders} printerSerial={printerSerial} calibrations={calibrations} trayNow={trayNow} trayNowLeft={trayNowLeft} trayNowRight={trayNowRight} activeExtruder={activeExtruder} amsThresholds={amsThresholds} onHistoryClick={onHistoryClick} />;
+    return <HtAmsCard unit={unit} printerModel={printerModel} numExtruders={numExtruders} printerSerial={printerSerial} calibrations={calibrations} trayNow={trayNow} trayNowLeft={trayNowLeft} trayNowRight={trayNowRight} activeExtruder={activeExtruder} amsThresholds={amsThresholds} onHistoryClick={onHistoryClick} trayReadingBits={trayReadingBits} />;
   }
 
-  return <RegularAmsCard unit={unit} printerModel={printerModel} numExtruders={numExtruders} printerSerial={printerSerial} calibrations={calibrations} trayNow={trayNow} trayNowLeft={trayNowLeft} trayNowRight={trayNowRight} activeExtruder={activeExtruder} amsThresholds={amsThresholds} onHistoryClick={onHistoryClick} />;
+  return <RegularAmsCard unit={unit} printerModel={printerModel} numExtruders={numExtruders} printerSerial={printerSerial} calibrations={calibrations} trayNow={trayNow} trayNowLeft={trayNowLeft} trayNowRight={trayNowRight} activeExtruder={activeExtruder} amsThresholds={amsThresholds} onHistoryClick={onHistoryClick} trayReadingBits={trayReadingBits} />;
 }
 
 // External spool holder (Virtual Tray) - 50% width of regular AMS
@@ -722,9 +673,10 @@ interface ExternalSpoolProps {
   numExtruders?: number;
   printerSerial?: string;
   calibrations?: CalibrationProfile[];
+  trayReadingBits?: number | null;
 }
 
-export function ExternalSpool({ tray, position = "left", numExtruders = 1, printerSerial, calibrations = [] }: ExternalSpoolProps) {
+export function ExternalSpool({ tray, position = "left", numExtruders = 1, printerSerial, calibrations = [], trayReadingBits }: ExternalSpoolProps) {
   const isEmpty = !tray || isTrayEmpty(tray);
   const color = tray ? trayColorToCSS(tray.tray_color) : "#808080";
   const material = tray?.tray_type || "";
@@ -782,6 +734,9 @@ export function ExternalSpool({ tray, position = "left", numExtruders = 1, print
                 trayId={0}
                 calibrations={calibrations}
                 currentKValue={kValue ?? null}
+                tray={tray}
+                trayCount={1}
+                isReading={isTrayReading(amsId, 0, trayReadingBits)}
               />
             )}
           </div>

@@ -762,20 +762,6 @@ void create_screen_main_screen() {
                             lv_label_set_text(obj, "");
                         }
                         {
-                            // main_screen_ams_a_slot_2
-                            lv_obj_t *obj = lv_label_create(parent_obj);
-                            objects.main_screen_ams_a_slot_2 = obj;
-                            lv_obj_set_pos(obj, 11, -3);
-                            lv_obj_set_size(obj, 23, 24);
-                            lv_obj_set_style_bg_color(obj, lv_color_hex(0xff0a40ec), LV_PART_MAIN | LV_STATE_DEFAULT);
-                            lv_obj_set_style_bg_opa(obj, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-                            lv_obj_set_style_border_opa(obj, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-                            lv_obj_set_style_border_width(obj, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
-                            lv_obj_set_style_radius(obj, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
-                            lv_obj_set_style_clip_corner(obj, true, LV_PART_MAIN | LV_STATE_DEFAULT);
-                            lv_label_set_text(obj, "");
-                        }
-                        {
                             // main_screen_ams_a_slot_3
                             lv_obj_t *obj = lv_label_create(parent_obj);
                             objects.main_screen_ams_a_slot_3 = obj;
@@ -803,6 +789,21 @@ void create_screen_main_screen() {
                             lv_obj_set_style_border_width(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_clip_corner(obj, true, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_radius(obj, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_label_set_text(obj, "");
+                        }
+                        {
+                            // main_screen_ams_a_slot_2
+                            lv_obj_t *obj = lv_label_create(parent_obj);
+                            objects.main_screen_ams_a_slot_2 = obj;
+                            lv_obj_set_pos(obj, 10, -3);
+                            lv_obj_set_size(obj, 23, 24);
+                            lv_obj_set_style_bg_color(obj, lv_color_hex(0xff0a40ec), LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_bg_opa(obj, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_radius(obj, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_clip_corner(obj, true, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_border_color(obj, lv_color_hex(0xffbab1b1), LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_border_opa(obj, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+                            lv_obj_set_style_border_width(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_label_set_text(obj, "");
                         }
                     }
@@ -4839,7 +4840,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_network_label = obj;
                             lv_obj_set_pos(obj, 60, 10);
                             lv_obj_set_size(obj, 80, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff000000), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -4871,7 +4872,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_printers_label = obj;
                             lv_obj_set_pos(obj, 60, 10);
                             lv_obj_set_size(obj, 80, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff888888), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -4903,7 +4904,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_hardware_label = obj;
                             lv_obj_set_pos(obj, 60, 10);
                             lv_obj_set_size(obj, 80, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff888888), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -4935,7 +4936,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_system_label = obj;
                             lv_obj_set_pos(obj, 60, 10);
                             lv_obj_set_size(obj, 80, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff888888), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -4985,7 +4986,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_network_content_wifi_label_name = obj;
                             lv_obj_set_pos(obj, 45, 15);
                             lv_obj_set_size(obj, 200, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -4997,7 +4998,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_network_content_wifi_label_ssid = obj;
                             lv_obj_set_pos(obj, 550, 7);
                             lv_obj_set_size(obj, 150, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff888888), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5009,7 +5010,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_network_content_wifi_icon_select = obj;
                             lv_obj_set_pos(obj, 725, 15);
                             lv_obj_set_size(obj, 20, 24);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff666666), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_18, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5032,7 +5033,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_network_content_wifi_label_ip_address = obj;
                             lv_obj_set_pos(obj, 550, 27);
                             lv_obj_set_size(obj, 150, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff888888), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5082,7 +5083,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_printers_content_add_printer_label = obj;
                             lv_obj_set_pos(obj, 45, 15);
                             lv_obj_set_size(obj, 200, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5094,7 +5095,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_printers_content_add_printer_label_select = obj;
                             lv_obj_set_pos(obj, 725, 15);
                             lv_obj_set_size(obj, 20, 24);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff666666), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_18, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5136,7 +5137,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_printers_content_printer_1_label = obj;
                             lv_obj_set_pos(obj, 45, 16);
                             lv_obj_set_size(obj, 200, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5148,7 +5149,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_printers_content_printer_1_label_online = obj;
                             lv_obj_set_pos(obj, 641, 17);
                             lv_obj_set_size(obj, 67, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff888888), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5160,7 +5161,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_printers_content_printer_1_label_select = obj;
                             lv_obj_set_pos(obj, 725, 15);
                             lv_obj_set_size(obj, 20, 24);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff666666), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_18, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5221,7 +5222,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_hardware_content_nfc_label = obj;
                             lv_obj_set_pos(obj, 45, 15);
                             lv_obj_set_size(obj, 200, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5233,7 +5234,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_hardware_content_nfc_label_type = obj;
                             lv_obj_set_pos(obj, 550, 15);
                             lv_obj_set_size(obj, 150, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff888888), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5245,7 +5246,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_hardware_content_nfc_label_select = obj;
                             lv_obj_set_pos(obj, 725, 15);
                             lv_obj_set_size(obj, 20, 24);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff666666), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_18, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5287,7 +5288,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_hardware_content_scale_label = obj;
                             lv_obj_set_pos(obj, 45, 15);
                             lv_obj_set_size(obj, 200, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5299,7 +5300,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_hardware_content_scale_label_type = obj;
                             lv_obj_set_pos(obj, 550, 15);
                             lv_obj_set_size(obj, 150, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff888888), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5311,7 +5312,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_hardware_content_scale_label_select = obj;
                             lv_obj_set_pos(obj, 725, 15);
                             lv_obj_set_size(obj, 20, 24);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff666666), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_18, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5353,7 +5354,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_display_content_label = obj;
                             lv_obj_set_pos(obj, 45, 15);
                             lv_obj_set_size(obj, 200, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5365,7 +5366,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_display_content_label_resolution = obj;
                             lv_obj_set_pos(obj, 550, 15);
                             lv_obj_set_size(obj, 150, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff888888), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5377,7 +5378,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_display_content_label_select = obj;
                             lv_obj_set_pos(obj, 725, 15);
                             lv_obj_set_size(obj, 20, 24);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff666666), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_18, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5438,7 +5439,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_system_content_firmware_label = obj;
                             lv_obj_set_pos(obj, 37, 15);
                             lv_obj_set_size(obj, 200, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5450,7 +5451,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_system_content_firmware_label_version = obj;
                             lv_obj_set_pos(obj, 602, 17);
                             lv_obj_set_size(obj, 79, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff888888), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5462,7 +5463,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_system_content_firmware_label_select = obj;
                             lv_obj_set_pos(obj, 715, 15);
                             lv_obj_set_size(obj, 20, 24);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff666666), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_18, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5504,7 +5505,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_system_content_reset_label = obj;
                             lv_obj_set_pos(obj, 37, 15);
                             lv_obj_set_size(obj, 200, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5516,7 +5517,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_system_content_reset_label_select = obj;
                             lv_obj_set_pos(obj, 715, 15);
                             lv_obj_set_size(obj, 20, 24);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff666666), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_18, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5558,7 +5559,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_about_content_label = obj;
                             lv_obj_set_pos(obj, 37, 15);
                             lv_obj_set_size(obj, 200, 20);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5570,7 +5571,7 @@ void create_screen_settings_screen() {
                             objects.settings_screen_tabs_about_content_label_select = obj;
                             lv_obj_set_pos(obj, 715, 15);
                             lv_obj_set_size(obj, 20, 24);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_color(obj, lv_color_hex(0xff666666), LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_obj_set_style_text_font(obj, &lv_font_montserrat_18, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -5733,7 +5734,7 @@ void create_screen_settings_wifi_screen() {
                             objects.settings_wifi_screen_content_panel_label_wifi = obj;
                             lv_obj_set_pos(obj, 16, -7);
                             lv_obj_set_size(obj, 300, 30);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_decor(obj, LV_TEXT_DECOR_UNDERLINE, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_label_set_text(obj, "WiFi Network");
@@ -5744,7 +5745,7 @@ void create_screen_settings_wifi_screen() {
                             objects.settings_wifi_screen_content_panel_label_ssid = obj;
                             lv_obj_set_pos(obj, 16, 24);
                             lv_obj_set_size(obj, 100, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "SSID");
                         }
@@ -5770,7 +5771,7 @@ void create_screen_settings_wifi_screen() {
                             objects.settings_wifi_screen_content_panel_label_password = obj;
                             lv_obj_set_pos(obj, 16, 114);
                             lv_obj_set_size(obj, 100, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "Password");
                         }
@@ -5796,7 +5797,7 @@ void create_screen_settings_wifi_screen() {
                             objects.settings_wifi_screen_content_panel_label_status = obj;
                             lv_obj_set_pos(obj, 16, 214);
                             lv_obj_set_size(obj, 300, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "Status: Connected");
                         }
@@ -5817,7 +5818,7 @@ void create_screen_settings_wifi_screen() {
                                     objects.settings_wifi_screen_content_panel_button_connect_label = obj;
                                     lv_obj_set_pos(obj, -1, 1);
                                     lv_obj_set_size(obj, 68, 18);
-                                    lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                                    lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                                     lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                                     lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_label_set_text(obj, "Connect");
@@ -5841,7 +5842,7 @@ void create_screen_settings_wifi_screen() {
                                     objects.settings_wifi_screen_content_panel_button_scan_label = obj;
                                     lv_obj_set_pos(obj, 11, 6);
                                     lv_obj_set_size(obj, 118, 16);
-                                    lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                                    lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                                     lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                                     lv_label_set_text(obj, "Scan Networks");
                                 }
@@ -5988,7 +5989,7 @@ void create_screen_settings_printer_add_screen() {
                             objects.settings_printer_add_screen_panel_panel_label_add = obj;
                             lv_obj_set_pos(obj, 16, -6);
                             lv_obj_set_size(obj, 300, 30);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_decor(obj, LV_TEXT_DECOR_UNDERLINE, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_label_set_text(obj, "Add Printer");
@@ -5999,7 +6000,7 @@ void create_screen_settings_printer_add_screen() {
                             objects.settings_printer_add_screen_panel_panel_label_name = obj;
                             lv_obj_set_pos(obj, 18, 69);
                             lv_obj_set_size(obj, 150, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "Printer Name");
                         }
@@ -6024,7 +6025,7 @@ void create_screen_settings_printer_add_screen() {
                             objects.settings_printer_add_screen_panel_panel_label_serial = obj;
                             lv_obj_set_pos(obj, 18, 158);
                             lv_obj_set_size(obj, 150, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "Serial Number");
                         }
@@ -6049,7 +6050,7 @@ void create_screen_settings_printer_add_screen() {
                             objects.settings_printer_add_screen_panel_panel_label_code = obj;
                             lv_obj_set_pos(obj, 243, 158);
                             lv_obj_set_size(obj, 150, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "Access Code");
                         }
@@ -6084,7 +6085,7 @@ void create_screen_settings_printer_add_screen() {
                                     objects.settings_printer_add_screen_panel_panel_button_add_label = obj;
                                     lv_obj_set_pos(obj, 27, 6);
                                     lv_obj_set_size(obj, 87, 16);
-                                    lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                                    lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                                     lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                                     lv_label_set_text(obj, "Add Printer");
                                 }
@@ -6106,7 +6107,7 @@ void create_screen_settings_printer_add_screen() {
                                     objects.settings_printer_add_screen_panel_panel_button_scan_label = obj;
                                     lv_obj_set_pos(obj, -4, -3);
                                     lv_obj_set_size(obj, 71, 13);
-                                    lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                                    lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                                     lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                                     lv_label_set_text(obj, "Discover");
                                 }
@@ -6118,7 +6119,7 @@ void create_screen_settings_printer_add_screen() {
                             objects.settings_printer_add_screen_panel_panel_label_ip_address = obj;
                             lv_obj_set_pos(obj, 243, 69);
                             lv_obj_set_size(obj, 150, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "IP Address");
                         }
@@ -6278,7 +6279,7 @@ void create_screen_settings_display_screen() {
                             objects.settings_display_screen_content_panel_label = obj;
                             lv_obj_set_pos(obj, 18, -7);
                             lv_obj_set_size(obj, 300, 30);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_obj_set_style_text_decor(obj, LV_TEXT_DECOR_UNDERLINE, LV_PART_MAIN | LV_STATE_DEFAULT);
                             lv_label_set_text(obj, "Display Settings");
@@ -6289,7 +6290,7 @@ void create_screen_settings_display_screen() {
                             objects.settings_display_screen_content_panel_label_resolution = obj;
                             lv_obj_set_pos(obj, 18, 32);
                             lv_obj_set_size(obj, 87, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "Resolution:");
                         }
@@ -6299,7 +6300,7 @@ void create_screen_settings_display_screen() {
                             objects.settings_display_screen_content_panel_label_panel = obj;
                             lv_obj_set_pos(obj, 18, 63);
                             lv_obj_set_size(obj, 87, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "Panel:");
                         }
@@ -6309,7 +6310,7 @@ void create_screen_settings_display_screen() {
                             objects.settings_display_screen_content_panel_label_brightness = obj;
                             lv_obj_set_pos(obj, 18, 94);
                             lv_obj_set_size(obj, 150, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "Brightness");
                         }
@@ -6319,7 +6320,7 @@ void create_screen_settings_display_screen() {
                             objects.settings_display_screen_content_panel_label_timeout = obj;
                             lv_obj_set_pos(obj, 16, 139);
                             lv_obj_set_size(obj, 150, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "Screen Timeout");
                         }
@@ -6358,7 +6359,7 @@ void create_screen_settings_display_screen() {
                             objects.settings_display_screen_content_panel_label_resolution_value = obj;
                             lv_obj_set_pos(obj, 105, 32);
                             lv_obj_set_size(obj, 87, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "");
                         }
@@ -6368,7 +6369,7 @@ void create_screen_settings_display_screen() {
                             objects.settings_display_screen_content_panel_label_panel_value = obj;
                             lv_obj_set_pos(obj, 105, 63);
                             lv_obj_set_size(obj, 87, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "");
                         }
@@ -6513,7 +6514,7 @@ void create_screen_settings_update_screen() {
                             objects.settings_update_screen_top_bar_content_panel_label = obj;
                             lv_obj_set_pos(obj, 18, -9);
                             lv_obj_set_size(obj, 300, 30);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "Firmware Update");
                         }
@@ -6523,7 +6524,7 @@ void create_screen_settings_update_screen() {
                             objects.settings_update_screen_top_bar_content_panel_label_version = obj;
                             lv_obj_set_pos(obj, 18, 41);
                             lv_obj_set_size(obj, 136, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "Current Version:");
                         }
@@ -6533,7 +6534,7 @@ void create_screen_settings_update_screen() {
                             objects.settings_update_screen_top_bar_content_panel_label_latest = obj;
                             lv_obj_set_pos(obj, 18, 66);
                             lv_obj_set_size(obj, 136, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "Latest Version:");
                         }
@@ -6543,7 +6544,7 @@ void create_screen_settings_update_screen() {
                             objects.settings_update_screen_top_bar_content_panel_label_status = obj;
                             lv_obj_set_pos(obj, 18, 95);
                             lv_obj_set_size(obj, 138, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "Status:");
                         }
@@ -6563,7 +6564,7 @@ void create_screen_settings_update_screen() {
                                     objects.settings_update_screen_top_bar_content_panel_button_check_label = obj;
                                     lv_obj_set_pos(obj, -14, 7);
                                     lv_obj_set_size(obj, 140, 14);
-                                    lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                                    lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                                     lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                                     lv_obj_set_style_text_color(obj, lv_color_hex(0xff000000), LV_PART_MAIN | LV_STATE_DEFAULT);
                                     lv_label_set_text(obj, "Check for Updates");
@@ -6576,7 +6577,7 @@ void create_screen_settings_update_screen() {
                             objects.settings_update_screen_top_bar_content_panel_label_version_value = obj;
                             lv_obj_set_pos(obj, 156, 41);
                             lv_obj_set_size(obj, 220, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "0.1b");
                         }
@@ -6586,7 +6587,7 @@ void create_screen_settings_update_screen() {
                             objects.settings_update_screen_top_bar_content_panel_label_latest_value = obj;
                             lv_obj_set_pos(obj, 156, 66);
                             lv_obj_set_size(obj, 220, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "Checking...");
                         }
@@ -6596,7 +6597,7 @@ void create_screen_settings_update_screen() {
                             objects.settings_update_screen_top_bar_content_panel_label_status_value = obj;
                             lv_obj_set_pos(obj, 156, 95);
                             lv_obj_set_size(obj, 220, 25);
-                            lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+                            lv_label_set_long_mode(obj, LV_LABEL_LONG_undefined);
                             lv_obj_clear_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_WITH_ARROW|LV_OBJ_FLAG_SNAPPABLE);
                             lv_label_set_text(obj, "Up to date");
                         }

@@ -291,7 +291,9 @@ async def set_filament(serial: str, ams_id: int, tray_id: int, filament: AmsFila
         ams_id=ams_id,
         tray_id=tray_id,
         tray_info_idx=filament.tray_info_idx,
+        setting_id=filament.setting_id,
         tray_type=filament.tray_type,
+        tray_sub_brands=filament.tray_sub_brands,
         tray_color=filament.tray_color,
         nozzle_temp_min=filament.nozzle_temp_min,
         nozzle_temp_max=filament.nozzle_temp_max,
@@ -643,11 +645,15 @@ async def reset_slot(serial: str, ams_id: int, tray_id: int):
 async def set_calibration(serial: str, ams_id: int, tray_id: int, request: SetCalibrationRequest):
     """Set calibration profile (k-value) for an AMS slot.
 
+    Sends two commands:
+    1. extrusion_cali_sel - selects the K profile
+    2. extrusion_cali_set - directly sets the K value (if k_value > 0)
+
     Args:
         serial: Printer serial number
         ams_id: AMS unit ID
         tray_id: Tray ID within AMS
-        request: Calibration settings (cali_idx, filament_id, nozzle_diameter)
+        request: Calibration settings (cali_idx, filament_id, nozzle_diameter, k_value)
     """
     if not _printer_manager:
         raise HTTPException(status_code=500, detail="Printer manager not available")
@@ -655,6 +661,7 @@ async def set_calibration(serial: str, ams_id: int, tray_id: int, request: SetCa
     if not _printer_manager.is_connected(serial):
         raise HTTPException(status_code=400, detail="Printer not connected")
 
+    # Method 1: Select calibration profile by cali_idx
     success = _printer_manager.set_calibration(
         serial=serial,
         ams_id=ams_id,
@@ -662,10 +669,29 @@ async def set_calibration(serial: str, ams_id: int, tray_id: int, request: SetCa
         cali_idx=request.cali_idx,
         filament_id=request.filament_id,
         nozzle_diameter=request.nozzle_diameter,
+        setting_id=request.setting_id,
     )
 
     if not success:
         raise HTTPException(status_code=500, detail="Failed to set calibration")
+
+    # Method 2: Also directly set the K value if provided (for better compatibility)
+    if request.k_value > 0:
+        # Calculate global tray ID for extrusion_cali_set
+        if ams_id <= 3:
+            global_tray_id = ams_id * 4 + tray_id
+        elif ams_id >= 128 and ams_id <= 135:
+            global_tray_id = (ams_id - 128) * 4 + tray_id
+        else:
+            global_tray_id = tray_id
+
+        _printer_manager.set_k_value(
+            serial=serial,
+            tray_id=global_tray_id,
+            k_value=request.k_value,
+            nozzle_diameter=request.nozzle_diameter,
+            nozzle_temp=request.nozzle_temp_max,
+        )
 
 
 @router.get("/{serial}/calibrations")

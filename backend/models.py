@@ -168,11 +168,13 @@ class PrinterState(BaseModel):
 
 class AmsFilamentSettingRequest(BaseModel):
     """Request to set filament in an AMS slot."""
-    tray_info_idx: str = ""  # Filament preset ID (e.g., "GFL99")
+    tray_info_idx: str = ""  # Filament preset ID short format (e.g., "GFL05")
     tray_type: str = ""  # Material type (e.g., "PLA")
+    tray_sub_brands: str = ""  # Preset name for slicer (e.g., "Bambu PLA Basic")
     tray_color: str = "FFFFFFFF"  # RGBA hex (e.g., "FF0000FF")
     nozzle_temp_min: int = 190
     nozzle_temp_max: int = 230
+    setting_id: str = ""  # Full setting ID with version (e.g., "GFSL05_07")
 
 
 class AssignSpoolRequest(BaseModel):
@@ -184,8 +186,11 @@ class AssignSpoolRequest(BaseModel):
 class SetCalibrationRequest(BaseModel):
     """Request to set calibration profile for an AMS slot."""
     cali_idx: int = -1  # -1 for default (0.02), or calibration profile index
-    filament_id: str = ""  # Filament preset ID (optional)
+    filament_id: str = ""  # K profile's filament_id (optional)
     nozzle_diameter: str = "0.4"  # Nozzle diameter
+    setting_id: str = ""  # K profile's setting_id for slicer compatibility (optional)
+    k_value: float = 0.0  # Direct K value to set (0.0 = skip direct setting)
+    nozzle_temp_max: int = 230  # Max nozzle temp for extrusion_cali_set
 
 
 # ============ WebSocket Messages ============
