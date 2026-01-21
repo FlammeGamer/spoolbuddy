@@ -70,6 +70,55 @@ function saveExpandedPrinters(expanded: Set<string>) {
   }
 }
 
+// Detect model from a string (model field or printer name)
+function detectModel(str: string): string | null {
+  const lower = str.toLowerCase().replace(/\s+/g, '').replace(/-/g, '');
+
+  // Check specific models first (longer/more specific matches before shorter)
+  if (lower.includes('x1e')) return 'X1E';
+  if (lower.includes('x1c') || lower.includes('x1carbon')) return 'X1-Carbon';
+  if (lower.includes('x1')) return 'X1';
+  if (lower.includes('h2d')) return 'H2D';
+  if (lower.includes('h2c')) return 'H2C';
+  if (lower.includes('h2s')) return 'H2S';
+  if (lower.includes('p2s')) return 'P2S';
+  if (lower.includes('p1s')) return 'P1S';
+  if (lower.includes('p1p')) return 'P1P';
+  if (lower.includes('a1mini')) return 'A1-Mini';
+  if (lower.includes('a1f')) return 'A1F';
+  if (lower.includes('a1')) return 'A1';
+
+  return null;
+}
+
+// Get effective model - try model field first, then fall back to detecting from name
+function getEffectiveModel(model: string | null | undefined, name: string | null | undefined): string | null {
+  if (model) return model;
+  if (name) return detectModel(name);
+  return null;
+}
+
+// Map model to image file
+function getModelImage(model: string | null): string {
+  if (!model) return '/img/printers/default.png';
+
+  const modelLower = model.toLowerCase().replace(/\s+/g, '').replace(/-/g, '');
+
+  if (modelLower.includes('x1e')) return '/img/printers/x1e.png';
+  if (modelLower.includes('x1c') || modelLower.includes('x1carbon')) return '/img/printers/x1c.png';
+  if (modelLower.includes('x1')) return '/img/printers/x1c.png';
+  if (modelLower.includes('h2d')) return '/img/printers/h2d.png';
+  if (modelLower.includes('h2c') || modelLower.includes('h2s')) return '/img/printers/h2d.png';
+  if (modelLower.includes('p2s')) return '/img/printers/p1s.png';
+  if (modelLower.includes('p1s')) return '/img/printers/p1s.png';
+  if (modelLower.includes('p1p')) return '/img/printers/p1p.png';
+  if (modelLower.includes('a1mini')) return '/img/printers/a1mini.png';
+  if (modelLower.includes('a1f')) return '/img/printers/a1f.png';
+  if (modelLower.includes('a1')) return '/img/printers/a1.png';
+
+  return '/img/printers/default.png';
+}
+
 export function Printers() {
   const [printers, setPrinters] = useState<Printer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -298,6 +347,8 @@ export function Printers() {
               const numExtruders = nozzleCount >= 2 ? 2 : 1;
               const isExpanded = expandedPrinters.has(printer.serial);
               const hasDetails = connected && state && (state.ams_units?.length > 0 || state.vt_tray || (state.gcode_state && state.gcode_state !== "IDLE"));
+              // Get effective model - from model field or detected from name
+              const effectiveModel = getEffectiveModel(printer.model, printer.name);
 
               return (
                 <li key={printer.serial} class="p-4 hover:bg-[var(--bg-tertiary)]/50 transition-colors">
@@ -314,13 +365,17 @@ export function Printers() {
                           />
                         )}
                       </div>
-                      {/* Printer icon */}
-                      <div class={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${
+                      {/* Printer image */}
+                      <div class={`flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden ${
                         connected
-                          ? "bg-[var(--success-color)]/10 text-[var(--success-color)]"
-                          : "bg-[var(--bg-tertiary)] text-[var(--text-muted)]"
+                          ? "bg-[var(--bg-tertiary)] ring-2 ring-[var(--success-color)]/30"
+                          : "bg-[var(--bg-tertiary)]"
                       }`}>
-                        <PrinterIcon class="w-6 h-6" strokeWidth={1.5} />
+                        <img
+                          src={getModelImage(effectiveModel)}
+                          alt={effectiveModel || 'Printer'}
+                          class="w-12 h-12 object-contain"
+                        />
                       </div>
                       {/* Printer info */}
                       <div>
@@ -328,7 +383,7 @@ export function Printers() {
                           {printer.name || printer.serial}
                         </p>
                         <p class="text-sm text-[var(--text-secondary)]">
-                          {printer.model || "Unknown Model"} &bull; {printer.ip_address || "No IP"}
+                          {effectiveModel || "Unknown Model"} &bull; {printer.ip_address || "No IP"}
                         </p>
                         <p class="text-xs text-[var(--text-muted)] font-mono">{printer.serial}</p>
                       </div>
