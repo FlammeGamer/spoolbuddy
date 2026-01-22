@@ -23,6 +23,9 @@ extern int get_selected_printer_index(void);
 extern bool is_selected_printer_dual_nozzle(void);
 #endif
 
+// For suppressing tag popup after assignment
+extern void ui_nfc_card_set_configured_tag(const char *tag_id);
+
 // Accent green color - matches progress bar (#00FF00)
 #define ACCENT_GREEN 0x00FF00
 #define SLOT_BORDER_DEFAULT 0x555555
@@ -131,7 +134,10 @@ static void setup_slot(lv_obj_t *slot, int ams_id, int slot_idx, AmsTrayCInfo *t
     lv_obj_add_event_cb(slot, slot_click_handler, LV_EVENT_CLICKED, (void*)(intptr_t)ams_id);
 
     // Set color from tray data
-    bool is_empty = !tray || tray->tray_color == 0;
+    // Empty slot if: no tray, empty tray_type, or color is 0 (transparent)
+    // Note: 0xFFFFFFFF (white) is a valid filament color, not empty
+    bool is_empty = !tray || tray->tray_type[0] == '\0' || tray->tray_color == 0;
+
     if (!is_empty) {
         lv_obj_set_style_bg_color(slot, rgba_to_lv_color(tray->tray_color), LV_PART_MAIN);
         lv_obj_set_style_bg_opa(slot, 255, LV_PART_MAIN);
@@ -798,7 +804,8 @@ void ui_scan_result_update(void) {
         if (scale_ok) {
             weight = scale_get_weight();
             int weight_int = (int)weight;
-            if (weight_int < 0) weight_int = 0;
+            // Show 0 if weight is between -20 and +20 (noise threshold)
+            if (weight_int >= -20 && weight_int <= 20) weight_int = 0;
             char weight_str[32];
             snprintf(weight_str, sizeof(weight_str), "%dg", weight_int);
             lv_label_set_text(objects.scan_screen_main_panel_spool_panel_label_weight, weight_str);
@@ -849,6 +856,147 @@ const char *ui_scan_result_get_tag_id(void) {
 
 // Screen navigation
 extern enum ScreensEnum pendingScreen;
+
+// Assignment result popup
+static lv_obj_t *assign_result_popup = NULL;
+
+// Helper to convert AMS ID to display name
+static const char* get_ams_display_name(int ams_id) {
+    switch (ams_id) {
+        case 0: return "AMS A";
+        case 1: return "AMS B";
+        case 2: return "AMS C";
+        case 3: return "AMS D";
+        case 128: return "AMS HT-A";
+        case 129: return "AMS HT-B";
+        case 130: return "AMS HT-C";
+        case 131: return "AMS HT-D";
+        case 254: return "External L";
+        case 255: return "External R";
+        default: return "AMS";
+    }
+}
+
+// Timer callback to close assignment result popup and navigate back
+static void assign_result_timer_cb(lv_timer_t *timer) {
+    // Delete timer first to prevent repeat firing (LVGL timers repeat by default)
+    lv_timer_delete(timer);
+
+    if (assign_result_popup) {
+        lv_obj_delete(assign_result_popup);
+        assign_result_popup = NULL;
+    }
+    // Navigate back to main screen
+    pendingScreen = SCREEN_ID_MAIN_SCREEN;
+}
+
+// Show assignment result popup
+static void show_assign_result_popup(int result, const char *ams_name, int slot_num) {
+    if (assign_result_popup) {
+        lv_obj_delete(assign_result_popup);
+        assign_result_popup = NULL;
+    }
+
+    // Create modal overlay
+    assign_result_popup = lv_obj_create(lv_layer_top());
+    lv_obj_set_size(assign_result_popup, 800, 480);
+    lv_obj_set_pos(assign_result_popup, 0, 0);
+    lv_obj_set_style_bg_color(assign_result_popup, lv_color_hex(0x000000), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(assign_result_popup, 180, LV_PART_MAIN);
+    lv_obj_set_style_border_width(assign_result_popup, 0, LV_PART_MAIN);
+    lv_obj_clear_flag(assign_result_popup, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Create result card
+    lv_obj_t *card = lv_obj_create(assign_result_popup);
+    lv_obj_set_size(card, 450, 280);
+    lv_obj_center(card);
+    lv_obj_set_style_bg_color(card, lv_color_hex(0x1a1a1a), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(card, 255, LV_PART_MAIN);
+    lv_obj_set_style_radius(card, 12, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(card, 20, LV_PART_MAIN);
+    lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+
+    bool is_success = (result == ASSIGN_RESULT_CONFIGURED || result == ASSIGN_RESULT_STAGED || result == ASSIGN_RESULT_STAGED_REPLACE);
+    bool needs_insert = (result == ASSIGN_RESULT_STAGED || result == ASSIGN_RESULT_STAGED_REPLACE);
+
+    // Border color based on result
+    lv_obj_set_style_border_color(card, lv_color_hex(is_success ? 0x4CAF50 : 0xFF5252), LV_PART_MAIN);
+    lv_obj_set_style_border_width(card, 2, LV_PART_MAIN);
+
+    // Icon
+    lv_obj_t *icon = lv_label_create(card);
+    lv_label_set_text(icon, is_success ? LV_SYMBOL_OK : LV_SYMBOL_CLOSE);
+    lv_obj_set_style_text_font(icon, &lv_font_montserrat_28, LV_PART_MAIN);
+    lv_obj_set_style_text_color(icon, lv_color_hex(is_success ? 0x4CAF50 : 0xFF5252), LV_PART_MAIN);
+    lv_obj_align(icon, LV_ALIGN_TOP_MID, 0, 5);
+
+    // Title
+    lv_obj_t *title = lv_label_create(card);
+    if (result == ASSIGN_RESULT_ERROR) {
+        lv_label_set_text(title, "Configuration Failed");
+    } else if (needs_insert) {
+        lv_label_set_text(title, "Slot Configured");
+    } else {
+        lv_label_set_text(title, "Slot Configured");
+    }
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, LV_PART_MAIN);
+    lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 45);
+
+    // Spool details
+    lv_obj_t *spool_label = lv_label_create(card);
+    char spool_text[128];
+    snprintf(spool_text, sizeof(spool_text), "%s %s%s%s - %s",
+             captured_vendor[0] ? captured_vendor : "",
+             captured_material[0] ? captured_material : "Unknown",
+             captured_subtype[0] ? " " : "",
+             captured_subtype[0] ? captured_subtype : "",
+             captured_color_name[0] ? captured_color_name : "Unknown");
+    lv_label_set_text(spool_label, spool_text);
+    lv_obj_set_style_text_font(spool_label, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_set_style_text_color(spool_label, lv_color_hex(0xCCCCCC), LV_PART_MAIN);
+    lv_obj_set_style_text_align(spool_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_obj_set_width(spool_label, 400);
+    lv_obj_align(spool_label, LV_ALIGN_TOP_MID, 0, 75);
+
+    // Build slot text
+    char slot_text[64];
+    if (selected_ams_id >= 128 || selected_ams_id == 254 || selected_ams_id == 255) {
+        snprintf(slot_text, sizeof(slot_text), "%s", ams_name);
+    } else {
+        snprintf(slot_text, sizeof(slot_text), "%s Slot %d", ams_name, slot_num);
+    }
+
+    // Action/status message
+    lv_obj_t *action_label = lv_label_create(card);
+    char action_text[128];
+    if (is_success && needs_insert) {
+        snprintf(action_text, sizeof(action_text), "Please insert spool into\n%s", slot_text);
+        lv_obj_set_style_text_color(action_label, lv_color_hex(0xFF9800), LV_PART_MAIN);
+    } else if (is_success) {
+        snprintf(action_text, sizeof(action_text), "Assigned to %s", slot_text);
+        lv_obj_set_style_text_color(action_label, lv_color_hex(0x4CAF50), LV_PART_MAIN);
+    } else {
+        snprintf(action_text, sizeof(action_text), "Failed to configure %s\nPlease try again.", slot_text);
+        lv_obj_set_style_text_color(action_label, lv_color_hex(0xFF5252), LV_PART_MAIN);
+    }
+    lv_label_set_text(action_label, action_text);
+    lv_obj_set_style_text_font(action_label, &lv_font_montserrat_16, LV_PART_MAIN);
+    lv_obj_set_style_text_align(action_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_obj_align(action_label, LV_ALIGN_TOP_MID, 0, 115);
+
+    // Auto-close hint
+    lv_obj_t *hint = lv_label_create(card);
+    lv_label_set_text(hint, "Returning to main screen...");
+    lv_obj_set_style_text_font(hint, &lv_font_montserrat_12, LV_PART_MAIN);
+    lv_obj_set_style_text_color(hint, lv_color_hex(0x666666), LV_PART_MAIN);
+    lv_obj_align(hint, LV_ALIGN_BOTTOM_MID, 0, -10);
+
+    // Auto-close timer (3 seconds for success, 4 seconds for staged to allow reading)
+    int timeout = (needs_insert) ? 4000 : 3000;
+    if (result == ASSIGN_RESULT_ERROR) timeout = 3000;
+    lv_timer_create(assign_result_timer_cb, timeout, NULL);
+}
 
 // Update assign button enabled/disabled state based on selection
 static void update_assign_button_state(void) {
@@ -917,33 +1065,19 @@ static void assign_button_click_handler(lv_event_t *e) {
     int assign_result = backend_assign_spool_to_tray(printer_info.serial, selected_ams_id,
                                                       selected_slot_index, captured_spool_id);
 
-    ESP_LOGI("ui_scan_result", "Assign result: %d (0=error, 1=configured, 2=staged)", assign_result);
+    ESP_LOGI("ui_scan_result", "Assign result: %d (0=error, 1=configured, 2=staged, 3=staged_replace)", assign_result);
 
-    if (assign_result == ASSIGN_RESULT_ERROR) {
-        // Show error
-        if (objects.scan_screen_main_panel_top_panel_label_message) {
-            lv_label_set_text(objects.scan_screen_main_panel_top_panel_label_message, "Assignment failed!");
-            lv_obj_set_style_text_color(objects.scan_screen_main_panel_top_panel_label_message,
-                                        lv_color_hex(0xFF0000), 0);  // Red error
-        }
-        return;
+    // If successful, mark this tag as configured to suppress popup when returning to main screen
+    if (assign_result != ASSIGN_RESULT_ERROR) {
+        ui_nfc_card_set_configured_tag(captured_tag_id);
     }
 
-    // Show success in status panel
-    if (objects.scan_screen_main_panel_top_panel_label_message) {
-        char success_msg[64];
-        if (assign_result == ASSIGN_RESULT_STAGED) {
-            snprintf(success_msg, sizeof(success_msg), "Staged for slot %d - insert spool", selected_slot_index + 1);
-        } else {
-            snprintf(success_msg, sizeof(success_msg), "Configured slot %d!", selected_slot_index + 1);
-        }
-        lv_label_set_text(objects.scan_screen_main_panel_top_panel_label_message, success_msg);
-        lv_obj_set_style_text_color(objects.scan_screen_main_panel_top_panel_label_message,
-                                    lv_color_hex(0x00FF00), 0);  // Green success
-    }
+    // Get AMS display name and slot number for popup
+    const char *ams_name = get_ams_display_name(selected_ams_id);
+    int slot_display = selected_slot_index + 1;  // 1-based for display
 
-    // Navigate back to main screen
-    pendingScreen = SCREEN_ID_MAIN_SCREEN;
+    // Show result popup (will auto-navigate back to main screen)
+    show_assign_result_popup(assign_result, ams_name, slot_display);
 }
 
 // Wire the assign button

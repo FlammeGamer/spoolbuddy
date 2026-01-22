@@ -995,6 +995,41 @@ bool spool_get_by_tag(const char *tag_id, SpoolInfoC *info) {
     return found;
 }
 
+// SpoolInfoLocal - local struct used by ui_nfc_card.c for inventory lookups
+// Must match the typedef in ui_nfc_card.c exactly
+typedef struct {
+    char id[64];
+    char brand[32];
+    char material[32];
+    char subtype[32];
+    char color_name[32];
+    uint32_t color_rgba;
+    int label_weight;
+    int weight_current;
+    bool valid;
+} SpoolInfoLocal;
+
+// Get spool by tag - populates SpoolInfoLocal for ui_nfc_card.c popup
+bool spool_get_by_tag_local(const char *tag_id, SpoolInfoLocal *info) {
+    if (!info) return false;
+    memset(info, 0, sizeof(SpoolInfoLocal));
+
+    SpoolInfo full = {0};
+    bool found = spool_get_by_tag_full(tag_id, &full);
+    if (found && full.valid) {
+        strncpy(info->id, full.id, sizeof(info->id) - 1);
+        strncpy(info->brand, full.brand, sizeof(info->brand) - 1);
+        strncpy(info->material, full.material, sizeof(info->material) - 1);
+        strncpy(info->subtype, full.subtype, sizeof(info->subtype) - 1);
+        strncpy(info->color_name, full.color_name, sizeof(info->color_name) - 1);
+        info->color_rgba = full.color_rgba;
+        info->label_weight = full.label_weight;
+        info->weight_current = full.weight_current;
+        info->valid = true;
+    }
+    return found;
+}
+
 bool spool_add_to_inventory(const char *tag_id, const char *vendor, const char *material,
                             const char *subtype, const char *color_name, uint32_t color_rgba,
                             int label_weight, int weight_current, const char *data_origin,
@@ -1265,6 +1300,17 @@ int spool_get_untagged_list(UntaggedSpoolInfo *spools, int max_count) {
     return count;
 }
 
+// Get count of spools without NFC tags (simple wrapper)
+int spool_get_untagged_count(void) {
+    // Use a small temporary array to get the count
+    UntaggedSpoolInfo temp[1];
+    // The function returns total count even if max_count is small
+    // but we need to actually call the full version to get count
+    // For now, call with larger buffer
+    static UntaggedSpoolInfo buffer[100];
+    return spool_get_untagged_list(buffer, 100);
+}
+
 // Link an NFC tag to an existing spool
 bool spool_link_tag(const char *spool_id, const char *tag_id, const char *tag_type) {
     if (!spool_id || !tag_id || !g_curl) {
@@ -1324,6 +1370,62 @@ bool spool_link_tag(const char *spool_id, const char *tag_id, const char *tag_ty
         if (response.data) {
             printf("[backend] Response: %s\n", response.data);
         }
+    }
+
+    free(response.data);
+    return success;
+}
+
+// Sync spool weight from scale to inventory
+bool spool_sync_weight(const char *spool_id, int weight) {
+    if (!spool_id || !g_curl) {
+        printf("[backend] spool_sync_weight: invalid params\n");
+        return false;
+    }
+
+    char url[512];
+    snprintf(url, sizeof(url), "%s/api/spools/%s/weight", g_base_url, spool_id);
+
+    cJSON *json = cJSON_CreateObject();
+    cJSON_AddNumberToObject(json, "weight", weight);
+    char *body = cJSON_PrintUnformatted(json);
+    cJSON_Delete(json);
+
+    if (!body) {
+        printf("[backend] spool_sync_weight: failed to create JSON\n");
+        return false;
+    }
+
+    printf("[backend] spool_sync_weight: POST %s\n", url);
+    printf("[backend] payload: %s\n", body);
+
+    ResponseBuffer response = {0};
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    curl_easy_reset(g_curl);
+    curl_easy_setopt(g_curl, CURLOPT_URL, url);
+    curl_easy_setopt(g_curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(g_curl, CURLOPT_POSTFIELDS, body);
+    curl_easy_setopt(g_curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(g_curl, CURLOPT_WRITEFUNCTION, write_callback);
+    curl_easy_setopt(g_curl, CURLOPT_WRITEDATA, &response);
+    curl_easy_setopt(g_curl, CURLOPT_TIMEOUT, 5L);
+
+    CURLcode res = curl_easy_perform(g_curl);
+
+    long http_code = 0;
+    curl_easy_getinfo(g_curl, CURLINFO_RESPONSE_CODE, &http_code);
+
+    curl_slist_free_all(headers);
+    free(body);
+
+    bool success = (res == CURLE_OK && http_code == 200);
+
+    if (success) {
+        printf("[backend] Weight synced for spool %s: %dg\n", spool_id, weight);
+    } else {
+        printf("[backend] Failed to sync weight: HTTP %ld, curl %d\n", http_code, res);
     }
 
     free(response.data);
@@ -2364,4 +2466,3 @@ int backend_scale_calibrate(float known_weight_grams) {
     printf("[backend] Scale calibrate command failed: %s\n", curl_easy_strerror(res));
     return -1;
 }
-

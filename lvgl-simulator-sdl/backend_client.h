@@ -305,9 +305,16 @@ typedef struct {
 // Returns number of spools found (up to max_count), fills array
 int spool_get_untagged_list(UntaggedSpoolInfo *spools, int max_count);
 
+// Get count of spools without NFC tags (simpler version)
+int spool_get_untagged_count(void);
+
 // Link an NFC tag to an existing spool
 // Returns true on success, false on failure (tag already assigned or spool not found)
 bool spool_link_tag(const char *spool_id, const char *tag_id, const char *tag_type);
+
+// Update spool weight in inventory (sync from scale)
+// Returns true on success, false on failure
+bool spool_sync_weight(const char *spool_id, int weight);
 
 // =============================================================================
 // OTA functions (mocked in simulator - implemented in sim_mocks.c)

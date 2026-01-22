@@ -141,7 +141,9 @@ static void home_click_handler(lv_event_t *e) {
 }
 
 static void encode_tag_click_handler(lv_event_t *e) {
-    pendingScreen = SCREEN_ID_SCAN_RESULT;
+    (void)e;
+    // Show tag details modal (read-only view)
+    ui_nfc_card_show_details();
 }
 
 static void catalog_click_handler(lv_event_t *e) {

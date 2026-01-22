@@ -163,6 +163,7 @@ typedef struct {
     char color_name[32];    // Color name
     uint32_t color_rgba;    // RGBA packed color
     int32_t label_weight;   // Label weight in grams
+    int32_t weight_current; // Current weight from inventory (grams)
     char slicer_filament[32]; // Slicer filament ID
     bool valid;             // True if spool was found
 } SpoolInfoC;
@@ -188,6 +189,7 @@ typedef enum {
 extern bool spool_get_by_tag(const char *tag_id, SpoolInfoC *info);
 extern bool spool_get_k_profile_for_printer(const char *spool_id, const char *printer_serial, SpoolKProfileC *profile);
 extern int backend_assign_spool_to_tray(const char *printer_serial, int ams_id, int tray_id, const char *spool_id);
+extern bool spool_sync_weight(const char *spool_id, int weight);
 
 // =============================================================================
 // Programmatic Screen IDs (beyond EEZ-generated screens)
