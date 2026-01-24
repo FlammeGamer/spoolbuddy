@@ -57,6 +57,7 @@ static void ensure_wifi_keyboard(void) {
     lv_obj_align(wifi_keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_add_flag(wifi_keyboard, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_event_cb(wifi_keyboard, wifi_keyboard_event_cb, LV_EVENT_ALL, NULL);
+    apply_keyboard_layout(wifi_keyboard);
 }
 
 // =============================================================================

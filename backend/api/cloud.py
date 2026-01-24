@@ -6,6 +6,7 @@ Credentials are persisted to the database for persistence across restarts.
 """
 
 import logging
+import time
 
 from db import get_db
 from fastapi import APIRouter, HTTPException
@@ -26,6 +27,11 @@ from services.bambu_cloud import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/cloud", tags=["cloud"])
+
+# Cache for slicer settings (filament presets)
+_settings_cache: SlicerSettingsResponse | None = None
+_settings_cache_time: float = 0
+_settings_cache_ttl: float = 300.0  # 5 minutes cache TTL
 
 # Database keys for cloud credentials
 CLOUD_TOKEN_KEY = "cloud_access_token"
@@ -58,6 +64,14 @@ async def _clear_credentials() -> None:
     db = await get_db()
     await db.delete_setting(CLOUD_TOKEN_KEY)
     await db.delete_setting(CLOUD_EMAIL_KEY)
+
+
+def _clear_settings_cache() -> None:
+    """Clear the slicer settings cache."""
+    global _settings_cache, _settings_cache_time
+    _settings_cache = None
+    _settings_cache_time = 0
+    logger.info("[Cloud] Settings cache cleared")
 
 
 @router.get("/status", response_model=CloudAuthStatus)
@@ -152,19 +166,58 @@ async def logout():
     cloud = get_cloud_service()
     cloud.logout()
     await _clear_credentials()
+    _clear_settings_cache()
     return {"success": True}
 
 
+async def prefetch_slicer_settings() -> None:
+    """
+    Pre-fetch slicer settings on startup to warm the cache.
+    Called from main.py during startup if cloud is authenticated.
+    """
+    token, email = await _get_stored_credentials()
+
+    if not token:
+        logger.info("[Cloud] No stored credentials, skipping prefetch")
+        return
+
+    cloud = get_cloud_service()
+    cloud.set_token(token)
+
+    if not cloud.is_authenticated:
+        logger.info("[Cloud] Not authenticated, skipping prefetch")
+        return
+
+    try:
+        logger.info(f"[Cloud] Pre-fetching slicer settings for {email}...")
+        await get_slicer_settings()
+        logger.info("[Cloud] Slicer settings prefetch complete")
+    except Exception as e:
+        logger.warning(f"[Cloud] Prefetch failed (will retry on first request): {e}")
+
+
 @router.get("/settings", response_model=SlicerSettingsResponse)
-async def get_slicer_settings(version: str = "02.04.00.70"):
+async def get_slicer_settings(version: str = "02.04.00.70", refresh: bool = False):
     """
     Get all slicer settings (filament, printer, process presets).
 
     The version parameter determines which slicer version presets to fetch.
     Default "02.04.00.70" is the standard Bambu Studio version.
 
+    Set refresh=true to force a fresh fetch from Bambu Cloud.
+    Results are cached for 5 minutes to speed up subsequent requests.
+
     Requires authentication.
     """
+    global _settings_cache, _settings_cache_time
+
+    # Check cache first (unless refresh requested)
+    if not refresh and _settings_cache is not None:
+        cache_age = time.time() - _settings_cache_time
+        if cache_age < _settings_cache_ttl:
+            logger.info(f"[Cloud] Returning cached settings (age: {cache_age:.1f}s)")
+            return _settings_cache
+
     token, _ = await _get_stored_credentials()
 
     if not token:
@@ -177,6 +230,7 @@ async def get_slicer_settings(version: str = "02.04.00.70"):
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     try:
+        logger.info("[Cloud] Fetching fresh settings from Bambu Cloud...")
         data = await cloud.get_slicer_settings(version)
 
         result = SlicerSettingsResponse()
@@ -224,9 +278,15 @@ async def get_slicer_settings(version: str = "02.04.00.70"):
 
             setattr(result, our_type, parsed)
 
+        # Cache the result
+        _settings_cache = result
+        _settings_cache_time = time.time()
+        logger.info(f"[Cloud] Cached {len(result.filament)} filament presets")
+
         return result
     except BambuCloudAuthError:
         await _clear_credentials()
+        _clear_settings_cache()
         raise HTTPException(status_code=401, detail="Authentication expired")
     except BambuCloudError as e:
         raise HTTPException(status_code=500, detail=str(e))

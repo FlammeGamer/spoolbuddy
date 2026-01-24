@@ -98,7 +98,7 @@ fn save_calibration_to_nvs(calibration: &Calibration) -> bool {
         return false;
     };
 
-    let mut nvs = match EspNvs::new(nvs_partition.clone(), NVS_NAMESPACE, true) {
+    let nvs = match EspNvs::new(nvs_partition.clone(), NVS_NAMESPACE, true) {
         Ok(nvs) => nvs,
         Err(e) => {
             warn!("Failed to open NVS namespace for scale: {:?}", e);
@@ -292,7 +292,7 @@ pub extern "C" fn scale_reset_calibration() -> i32 {
         // Clear saved calibration from NVS
         let nvs_guard = NVS_PARTITION.lock().unwrap();
         if let Some(ref nvs_partition) = *nvs_guard {
-            if let Ok(mut nvs) = EspNvs::new(nvs_partition.clone(), NVS_NAMESPACE, true) {
+            if let Ok(nvs) = EspNvs::new(nvs_partition.clone(), NVS_NAMESPACE, true) {
                 let _ = nvs.remove(NVS_KEY_CALIBRATION);
             }
         }

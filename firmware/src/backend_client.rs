@@ -9,7 +9,6 @@ use serde::Deserialize;
 use std::ffi::{c_char, c_int};
 use std::sync::Mutex;
 use embedded_svc::http::client::Client as HttpClient;
-use embedded_svc::io::Write;
 
 /// Maximum number of printers to cache (reduced for memory)
 const MAX_PRINTERS: usize = 4;
@@ -311,10 +310,7 @@ fn get_wifi_params() -> String {
         rssi: 0,
     };
 
-    // SAFETY: wifi_get_status is a C-callable function that fills the struct
-    unsafe {
-        crate::wifi_manager::wifi_get_status(&mut status as *mut _);
-    }
+    crate::wifi_manager::wifi_get_status(&mut status as *mut _);
 
     if status.state == 0 {
         // Uninitialized - don't send WiFi params
@@ -326,9 +322,7 @@ fn get_wifi_params() -> String {
     // Get SSID if connected
     if status.state == 3 {
         let mut ssid_buf = [0u8; 33];
-        let ssid_len = unsafe {
-            crate::wifi_manager::wifi_get_ssid(ssid_buf.as_mut_ptr() as *mut c_char, 33)
-        };
+        let ssid_len = crate::wifi_manager::wifi_get_ssid(ssid_buf.as_mut_ptr() as *mut c_char, 33);
         if ssid_len > 0 {
             // Convert buffer to string (find null terminator)
             let ssid = ssid_buf.iter()
@@ -1248,6 +1242,65 @@ pub extern "C" fn backend_get_ams_unit(
     0
 }
 
+/// AMS tray info with string color (for status_bar.c hex parsing)
+#[repr(C)]
+pub struct AmsTrayInfo {
+    pub tray_type: [c_char; 16],
+    pub tray_color: [c_char; 16],  // Hex string like "FF0000FF"
+    pub remain: u8,
+}
+
+/// Get AMS tray info with color as hex string
+/// Returns 0 on success, -1 on error
+#[no_mangle]
+pub extern "C" fn backend_get_ams_tray(
+    printer_index: c_int,
+    ams_index: c_int,
+    tray_index: c_int,
+    info: *mut AmsTrayInfo,
+) -> c_int {
+    if info.is_null() {
+        return -1;
+    }
+
+    let manager = BACKEND_MANAGER.lock().unwrap();
+    if printer_index < 0 || printer_index as usize >= manager.printer_count {
+        return -1;
+    }
+
+    let printer = &manager.printers[printer_index as usize];
+    if ams_index < 0 || ams_index as usize >= printer.ams_unit_count as usize {
+        return -1;
+    }
+
+    let ams = &printer.ams_units[ams_index as usize];
+    if tray_index < 0 || tray_index as usize >= ams.tray_count as usize {
+        return -1;
+    }
+
+    let tray = &ams.trays[tray_index as usize];
+
+    unsafe {
+        let out = &mut *info;
+
+        // Copy tray_type
+        out.tray_type = [0; 16];
+        for (j, &byte) in tray.tray_type.iter().enumerate() {
+            out.tray_type[j] = byte as c_char;
+        }
+
+        // Convert packed RGBA to hex string
+        out.tray_color = [0; 16];
+        let color = tray.tray_color;
+        let hex_str = format!("{:08X}", color);
+        copy_to_c_buf_signed(&hex_str, &mut out.tray_color);
+
+        out.remain = tray.remain;
+    }
+
+    0
+}
+
 /// Get active tray for single-nozzle printer
 /// Returns -1 if not available
 #[no_mangle]
@@ -1435,6 +1488,7 @@ pub struct SpoolInfoC {
     pub color_name: [u8; 32],   // Color name
     pub color_rgba: u32,        // RGBA packed color
     pub label_weight: i32,      // Label weight in grams
+    pub weight_current: i32,    // Current weight from inventory (grams)
     pub slicer_filament: [u8; 32], // Slicer filament ID
     pub valid: bool,            // True if spool was found
 }
@@ -1459,6 +1513,7 @@ struct ApiSpool {
     color_name: Option<String>,
     rgba: Option<String>,
     label_weight: Option<i32>,
+    weight_current: Option<i32>,
     slicer_filament: Option<String>,
 }
 
@@ -1475,6 +1530,7 @@ struct ApiKProfile {
 #[derive(Debug, Deserialize)]
 struct ApiAssignResponse {
     status: Option<String>,     // "configured" or "staged"
+    #[allow(dead_code)]
     message: Option<String>,
 }
 
@@ -1585,6 +1641,7 @@ pub extern "C" fn spool_get_by_tag(tag_id: *const c_char, info: *mut SpoolInfoC)
                     color_name: [0; 32],
                     color_rgba: 0,
                     label_weight: 0,
+                    weight_current: 0,
                     slicer_filament: [0; 32],
                     valid: true,
                 };
@@ -1608,6 +1665,9 @@ pub extern "C" fn spool_get_by_tag(tag_id: *const c_char, info: *mut SpoolInfoC)
                 }
                 if let Some(w) = spool.label_weight {
                     info_ref.label_weight = w;
+                }
+                if let Some(w) = spool.weight_current {
+                    info_ref.weight_current = w;
                 }
                 if let Some(ref sf) = spool.slicer_filament {
                     copy_to_c_buf(sf, &mut info_ref.slicer_filament);
@@ -1736,6 +1796,599 @@ pub extern "C" fn spool_get_k_profile_for_printer(
 
     info!("spool_get_k_profile: no profile for {} on {}", spool_id_str, printer_serial_str);
     false
+}
+
+/// Check if a spool with given tag_id exists in inventory
+#[no_mangle]
+pub extern "C" fn spool_exists_by_tag(tag_id: *const c_char) -> bool {
+    if tag_id.is_null() {
+        return false;
+    }
+
+    let tag_id_str = unsafe {
+        match std::ffi::CStr::from_ptr(tag_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return false,
+        }
+    };
+
+    let manager = BACKEND_MANAGER.lock().unwrap();
+    let base_url = manager.server_url.clone();
+    drop(manager);
+
+    if base_url.is_empty() {
+        return false;
+    }
+
+    // GET /api/spools - get all spools and search for matching tag
+    let url = format!("{}/api/spools", base_url);
+
+    let config = HttpConfig {
+        timeout: Some(std::time::Duration::from_millis(HTTP_TIMEOUT_MS)),
+        ..Default::default()
+    };
+
+    let connection = match EspHttpConnection::new(&config) {
+        Ok(c) => c,
+        Err(_) => return false,
+    };
+
+    let mut client = HttpClient::wrap(connection);
+    let request = match client.get(&url) {
+        Ok(r) => r,
+        Err(_) => return false,
+    };
+
+    let mut response = match request.submit() {
+        Ok(r) => r,
+        Err(_) => return false,
+    };
+
+    if response.status() != 200 {
+        return false;
+    }
+
+    // Read response - use larger buffer for full spool list
+    let mut buf = vec![0u8; 16384];
+    let mut total = 0;
+    loop {
+        match response.read(&mut buf[total..]) {
+            Ok(0) => break,
+            Ok(n) => total += n,
+            Err(_) => break,
+        }
+        if total >= buf.len() {
+            break;
+        }
+    }
+
+    if total == 0 {
+        return false;
+    }
+
+    // Parse as JSON array of spools
+    let body = String::from_utf8_lossy(&buf[..total]);
+    let spools: Vec<ApiSpool> = match serde_json::from_str(&body) {
+        Ok(s) => s,
+        Err(e) => {
+            warn!("spool_exists_by_tag: JSON parse error: {:?}", e);
+            return false;
+        }
+    };
+
+    // Search for matching tag_id
+    for spool in spools {
+        if let Some(ref tid) = spool.tag_id {
+            if tid == tag_id_str {
+                info!("spool_exists_by_tag: found spool for tag {}", tag_id_str);
+                return true;
+            }
+        }
+    }
+
+    info!("spool_exists_by_tag: no spool found for tag {}", tag_id_str);
+    false
+}
+
+/// Add a new spool to inventory
+#[no_mangle]
+pub extern "C" fn spool_add_to_inventory(
+    tag_id: *const c_char,
+    vendor: *const c_char,
+    material: *const c_char,
+    subtype: *const c_char,
+    color_name: *const c_char,
+    color_rgba: u32,
+    label_weight: c_int,
+    weight_current: c_int,
+    data_origin: *const c_char,
+    tag_type: *const c_char,
+    slicer_filament: *const c_char,
+) -> bool {
+    fn c_str_to_string(ptr: *const c_char) -> String {
+        if ptr.is_null() {
+            String::new()
+        } else {
+            unsafe {
+                std::ffi::CStr::from_ptr(ptr)
+                    .to_str()
+                    .unwrap_or("")
+                    .to_string()
+            }
+        }
+    }
+
+    let tag_id_str = c_str_to_string(tag_id);
+    let vendor_str = c_str_to_string(vendor);
+    let material_str = c_str_to_string(material);
+    let subtype_str = c_str_to_string(subtype);
+    let color_name_str = c_str_to_string(color_name);
+    let data_origin_str = c_str_to_string(data_origin);
+    let tag_type_str = c_str_to_string(tag_type);
+    let slicer_filament_str = c_str_to_string(slicer_filament);
+
+    // Convert RGBA to hex string
+    let rgba_hex = format!("{:08X}", color_rgba);
+
+    let manager = BACKEND_MANAGER.lock().unwrap();
+    let base_url = manager.server_url.clone();
+    drop(manager);
+
+    if base_url.is_empty() {
+        return false;
+    }
+
+    // POST /api/spools
+    let url = format!("{}/api/spools", base_url);
+
+    let body = format!(
+        r#"{{"tag_id":"{}","brand":"{}","material":"{}","subtype":"{}","color_name":"{}","rgba":"{}","label_weight":{},"weight_current":{},"data_origin":"{}","tag_type":"{}","slicer_filament":"{}"}}"#,
+        tag_id_str, vendor_str, material_str, subtype_str, color_name_str,
+        rgba_hex, label_weight, weight_current, data_origin_str, tag_type_str, slicer_filament_str
+    );
+
+    info!("spool_add_to_inventory: POST {} with {}", url, body);
+
+    let config = HttpConfig {
+        timeout: Some(std::time::Duration::from_millis(HTTP_TIMEOUT_MS)),
+        ..Default::default()
+    };
+
+    let connection = match EspHttpConnection::new(&config) {
+        Ok(c) => c,
+        Err(e) => {
+            warn!("Failed to create HTTP connection: {:?}", e);
+            return false;
+        }
+    };
+
+    let mut client = HttpClient::wrap(connection);
+
+    let headers = [
+        ("Content-Type", "application/json"),
+        ("Content-Length", &body.len().to_string()),
+    ];
+
+    let mut request = match client.request(embedded_svc::http::Method::Post, &url, &headers) {
+        Ok(r) => r,
+        Err(e) => {
+            warn!("Failed to create POST request: {:?}", e);
+            return false;
+        }
+    };
+
+    if let Err(e) = request.write(body.as_bytes()) {
+        warn!("Failed to write request body: {:?}", e);
+        return false;
+    }
+
+    if let Err(e) = request.flush() {
+        warn!("Failed to flush request: {:?}", e);
+        return false;
+    }
+
+    let response = match request.submit() {
+        Ok(r) => r,
+        Err(e) => {
+            warn!("Failed to submit request: {:?}", e);
+            return false;
+        }
+    };
+
+    let status = response.status();
+    if status != 200 && status != 201 {
+        warn!("spool_add_to_inventory failed with status {}", status);
+        return false;
+    }
+
+    info!("spool_add_to_inventory: success");
+    true
+}
+
+/// Untagged spool info for FFI
+#[repr(C)]
+pub struct UntaggedSpoolInfo {
+    pub id: [c_char; 64],
+    pub brand: [c_char; 32],
+    pub material: [c_char; 32],
+    pub color_name: [c_char; 32],
+    pub color_rgba: u32,
+    pub label_weight: i32,
+    pub spool_number: i32,
+    pub valid: bool,
+}
+
+/// API response for untagged spools
+#[derive(Debug, Clone, Deserialize, Default)]
+struct ApiUntaggedSpool {
+    id: String,
+    brand: Option<String>,
+    material: Option<String>,
+    color_name: Option<String>,
+    rgba: Option<String>,
+    label_weight: Option<i32>,
+    spool_number: Option<i32>,
+}
+
+/// Get list of spools without NFC tags assigned
+#[no_mangle]
+pub extern "C" fn spool_get_untagged_list(
+    spools: *mut UntaggedSpoolInfo,
+    max_count: c_int,
+) -> c_int {
+    if spools.is_null() || max_count <= 0 {
+        return -1;
+    }
+
+    let manager = BACKEND_MANAGER.lock().unwrap();
+    let base_url = manager.server_url.clone();
+    drop(manager);
+
+    if base_url.is_empty() {
+        return -1;
+    }
+
+    // GET /api/spools?untagged=true
+    let url = format!("{}/api/spools?untagged=true", base_url);
+
+    let config = HttpConfig {
+        timeout: Some(std::time::Duration::from_millis(HTTP_TIMEOUT_MS)),
+        ..Default::default()
+    };
+
+    let connection = match EspHttpConnection::new(&config) {
+        Ok(c) => c,
+        Err(_) => return -1,
+    };
+
+    let mut client = HttpClient::wrap(connection);
+    let request = match client.get(&url) {
+        Ok(r) => r,
+        Err(_) => return -1,
+    };
+
+    let mut response = match request.submit() {
+        Ok(r) => r,
+        Err(_) => return -1,
+    };
+
+    if response.status() != 200 {
+        return -1;
+    }
+
+    let mut buf = vec![0u8; 8192];
+    let mut total = 0;
+    loop {
+        match response.read(&mut buf[total..]) {
+            Ok(0) => break,
+            Ok(n) => total += n,
+            Err(_) => break,
+        }
+        if total >= buf.len() {
+            break;
+        }
+    }
+
+    if total == 0 {
+        return 0;
+    }
+
+    let body = String::from_utf8_lossy(&buf[..total]);
+    let api_spools: Vec<ApiUntaggedSpool> = match serde_json::from_str(&body) {
+        Ok(s) => s,
+        Err(_) => return -1,
+    };
+
+    let count = api_spools.len().min(max_count as usize);
+
+    for (i, spool) in api_spools.iter().take(count).enumerate() {
+        let spool_ref = unsafe { &mut *spools.add(i) };
+
+        spool_ref.id = [0; 64];
+        spool_ref.brand = [0; 32];
+        spool_ref.material = [0; 32];
+        spool_ref.color_name = [0; 32];
+        spool_ref.color_rgba = 0;
+        spool_ref.label_weight = spool.label_weight.unwrap_or(0);
+        spool_ref.spool_number = spool.spool_number.unwrap_or(0);
+        spool_ref.valid = true;
+
+        copy_to_c_buf_signed(&spool.id, &mut spool_ref.id);
+        if let Some(ref b) = spool.brand {
+            copy_to_c_buf_signed(b, &mut spool_ref.brand);
+        }
+        if let Some(ref m) = spool.material {
+            copy_to_c_buf_signed(m, &mut spool_ref.material);
+        }
+        if let Some(ref c) = spool.color_name {
+            copy_to_c_buf_signed(c, &mut spool_ref.color_name);
+        }
+        if let Some(ref rgba) = spool.rgba {
+            spool_ref.color_rgba = parse_rgba_hex(rgba);
+        }
+    }
+
+    count as c_int
+}
+
+/// Get count of spools without NFC tags
+#[no_mangle]
+pub extern "C" fn spool_get_untagged_count() -> c_int {
+    let manager = BACKEND_MANAGER.lock().unwrap();
+    let base_url = manager.server_url.clone();
+    drop(manager);
+
+    if base_url.is_empty() {
+        return -1;
+    }
+
+    // GET /api/spools?untagged=true (just count results)
+    let url = format!("{}/api/spools?untagged=true", base_url);
+
+    let config = HttpConfig {
+        timeout: Some(std::time::Duration::from_millis(HTTP_TIMEOUT_MS)),
+        ..Default::default()
+    };
+
+    let connection = match EspHttpConnection::new(&config) {
+        Ok(c) => c,
+        Err(_) => return -1,
+    };
+
+    let mut client = HttpClient::wrap(connection);
+    let request = match client.get(&url) {
+        Ok(r) => r,
+        Err(_) => return -1,
+    };
+
+    let mut response = match request.submit() {
+        Ok(r) => r,
+        Err(_) => return -1,
+    };
+
+    if response.status() != 200 {
+        return -1;
+    }
+
+    let mut buf = vec![0u8; 8192];
+    let mut total = 0;
+    loop {
+        match response.read(&mut buf[total..]) {
+            Ok(0) => break,
+            Ok(n) => total += n,
+            Err(_) => break,
+        }
+        if total >= buf.len() {
+            break;
+        }
+    }
+
+    if total == 0 {
+        return 0;
+    }
+
+    let body = String::from_utf8_lossy(&buf[..total]);
+    let spools: Vec<serde_json::Value> = match serde_json::from_str(&body) {
+        Ok(s) => s,
+        Err(_) => return -1,
+    };
+
+    spools.len() as c_int
+}
+
+/// Link an NFC tag to an existing spool
+/// Returns: 0 = success, -1 = connection error, or HTTP status code on failure (e.g., 409 = already assigned)
+#[no_mangle]
+pub extern "C" fn spool_link_tag(
+    spool_id: *const c_char,
+    tag_id: *const c_char,
+    tag_type: *const c_char,
+) -> c_int {
+    if spool_id.is_null() || tag_id.is_null() {
+        return -1;
+    }
+
+    fn c_str_to_string(ptr: *const c_char) -> String {
+        if ptr.is_null() {
+            String::new()
+        } else {
+            unsafe {
+                std::ffi::CStr::from_ptr(ptr)
+                    .to_str()
+                    .unwrap_or("")
+                    .to_string()
+            }
+        }
+    }
+
+    let spool_id_str = c_str_to_string(spool_id);
+    let tag_id_str = c_str_to_string(tag_id);
+    let tag_type_str = c_str_to_string(tag_type);
+
+    let manager = BACKEND_MANAGER.lock().unwrap();
+    let base_url = manager.server_url.clone();
+    drop(manager);
+
+    if base_url.is_empty() {
+        return -1;
+    }
+
+    // PATCH /api/spools/{spool_id}/link-tag
+    let url = format!("{}/api/spools/{}/link-tag", base_url, spool_id_str);
+
+    let body = format!(
+        r#"{{"tag_id":"{}","tag_type":"{}"}}"#,
+        tag_id_str, tag_type_str
+    );
+
+    info!("spool_link_tag: PATCH {} with {}", url, body);
+
+    let config = HttpConfig {
+        timeout: Some(std::time::Duration::from_millis(HTTP_TIMEOUT_MS)),
+        ..Default::default()
+    };
+
+    let connection = match EspHttpConnection::new(&config) {
+        Ok(c) => c,
+        Err(e) => {
+            warn!("Failed to create HTTP connection: {:?}", e);
+            return -1;
+        }
+    };
+
+    let mut client = HttpClient::wrap(connection);
+
+    let headers = [
+        ("Content-Type", "application/json"),
+        ("Content-Length", &body.len().to_string()),
+    ];
+
+    let mut request = match client.request(embedded_svc::http::Method::Patch, &url, &headers) {
+        Ok(r) => r,
+        Err(e) => {
+            warn!("Failed to create PATCH request: {:?}", e);
+            return -1;
+        }
+    };
+
+    if let Err(e) = request.write(body.as_bytes()) {
+        warn!("Failed to write request body: {:?}", e);
+        return -1;
+    }
+
+    if let Err(e) = request.flush() {
+        warn!("Failed to flush request: {:?}", e);
+        return -1;
+    }
+
+    let response = match request.submit() {
+        Ok(r) => r,
+        Err(e) => {
+            warn!("Failed to submit request: {:?}", e);
+            return -1;
+        }
+    };
+
+    let status = response.status();
+    if status != 200 {
+        warn!("spool_link_tag failed with status {}", status);
+        return status as c_int;
+    }
+
+    info!("spool_link_tag: success");
+    0
+}
+
+/// Sync spool weight to backend
+#[no_mangle]
+pub extern "C" fn spool_sync_weight(
+    spool_id: *const c_char,
+    weight: c_int,
+) -> bool {
+    if spool_id.is_null() {
+        return false;
+    }
+
+    let spool_id_str = unsafe {
+        std::ffi::CStr::from_ptr(spool_id)
+            .to_str()
+            .unwrap_or("")
+            .to_string()
+    };
+
+    if spool_id_str.is_empty() {
+        return false;
+    }
+
+    let manager = BACKEND_MANAGER.lock().unwrap();
+    let base_url = manager.server_url.clone();
+    drop(manager);
+
+    if base_url.is_empty() {
+        return false;
+    }
+
+    // PUT /api/spools/{spool_id}
+    let url = format!("{}/api/spools/{}", base_url, spool_id_str);
+
+    let body = format!(r#"{{"weight_current":{}}}"#, weight);
+
+    info!("spool_sync_weight: PUT {} with {}", url, body);
+
+    let config = HttpConfig {
+        timeout: Some(std::time::Duration::from_millis(HTTP_TIMEOUT_MS)),
+        ..Default::default()
+    };
+
+    let connection = match EspHttpConnection::new(&config) {
+        Ok(c) => c,
+        Err(e) => {
+            warn!("Failed to create HTTP connection: {:?}", e);
+            return false;
+        }
+    };
+
+    let mut client = HttpClient::wrap(connection);
+
+    let headers = [
+        ("Content-Type", "application/json"),
+        ("Content-Length", &body.len().to_string()),
+    ];
+
+    let mut request = match client.request(embedded_svc::http::Method::Put, &url, &headers) {
+        Ok(r) => r,
+        Err(e) => {
+            warn!("Failed to create PUT request: {:?}", e);
+            return false;
+        }
+    };
+
+    if let Err(e) = request.write(body.as_bytes()) {
+        warn!("Failed to write request body: {:?}", e);
+        return false;
+    }
+
+    if let Err(e) = request.flush() {
+        warn!("Failed to flush request: {:?}", e);
+        return false;
+    }
+
+    let response = match request.submit() {
+        Ok(r) => r,
+        Err(e) => {
+            warn!("Failed to submit request: {:?}", e);
+            return false;
+        }
+    };
+
+    let status = response.status();
+    if status != 200 {
+        warn!("spool_sync_weight failed with status {}", status);
+        return false;
+    }
+
+    info!("spool_sync_weight: success");
+    true
 }
 
 /// Assign result enum (matches simulator)
@@ -1879,4 +2532,939 @@ pub extern "C" fn backend_assign_spool_to_tray(
     // Default to configured if status was OK
     info!("Assign result: assuming configured (status {})", status);
     1
+}
+
+// =============================================================================
+// AMS Slot Configuration API (for Configure Slot modal)
+// =============================================================================
+
+/// Slicer preset from cloud API
+#[derive(Debug, Clone, Deserialize, Default)]
+struct ApiSlicerPreset {
+    setting_id: String,
+    name: String,
+    #[serde(rename = "type")]
+    preset_type: Option<String>,
+    is_custom: Option<bool>,
+}
+
+/// Slicer settings response from cloud API
+#[derive(Debug, Clone, Deserialize, Default)]
+struct ApiSlicerSettingsResponse {
+    filament: Option<Vec<ApiSlicerPreset>>,
+    #[allow(dead_code)]
+    printer: Option<Vec<ApiSlicerPreset>>,
+    #[allow(dead_code)]
+    process: Option<Vec<ApiSlicerPreset>>,
+}
+
+/// Preset detail from cloud API
+#[derive(Debug, Clone, Deserialize, Default)]
+struct ApiPresetDetail {
+    filament_id: Option<String>,
+    base_id: Option<String>,
+    setting: Option<ApiPresetDetailSetting>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+struct ApiPresetDetailSetting {
+    filament_id: Option<String>,
+    base_id: Option<String>,
+}
+
+/// K-profile from calibrations API
+#[derive(Debug, Clone, Deserialize, Default)]
+struct ApiKProfileInfo {
+    cali_idx: Option<i32>,
+    name: Option<String>,
+    k_value: Option<f64>,
+    filament_id: Option<String>,
+    setting_id: Option<String>,
+    extruder_id: Option<i32>,
+    nozzle_temp: Option<i32>,
+}
+
+/// Color catalog entry from colors API
+#[derive(Debug, Clone, Deserialize, Default)]
+struct ApiColorEntry {
+    id: Option<i32>,
+    manufacturer: Option<String>,
+    color_name: Option<String>,
+    hex_color: Option<String>,
+    material: Option<String>,
+}
+
+// C-compatible structs for FFI (names match ui_internal.h)
+
+/// Slicer preset (C-compatible, matches ui_internal.h SlicerPreset)
+#[repr(C)]
+pub struct SlicerPreset {
+    pub setting_id: [c_char; 64],
+    pub name: [c_char; 64],
+    pub preset_type: [c_char; 16],  // Called 'type' in C, but 'type' is reserved in Rust
+    pub is_custom: bool,
+}
+
+/// Preset detail (C-compatible, matches ui_internal.h PresetDetail)
+#[repr(C)]
+pub struct PresetDetail {
+    pub filament_id: [c_char; 64],
+    pub base_id: [c_char; 64],
+    pub has_filament_id: bool,
+    pub has_base_id: bool,
+}
+
+/// K-profile info (C-compatible, matches ui_internal.h KProfileInfo)
+#[repr(C)]
+pub struct KProfileInfo {
+    pub cali_idx: i32,
+    pub name: [c_char; 64],
+    pub k_value: [c_char; 16],
+    pub filament_id: [c_char; 32],
+    pub setting_id: [c_char; 64],
+    pub extruder_id: i32,
+    pub nozzle_temp: i32,
+}
+
+/// Color catalog entry (C-compatible, matches ui_internal.h ColorCatalogEntry)
+#[repr(C)]
+pub struct ColorCatalogEntry {
+    pub id: i32,
+    pub manufacturer: [c_char; 64],
+    pub color_name: [c_char; 64],
+    pub hex_color: [c_char; 16],
+    pub material: [c_char; 32],
+}
+
+/// Get slicer filament presets from Bambu Cloud (via backend)
+/// Returns number of presets found (up to max_count), -1 on error
+#[no_mangle]
+pub extern "C" fn backend_get_slicer_presets(
+    presets: *mut SlicerPreset,
+    max_count: c_int,
+) -> c_int {
+    info!("backend_get_slicer_presets called");
+
+    if presets.is_null() || max_count <= 0 {
+        return -1;
+    }
+
+    let manager = BACKEND_MANAGER.lock().unwrap();
+    let base_url = manager.server_url.clone();
+    let is_connected = matches!(manager.state, BackendState::Connected { .. });
+    drop(manager);
+
+    if base_url.is_empty() {
+        info!("backend_get_slicer_presets: no server URL configured");
+        return 0;  // Return 0 presets instead of -1 if not configured
+    }
+
+    if !is_connected {
+        info!("backend_get_slicer_presets: backend not connected, skipping");
+        return 0;  // Don't block UI if backend not connected
+    }
+
+    // GET /api/cloud/settings
+    let url = format!("{}/api/cloud/settings", base_url);
+
+    let config = HttpConfig {
+        timeout: Some(std::time::Duration::from_millis(HTTP_TIMEOUT_MS)),
+        ..Default::default()
+    };
+
+    let connection = match EspHttpConnection::new(&config) {
+        Ok(c) => c,
+        Err(_) => return -1,
+    };
+
+    let mut client = HttpClient::wrap(connection);
+    let request = match client.get(&url) {
+        Ok(r) => r,
+        Err(_) => return -1,
+    };
+
+    let mut response = match request.submit() {
+        Ok(r) => r,
+        Err(_) => return -1,
+    };
+
+    if response.status() != 200 {
+        // Might be 401 (not authenticated) - return 0 presets
+        if response.status() == 401 {
+            return 0;
+        }
+        return -1;
+    }
+
+    // Read response body
+    let mut buf = vec![0u8; 262144]; // 256KB buffer for presets list
+    let mut total = 0;
+    loop {
+        match response.read(&mut buf[total..]) {
+            Ok(0) => break,
+            Ok(n) => total += n,
+            Err(_) => break,
+        }
+        if total >= buf.len() {
+            break;
+        }
+    }
+
+    if total == 0 {
+        return 0;
+    }
+
+    // Parse response
+    let body = String::from_utf8_lossy(&buf[..total]);
+    let settings: ApiSlicerSettingsResponse = match serde_json::from_str(&body) {
+        Ok(s) => s,
+        Err(e) => {
+            warn!("Failed to parse slicer presets: {:?}", e);
+            return -1;
+        }
+    };
+
+    // Extract filament presets only
+    let filaments = settings.filament.unwrap_or_default();
+    let count = filaments.len().min(max_count as usize);
+
+    for (i, preset) in filaments.iter().take(count).enumerate() {
+        let preset_ref = unsafe { &mut *presets.add(i) };
+
+        // Initialize with zeros
+        preset_ref.setting_id = [0; 64];
+        preset_ref.name = [0; 64];
+        preset_ref.preset_type = [0; 16];
+        preset_ref.is_custom = preset.is_custom.unwrap_or(false);
+
+        // Copy strings
+        copy_to_c_buf_signed(&preset.setting_id, &mut preset_ref.setting_id);
+        copy_to_c_buf_signed(&preset.name, &mut preset_ref.name);
+        if let Some(ref t) = preset.preset_type {
+            copy_to_c_buf_signed(t, &mut preset_ref.preset_type);
+        }
+    }
+
+    info!("backend_get_slicer_presets: returning {} presets", count);
+    count as c_int
+}
+
+/// Get detailed preset info including filament_id and base_id
+/// Returns true on success, false on failure
+#[no_mangle]
+pub extern "C" fn backend_get_preset_detail(
+    setting_id: *const c_char,
+    detail: *mut PresetDetail,
+) -> bool {
+    if setting_id.is_null() || detail.is_null() {
+        return false;
+    }
+
+    let setting_id_str = unsafe {
+        match std::ffi::CStr::from_ptr(setting_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return false,
+        }
+    };
+
+    let manager = BACKEND_MANAGER.lock().unwrap();
+    let base_url = manager.server_url.clone();
+    let is_connected = matches!(manager.state, BackendState::Connected { .. });
+    drop(manager);
+
+    if base_url.is_empty() || !is_connected {
+        info!("backend_get_preset_detail: backend not available, skipping");
+        return false;
+    }
+
+    // GET /api/cloud/settings/{setting_id}
+    let url = format!("{}/api/cloud/settings/{}", base_url, setting_id_str);
+
+    let config = HttpConfig {
+        timeout: Some(std::time::Duration::from_millis(HTTP_TIMEOUT_MS)),
+        ..Default::default()
+    };
+
+    let connection = match EspHttpConnection::new(&config) {
+        Ok(c) => c,
+        Err(_) => return false,
+    };
+
+    let mut client = HttpClient::wrap(connection);
+    let request = match client.get(&url) {
+        Ok(r) => r,
+        Err(_) => return false,
+    };
+
+    let mut response = match request.submit() {
+        Ok(r) => r,
+        Err(_) => return false,
+    };
+
+    if response.status() != 200 {
+        return false;
+    }
+
+    // Read response body
+    let mut buf = vec![0u8; 4096];
+    let mut total = 0;
+    loop {
+        match response.read(&mut buf[total..]) {
+            Ok(0) => break,
+            Ok(n) => total += n,
+            Err(_) => break,
+        }
+        if total >= buf.len() {
+            break;
+        }
+    }
+
+    if total == 0 {
+        return false;
+    }
+
+    // Parse response
+    let body = String::from_utf8_lossy(&buf[..total]);
+    let api_detail: ApiPresetDetail = match serde_json::from_str(&body) {
+        Ok(d) => d,
+        Err(_) => return false,
+    };
+
+    // Fill detail struct
+    let detail_ref = unsafe { &mut *detail };
+    detail_ref.filament_id = [0; 64];
+    detail_ref.base_id = [0; 64];
+    detail_ref.has_filament_id = false;
+    detail_ref.has_base_id = false;
+
+    // Check top-level first, then nested setting object
+    if let Some(ref fid) = api_detail.filament_id {
+        copy_to_c_buf_signed(fid, &mut detail_ref.filament_id);
+        detail_ref.has_filament_id = true;
+    } else if let Some(ref setting) = api_detail.setting {
+        if let Some(ref fid) = setting.filament_id {
+            copy_to_c_buf_signed(fid, &mut detail_ref.filament_id);
+            detail_ref.has_filament_id = true;
+        }
+    }
+
+    if let Some(ref bid) = api_detail.base_id {
+        copy_to_c_buf_signed(bid, &mut detail_ref.base_id);
+        detail_ref.has_base_id = true;
+    } else if let Some(ref setting) = api_detail.setting {
+        if let Some(ref bid) = setting.base_id {
+            copy_to_c_buf_signed(bid, &mut detail_ref.base_id);
+            detail_ref.has_base_id = true;
+        }
+    }
+
+    info!("backend_get_preset_detail: {} -> has_fid={}, has_bid={}",
+          setting_id_str, detail_ref.has_filament_id, detail_ref.has_base_id);
+    true
+}
+
+/// Get K-profiles (calibration profiles) for a printer
+/// Returns number of profiles found, -1 on error
+#[no_mangle]
+pub extern "C" fn backend_get_k_profiles(
+    printer_serial: *const c_char,
+    nozzle_diameter: *const c_char,
+    profiles: *mut KProfileInfo,
+    max_count: c_int,
+) -> c_int {
+    info!("backend_get_k_profiles called");
+
+    if printer_serial.is_null() || profiles.is_null() || max_count <= 0 {
+        return -1;
+    }
+
+    let serial_str = unsafe {
+        match std::ffi::CStr::from_ptr(printer_serial).to_str() {
+            Ok(s) => s,
+            Err(_) => return -1,
+        }
+    };
+
+    let nozzle_str = if nozzle_diameter.is_null() {
+        "0.4"
+    } else {
+        unsafe {
+            match std::ffi::CStr::from_ptr(nozzle_diameter).to_str() {
+                Ok(s) => s,
+                Err(_) => "0.4",
+            }
+        }
+    };
+
+    let manager = BACKEND_MANAGER.lock().unwrap();
+    let base_url = manager.server_url.clone();
+    let is_connected = matches!(manager.state, BackendState::Connected { .. });
+    drop(manager);
+
+    if base_url.is_empty() {
+        info!("backend_get_k_profiles: no server URL configured");
+        return 0;  // Return 0 profiles instead of -1 if not configured
+    }
+
+    if !is_connected {
+        info!("backend_get_k_profiles: backend not connected, skipping");
+        return 0;  // Don't block UI if backend not connected
+    }
+
+    info!("backend_get_k_profiles: fetching from {}", base_url);
+
+    // GET /api/printers/{serial}/calibrations?nozzle_diameter=X
+    let url = format!("{}/api/printers/{}/calibrations?nozzle_diameter={}",
+                      base_url, serial_str, nozzle_str);
+
+    let config = HttpConfig {
+        timeout: Some(std::time::Duration::from_millis(HTTP_TIMEOUT_MS)),
+        ..Default::default()
+    };
+
+    let connection = match EspHttpConnection::new(&config) {
+        Ok(c) => c,
+        Err(_) => return -1,
+    };
+
+    let mut client = HttpClient::wrap(connection);
+    let request = match client.get(&url) {
+        Ok(r) => r,
+        Err(_) => return -1,
+    };
+
+    let mut response = match request.submit() {
+        Ok(r) => r,
+        Err(_) => return -1,
+    };
+
+    if response.status() != 200 {
+        return -1;
+    }
+
+    // Read response body
+    let mut buf = vec![0u8; 8192];
+    let mut total = 0;
+    loop {
+        match response.read(&mut buf[total..]) {
+            Ok(0) => break,
+            Ok(n) => total += n,
+            Err(_) => break,
+        }
+        if total >= buf.len() {
+            break;
+        }
+    }
+
+    if total == 0 {
+        return 0;
+    }
+
+    // Parse response
+    let body = String::from_utf8_lossy(&buf[..total]);
+    let api_profiles: Vec<ApiKProfileInfo> = match serde_json::from_str(&body) {
+        Ok(p) => p,
+        Err(e) => {
+            warn!("Failed to parse K-profiles: {:?}", e);
+            return -1;
+        }
+    };
+
+    let count = api_profiles.len().min(max_count as usize);
+
+    for (i, prof) in api_profiles.iter().take(count).enumerate() {
+        let prof_ref = unsafe { &mut *profiles.add(i) };
+
+        prof_ref.cali_idx = prof.cali_idx.unwrap_or(-1);
+        prof_ref.name = [0; 64];
+        prof_ref.k_value = [0; 16];
+        prof_ref.filament_id = [0; 32];
+        prof_ref.setting_id = [0; 64];
+        prof_ref.extruder_id = prof.extruder_id.unwrap_or(-1);
+        prof_ref.nozzle_temp = prof.nozzle_temp.unwrap_or(0);
+
+        if let Some(ref n) = prof.name {
+            copy_to_c_buf_signed(n, &mut prof_ref.name);
+        }
+        if let Some(k) = prof.k_value {
+            let k_str = format!("{:.3}", k);
+            copy_to_c_buf_signed(&k_str, &mut prof_ref.k_value);
+        }
+        if let Some(ref fid) = prof.filament_id {
+            copy_to_c_buf_signed(fid, &mut prof_ref.filament_id);
+        }
+        if let Some(ref sid) = prof.setting_id {
+            copy_to_c_buf_signed(sid, &mut prof_ref.setting_id);
+        }
+    }
+
+    info!("backend_get_k_profiles: returning {} profiles for {}", count, serial_str);
+    count as c_int
+}
+
+/// Set filament in an AMS slot
+/// Returns true on success
+#[no_mangle]
+pub extern "C" fn backend_set_slot_filament(
+    printer_serial: *const c_char,
+    ams_id: c_int,
+    tray_id: c_int,
+    tray_info_idx: *const c_char,
+    setting_id: *const c_char,
+    tray_type: *const c_char,
+    tray_sub_brands: *const c_char,
+    tray_color: *const c_char,
+    nozzle_temp_min: c_int,
+    nozzle_temp_max: c_int,
+) -> bool {
+    if printer_serial.is_null() {
+        return false;
+    }
+
+    let serial_str = unsafe {
+        match std::ffi::CStr::from_ptr(printer_serial).to_str() {
+            Ok(s) => s,
+            Err(_) => return false,
+        }
+    };
+
+    // Helper to convert C string to Rust string
+    fn c_str_to_string(ptr: *const c_char) -> String {
+        if ptr.is_null() {
+            String::new()
+        } else {
+            unsafe {
+                std::ffi::CStr::from_ptr(ptr)
+                    .to_str()
+                    .unwrap_or("")
+                    .to_string()
+            }
+        }
+    }
+
+    let tray_info_idx_str = c_str_to_string(tray_info_idx);
+    let setting_id_str = c_str_to_string(setting_id);
+    let tray_type_str = c_str_to_string(tray_type);
+    let tray_sub_brands_str = c_str_to_string(tray_sub_brands);
+    let tray_color_str = c_str_to_string(tray_color);
+
+    let manager = BACKEND_MANAGER.lock().unwrap();
+    let base_url = manager.server_url.clone();
+    drop(manager);
+
+    if base_url.is_empty() {
+        return false;
+    }
+
+    // POST /api/printers/{serial}/ams/{ams_id}/tray/{tray_id}/filament
+    let url = format!("{}/api/printers/{}/ams/{}/tray/{}/filament",
+                      base_url, serial_str, ams_id, tray_id);
+
+    // Build JSON body
+    let body = format!(
+        r#"{{"tray_info_idx":"{}","setting_id":"{}","tray_type":"{}","tray_sub_brands":"{}","tray_color":"{}","nozzle_temp_min":{},"nozzle_temp_max":{}}}"#,
+        tray_info_idx_str, setting_id_str, tray_type_str, tray_sub_brands_str,
+        tray_color_str, nozzle_temp_min, nozzle_temp_max
+    );
+
+    info!("backend_set_slot_filament: POST {} with {}", url, body);
+
+    let config = HttpConfig {
+        timeout: Some(std::time::Duration::from_millis(HTTP_TIMEOUT_MS)),
+        ..Default::default()
+    };
+
+    let connection = match EspHttpConnection::new(&config) {
+        Ok(c) => c,
+        Err(e) => {
+            warn!("Failed to create HTTP connection: {:?}", e);
+            return false;
+        }
+    };
+
+    let mut client = HttpClient::wrap(connection);
+
+    let headers = [
+        ("Content-Type", "application/json"),
+        ("Content-Length", &body.len().to_string()),
+    ];
+
+    let mut request = match client.request(embedded_svc::http::Method::Post, &url, &headers) {
+        Ok(r) => r,
+        Err(e) => {
+            warn!("Failed to create POST request: {:?}", e);
+            return false;
+        }
+    };
+
+    if let Err(e) = request.write(body.as_bytes()) {
+        warn!("Failed to write request body: {:?}", e);
+        return false;
+    }
+
+    if let Err(e) = request.flush() {
+        warn!("Failed to flush request: {:?}", e);
+        return false;
+    }
+
+    let response = match request.submit() {
+        Ok(r) => r,
+        Err(e) => {
+            warn!("Failed to submit request: {:?}", e);
+            return false;
+        }
+    };
+
+    let status = response.status();
+    if status != 200 && status != 204 {
+        warn!("set_slot_filament failed with status {}", status);
+        return false;
+    }
+
+    info!("backend_set_slot_filament: success");
+    true
+}
+
+/// Set calibration (K-profile) for an AMS slot
+/// Returns true on success
+#[no_mangle]
+pub extern "C" fn backend_set_slot_calibration(
+    printer_serial: *const c_char,
+    ams_id: c_int,
+    tray_id: c_int,
+    cali_idx: c_int,
+    filament_id: *const c_char,
+    setting_id: *const c_char,
+    nozzle_diameter: *const c_char,
+    k_value: f32,
+    nozzle_temp: c_int,
+) -> bool {
+    if printer_serial.is_null() {
+        return false;
+    }
+
+    let serial_str = unsafe {
+        match std::ffi::CStr::from_ptr(printer_serial).to_str() {
+            Ok(s) => s,
+            Err(_) => return false,
+        }
+    };
+
+    fn c_str_to_string(ptr: *const c_char) -> String {
+        if ptr.is_null() {
+            String::new()
+        } else {
+            unsafe {
+                std::ffi::CStr::from_ptr(ptr)
+                    .to_str()
+                    .unwrap_or("")
+                    .to_string()
+            }
+        }
+    }
+
+    let filament_id_str = c_str_to_string(filament_id);
+    let setting_id_str = c_str_to_string(setting_id);
+    let nozzle_diameter_str = if nozzle_diameter.is_null() {
+        "0.4".to_string()
+    } else {
+        c_str_to_string(nozzle_diameter)
+    };
+
+    let manager = BACKEND_MANAGER.lock().unwrap();
+    let base_url = manager.server_url.clone();
+    drop(manager);
+
+    if base_url.is_empty() {
+        return false;
+    }
+
+    // POST /api/printers/{serial}/ams/{ams_id}/tray/{tray_id}/calibration
+    let url = format!("{}/api/printers/{}/ams/{}/tray/{}/calibration",
+                      base_url, serial_str, ams_id, tray_id);
+
+    // Build JSON body
+    let body = format!(
+        r#"{{"cali_idx":{},"filament_id":"{}","setting_id":"{}","nozzle_diameter":"{}","k_value":{},"nozzle_temp_max":{}}}"#,
+        cali_idx, filament_id_str, setting_id_str, nozzle_diameter_str, k_value, nozzle_temp
+    );
+
+    info!("backend_set_slot_calibration: POST {} with {}", url, body);
+
+    let config = HttpConfig {
+        timeout: Some(std::time::Duration::from_millis(HTTP_TIMEOUT_MS)),
+        ..Default::default()
+    };
+
+    let connection = match EspHttpConnection::new(&config) {
+        Ok(c) => c,
+        Err(e) => {
+            warn!("Failed to create HTTP connection: {:?}", e);
+            return false;
+        }
+    };
+
+    let mut client = HttpClient::wrap(connection);
+
+    let headers = [
+        ("Content-Type", "application/json"),
+        ("Content-Length", &body.len().to_string()),
+    ];
+
+    let mut request = match client.request(embedded_svc::http::Method::Post, &url, &headers) {
+        Ok(r) => r,
+        Err(e) => {
+            warn!("Failed to create POST request: {:?}", e);
+            return false;
+        }
+    };
+
+    if let Err(e) = request.write(body.as_bytes()) {
+        warn!("Failed to write request body: {:?}", e);
+        return false;
+    }
+
+    if let Err(e) = request.flush() {
+        warn!("Failed to flush request: {:?}", e);
+        return false;
+    }
+
+    let response = match request.submit() {
+        Ok(r) => r,
+        Err(e) => {
+            warn!("Failed to submit request: {:?}", e);
+            return false;
+        }
+    };
+
+    let status = response.status();
+    if status != 200 && status != 204 {
+        warn!("set_slot_calibration failed with status {}", status);
+        return false;
+    }
+
+    info!("backend_set_slot_calibration: success");
+    true
+}
+
+/// Reset/clear an AMS slot (triggers RFID re-read)
+/// Returns true on success
+#[no_mangle]
+pub extern "C" fn backend_reset_slot(
+    printer_serial: *const c_char,
+    ams_id: c_int,
+    tray_id: c_int,
+) -> bool {
+    if printer_serial.is_null() {
+        return false;
+    }
+
+    let serial_str = unsafe {
+        match std::ffi::CStr::from_ptr(printer_serial).to_str() {
+            Ok(s) => s,
+            Err(_) => return false,
+        }
+    };
+
+    let manager = BACKEND_MANAGER.lock().unwrap();
+    let base_url = manager.server_url.clone();
+    drop(manager);
+
+    if base_url.is_empty() {
+        return false;
+    }
+
+    // POST /api/printers/{serial}/ams/{ams_id}/tray/{tray_id}/reset
+    let url = format!("{}/api/printers/{}/ams/{}/tray/{}/reset",
+                      base_url, serial_str, ams_id, tray_id);
+
+    info!("backend_reset_slot: POST {}", url);
+
+    let config = HttpConfig {
+        timeout: Some(std::time::Duration::from_millis(HTTP_TIMEOUT_MS)),
+        ..Default::default()
+    };
+
+    let connection = match EspHttpConnection::new(&config) {
+        Ok(c) => c,
+        Err(e) => {
+            warn!("Failed to create HTTP connection: {:?}", e);
+            return false;
+        }
+    };
+
+    let mut client = HttpClient::wrap(connection);
+
+    // Empty body POST
+    let headers = [
+        ("Content-Type", "application/json"),
+        ("Content-Length", "0"),
+    ];
+
+    let request = match client.request(embedded_svc::http::Method::Post, &url, &headers) {
+        Ok(r) => r,
+        Err(e) => {
+            warn!("Failed to create POST request: {:?}", e);
+            return false;
+        }
+    };
+
+    let response = match request.submit() {
+        Ok(r) => r,
+        Err(e) => {
+            warn!("Failed to submit request: {:?}", e);
+            return false;
+        }
+    };
+
+    let status = response.status();
+    if status != 200 && status != 204 {
+        warn!("reset_slot failed with status {}", status);
+        return false;
+    }
+
+    info!("backend_reset_slot: success");
+    true
+}
+
+/// Search color catalog by manufacturer and/or material
+/// Returns number of colors found (up to max_count), -1 on error
+#[no_mangle]
+pub extern "C" fn backend_search_colors(
+    manufacturer: *const c_char,
+    material: *const c_char,
+    colors: *mut ColorCatalogEntry,
+    max_count: c_int,
+) -> c_int {
+    if colors.is_null() || max_count <= 0 {
+        return -1;
+    }
+
+    fn c_str_to_option(ptr: *const c_char) -> Option<String> {
+        if ptr.is_null() {
+            None
+        } else {
+            let s = unsafe {
+                std::ffi::CStr::from_ptr(ptr)
+                    .to_str()
+                    .unwrap_or("")
+                    .to_string()
+            };
+            if s.is_empty() { None } else { Some(s) }
+        }
+    }
+
+    let manufacturer_opt = c_str_to_option(manufacturer);
+    let material_opt = c_str_to_option(material);
+
+    let manager = BACKEND_MANAGER.lock().unwrap();
+    let base_url = manager.server_url.clone();
+    drop(manager);
+
+    if base_url.is_empty() {
+        return -1;
+    }
+
+    // GET /api/colors/search?manufacturer=X&material=Y
+    let mut url = format!("{}/api/colors/search", base_url);
+    let mut has_param = false;
+
+    if let Some(ref m) = manufacturer_opt {
+        url.push_str(&format!("?manufacturer={}", m.replace(' ', "%20")));
+        has_param = true;
+    }
+    if let Some(ref m) = material_opt {
+        url.push_str(&format!("{}material={}", if has_param { "&" } else { "?" }, m));
+    }
+
+    let config = HttpConfig {
+        timeout: Some(std::time::Duration::from_millis(HTTP_TIMEOUT_MS)),
+        ..Default::default()
+    };
+
+    let connection = match EspHttpConnection::new(&config) {
+        Ok(c) => c,
+        Err(_) => return -1,
+    };
+
+    let mut client = HttpClient::wrap(connection);
+    let request = match client.get(&url) {
+        Ok(r) => r,
+        Err(_) => return -1,
+    };
+
+    let mut response = match request.submit() {
+        Ok(r) => r,
+        Err(_) => return -1,
+    };
+
+    if response.status() != 200 {
+        return -1;
+    }
+
+    // Read response body
+    let mut buf = vec![0u8; 65536]; // 64KB buffer for colors list
+    let mut total = 0;
+    loop {
+        match response.read(&mut buf[total..]) {
+            Ok(0) => break,
+            Ok(n) => total += n,
+            Err(_) => break,
+        }
+        if total >= buf.len() {
+            break;
+        }
+    }
+
+    if total == 0 {
+        return 0;
+    }
+
+    // Parse response
+    let body = String::from_utf8_lossy(&buf[..total]);
+    let api_colors: Vec<ApiColorEntry> = match serde_json::from_str(&body) {
+        Ok(c) => c,
+        Err(e) => {
+            warn!("Failed to parse color catalog: {:?}", e);
+            return -1;
+        }
+    };
+
+    let count = api_colors.len().min(max_count as usize);
+
+    for (i, color) in api_colors.iter().take(count).enumerate() {
+        let color_ref = unsafe { &mut *colors.add(i) };
+
+        color_ref.id = color.id.unwrap_or(0);
+        color_ref.manufacturer = [0; 64];
+        color_ref.color_name = [0; 64];
+        color_ref.hex_color = [0; 16];
+        color_ref.material = [0; 32];
+
+        if let Some(ref m) = color.manufacturer {
+            copy_to_c_buf_signed(m, &mut color_ref.manufacturer);
+        }
+        if let Some(ref c) = color.color_name {
+            copy_to_c_buf_signed(c, &mut color_ref.color_name);
+        }
+        if let Some(ref h) = color.hex_color {
+            copy_to_c_buf_signed(h, &mut color_ref.hex_color);
+        }
+        if let Some(ref m) = color.material {
+            copy_to_c_buf_signed(m, &mut color_ref.material);
+        }
+    }
+
+    info!("backend_search_colors: returning {} colors", count);
+    count as c_int
+}
+
+/// Helper to copy string to c_char buffer (signed char)
+fn copy_to_c_buf_signed(src: &str, dest: &mut [c_char]) {
+    let bytes = src.as_bytes();
+    let len = bytes.len().min(dest.len() - 1);
+    for i in 0..len {
+        dest[i] = bytes[i] as c_char;
+    }
+    dest[len] = 0; // Null terminate
 }

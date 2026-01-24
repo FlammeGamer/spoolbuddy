@@ -46,6 +46,7 @@
 
 /* Drawing engine features */
 #define LV_USE_DRAW_SW 1
+#define LV_DRAW_SW_COMPLEX 1  /* Enable complex drawing (gradients, masks, etc.) - needed for rounded corners */
 
 /* Enable vector graphics */
 #define LV_USE_VECTOR_GRAPHIC 0

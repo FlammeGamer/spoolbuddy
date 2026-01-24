@@ -181,6 +181,7 @@ _device_tag_data: dict | None = None  # Points to staged data for backwards comp
 # Tag removal debounce - avoid false removals from flaky NFC reads
 _tag_last_seen_time: float = time.time()  # When we last saw a tag (init to now to prevent immediate false removal)
 _tag_removal_debounce: float = 0.5  # seconds to wait before confirming tag removal
+_tag_staleness_timeout: float = 3.0  # seconds without tag_id in messages before assuming tag removed
 _confirmed_tag_id: str | None = None  # Tag ID after debounce (what frontend sees)
 _ever_had_tag: bool = False  # Track if we've ever seen a tag in this session
 
@@ -688,6 +689,11 @@ async def lifespan(app: FastAPI):
     # Auto-connect printers
     asyncio.create_task(auto_connect_printers())
 
+    # Pre-fetch cloud slicer settings to warm cache
+    from api.cloud import prefetch_slicer_settings
+
+    asyncio.create_task(prefetch_slicer_settings())
+
     # Start display timeout checker
     asyncio.create_task(check_display_timeout())
 
@@ -1136,6 +1142,17 @@ async def handle_device_state(message: dict):
         _confirmed_tag_id = None
         _device_current_tag_id = None
         state_changed = True
+    elif not has_tag_field and _confirmed_tag_id is not None:
+        # Message has no tag_id field - check for staleness timeout
+        # If device stops sending tag_id for a while, assume tag was removed
+        time_since_last_seen = now - _tag_last_seen_time
+        if time_since_last_seen >= _tag_staleness_timeout:
+            logger.info(
+                f"Tag stale (no tag_id in messages for {time_since_last_seen:.1f}s), clearing tag {_confirmed_tag_id}"
+            )
+            _confirmed_tag_id = None
+            _device_current_tag_id = None
+            state_changed = True
     elif has_tag_field:
         # Track raw device tag (for debugging/staging)
         _device_current_tag_id = tag_id

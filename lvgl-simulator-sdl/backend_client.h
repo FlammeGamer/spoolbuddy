@@ -595,6 +595,30 @@ int backend_discovery_is_running(void);
 // Get discovered printers (returns count, fills results array)
 int backend_discovery_get_printers(PrinterDiscoveryResult *results, int max_results);
 
+// =============================================================================
+// UI Scan Result Functions (implemented in ui_scan_result.c)
+// =============================================================================
+
+// Set tag ID before navigating to scan result screen
+void ui_scan_result_set_tag_id(const char *tag_id);
+
+// =============================================================================
+// Keyboard Layout Functions (stub for simulator)
+// =============================================================================
+
+// Keyboard layout types
+typedef enum {
+    KEYBOARD_LAYOUT_QWERTY = 0,
+    KEYBOARD_LAYOUT_QWERTZ = 1,
+    KEYBOARD_LAYOUT_AZERTY = 2,
+} KeyboardLayout;
+
+// Apply saved keyboard layout to a keyboard widget (no-op in simulator)
+static inline void apply_keyboard_layout(void *keyboard) { (void)keyboard; }
+
+// Get current keyboard layout setting (always QWERTY in simulator)
+static inline KeyboardLayout get_keyboard_layout(void) { return KEYBOARD_LAYOUT_QWERTY; }
+
 #ifdef __cplusplus
 }
 #endif

@@ -16,6 +16,7 @@
 #ifdef ESP_PLATFORM
 // Firmware: use ESP-IDF and Rust FFI backend
 #include "ui_internal.h"
+#include "ui_ams_slot_modal.h"
 #include "esp_log.h"
 static const char *TAG = "ui_backend";
 #else
@@ -100,8 +101,8 @@ void update_backend_ui(void) {
     // Detect any screen change
     bool screen_changed = (screen_id != previous_screen);
 
-    // Force immediate update when navigating to main screen
-    bool force_update = (screen_id == SCREEN_ID_MAIN_SCREEN && screen_changed);
+    // Force immediate update when navigating to main screen or AMS overview
+    bool force_update = ((screen_id == SCREEN_ID_MAIN_SCREEN || screen_id == SCREEN_ID_AMS_OVERVIEW) && screen_changed);
     if (force_update) {
         needs_data_refresh = true;
     }
@@ -1399,6 +1400,11 @@ static void update_ams_overview_display(void) {
         return;
     }
 
+    // Show the main AMS panel container (hidden initially to prevent flicker)
+    if (objects.ams_screen_ams_panel) {
+        lv_obj_clear_flag(objects.ams_screen_ams_panel, LV_OBJ_FLAG_HIDDEN);
+    }
+
     ESP_LOGI(TAG, "AMS overview update: panel=%p ht_a=%p ext1=%p ext2=%p",
              (void*)objects.ams_screen_ams_panel,
              (void*)objects.ams_screen_ams_panel_ht_a,
@@ -2474,8 +2480,6 @@ void wire_scan_printer_dropdown(void) {
 // AMS Slot Click Handlers (opens Configure Slot modal)
 // =============================================================================
 
-#ifndef ESP_PLATFORM  // Simulator only for now
-
 // Struct to hold slot info for click handler
 typedef struct {
     int ams_id;
@@ -2500,8 +2504,15 @@ static void ams_slot_config_success(void) {
 
 // Click handler for AMS slots
 static void ams_slot_click_handler(lv_event_t *e) {
+    ESP_LOGI(TAG, "ams_slot_click_handler: ENTRY");
+
     AmsSlotUserData *slot_data = (AmsSlotUserData *)lv_event_get_user_data(e);
-    if (!slot_data) return;
+    if (!slot_data) {
+        ESP_LOGI(TAG, "ams_slot_click_handler: no slot_data");
+        return;
+    }
+
+    ESP_LOGI(TAG, "ams_slot_click_handler: slot ams=%d tray=%d", slot_data->ams_id, slot_data->tray_id);
 
     // Get printer serial
     BackendPrinterInfo printer_info = {0};
@@ -2509,6 +2520,7 @@ static void ams_slot_click_handler(lv_event_t *e) {
         ESP_LOGI(TAG, "Failed to get printer info for slot click");
         return;
     }
+    ESP_LOGI(TAG, "ams_slot_click_handler: got printer info");
 
     // Get current tray info
     AmsUnitCInfo ams_info = {0};
@@ -2545,10 +2557,12 @@ static void ams_slot_click_handler(lv_event_t *e) {
              printer_info.serial, slot_data->ams_id, slot_data->tray_id, extruder_id,
              tray_type ? tray_type : "empty", tray_color);
 
+    ESP_LOGI(TAG, "ams_slot_click_handler: calling ui_ams_slot_modal_open");
     ui_ams_slot_modal_open(printer_info.serial, slot_data->ams_id, slot_data->tray_id,
                            slot_data->tray_count, extruder_id,
                            tray_type, tray_color[0] ? tray_color : NULL,
                            ams_slot_config_success);
+    ESP_LOGI(TAG, "ams_slot_click_handler: modal_open returned");
 }
 
 /**
@@ -2646,8 +2660,6 @@ void wire_ams_slot_click_handlers(void) {
 
     ESP_LOGI(TAG, "Wired AMS slot click handlers");
 }
-
-#endif // !ESP_PLATFORM
 
 /**
  * @brief Initialize main screen AMS display

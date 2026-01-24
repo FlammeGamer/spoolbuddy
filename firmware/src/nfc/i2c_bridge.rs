@@ -12,7 +12,7 @@
 //!   - 0x20: Read tag data (returns: status, tag_type, uid_len, uid, block_data...)
 
 use esp_idf_hal::i2c::I2cDriver;
-use log::{info, warn, debug};
+use log::{info, warn};
 use std::sync::atomic::{AtomicU8, Ordering};
 
 /// I2C address of the Pico NFC bridge

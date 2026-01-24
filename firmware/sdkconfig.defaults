@@ -19,6 +19,8 @@ CONFIG_SPIRAM_USE_MALLOC=y
 # Allocations larger than this go to PSRAM (lowered to 64 bytes to route
 # most LVGL allocations to PSRAM, freeing internal SRAM for WiFi)
 CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=64
+# Allow placing BSS segments in external memory (for EXT_RAM_BSS_ATTR)
+CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y
 
 # LCD driver support
 CONFIG_LCD_RGB_ISR_IRAM_SAFE=y
@@ -59,6 +61,14 @@ CONFIG_LWIP_TCP_SND_BUF_DEFAULT=2048
 CONFIG_LWIP_TCP_WND_DEFAULT=2048
 
 # LVGL 9.x Configuration
+# Use our lv_conf.h instead of Kconfig-only mode
+CONFIG_LV_CONF_SKIP=n
+
+# Enable software draw engine with complex rendering (masks, rounded corners, etc.)
+# CRITICAL: Without this, dropdown/textarea/keyboard widgets crash!
+CONFIG_LV_USE_DRAW_SW=y
+CONFIG_LV_DRAW_SW_COMPLEX=y
+
 # Font settings - enable the fonts used by EEZ UI
 CONFIG_LV_FONT_MONTSERRAT_10=y
 CONFIG_LV_FONT_MONTSERRAT_12=y

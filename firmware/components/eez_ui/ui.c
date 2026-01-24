@@ -118,6 +118,7 @@ void loadScreen(enum ScreensEnum screenId) {
         case SCREEN_ID_SETTINGS_UPDATE_SCREEN: screen = objects.settings_update_screen; break;
         case SCREEN_ID_NFC_SCREEN: screen = get_nfc_screen(); break;
         case SCREEN_ID_SCALE_CALIBRATION_SCREEN: screen = get_scale_calibration_screen(); break;
+        case SCREEN_ID_KEYBOARD_LAYOUT_SCREEN: screen = get_keyboard_layout_screen(); break;
         case SCREEN_ID_SPLASH_SCREEN: screen = get_splash_screen(); break;
         default: screen = getLvglObjectFromIndex(currentScreen); break;
     }
@@ -181,6 +182,8 @@ void navigate_to_settings_detail(const char *title) {
         pendingScreen = SCREEN_ID_NFC_SCREEN;
     } else if (strcmp(title, "Scale") == 0) {
         pendingScreen = SCREEN_ID_SCALE_CALIBRATION_SCREEN;
+    } else if (strcmp(title, "Keyboard") == 0) {
+        pendingScreen = SCREEN_ID_KEYBOARD_LAYOUT_SCREEN;
     } else {
         // Fallback to main settings screen for unsupported detail pages
         pendingScreen = SCREEN_ID_SETTINGS_SCREEN;
@@ -230,9 +233,7 @@ void wire_ams_overview_buttons(void) {
     wire_ams_printer_dropdown();
 
     // Wire AMS slot click handlers (opens Configure Slot modal)
-#ifndef ESP_PLATFORM
     wire_ams_slot_click_handlers();
-#endif
 }
 
 void wire_scan_result_buttons(void) {
@@ -265,6 +266,7 @@ void delete_all_screens(void) {
     // Clear module state via cleanup functions
     ui_wifi_cleanup();
     ui_printer_cleanup();
+    ui_settings_cleanup();       // Clear keyboard row pointer
     ui_nfc_card_cleanup();       // Clear NFC card dynamic elements
     reset_notification_state();  // Clear notification dots before deleting screens
     reset_backend_ui_state();    // Clear all dynamic UI state (AMS widgets, labels, etc.)
@@ -340,12 +342,15 @@ void ui_tick() {
 
         // For programmatic screens, create and load BEFORE deleting old screens
         // This prevents LVGL from having an invalid active screen during transition
-        if (screen == SCREEN_ID_NFC_SCREEN || screen == SCREEN_ID_SCALE_CALIBRATION_SCREEN) {
+        if (screen == SCREEN_ID_NFC_SCREEN || screen == SCREEN_ID_SCALE_CALIBRATION_SCREEN ||
+            screen == SCREEN_ID_KEYBOARD_LAYOUT_SCREEN) {
             // Create the new programmatic screen
             if (screen == SCREEN_ID_NFC_SCREEN) {
                 create_nfc_screen();
             } else if (screen == SCREEN_ID_SCALE_CALIBRATION_SCREEN) {
                 create_scale_calibration_screen();
+            } else if (screen == SCREEN_ID_KEYBOARD_LAYOUT_SCREEN) {
+                create_keyboard_layout_screen();
             }
             // Load it immediately so LVGL has a valid active screen
             loadScreen(screen);
@@ -367,6 +372,11 @@ void ui_tick() {
                     break;
                 case SCREEN_ID_AMS_OVERVIEW:
                     create_screen_ams_overview();
+                    // Hide AMS panel immediately after creation to prevent flicker
+                    // Must happen BEFORE any potential render cycle
+                    if (objects.ams_screen_ams_panel) {
+                        lv_obj_add_flag(objects.ams_screen_ams_panel, LV_OBJ_FLAG_HIDDEN);
+                    }
                     wire_ams_overview_buttons();
                     break;
                 case SCREEN_ID_SCAN_RESULT:
@@ -469,6 +479,9 @@ void ui_tick() {
         }
         if (screen_id == SCREEN_ID_SCALE_CALIBRATION_SCREEN) {
             update_scale_calibration_screen();
+        }
+        if (screen_id == SCREEN_ID_KEYBOARD_LAYOUT_SCREEN) {
+            update_keyboard_layout_screen();
         }
 
         // Update WiFi icon for CURRENT screen only (other screen objects are freed)

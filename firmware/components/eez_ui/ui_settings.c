@@ -119,6 +119,86 @@ static void settings_detail_back_handler(lv_event_t *e) {
 }
 
 // =============================================================================
+// Add Keyboard Row to Hardware Tab
+// =============================================================================
+
+static lv_obj_t *keyboard_settings_row = NULL;
+
+// Reset keyboard row pointer when screens are deleted
+void ui_settings_cleanup(void) {
+    keyboard_settings_row = NULL;
+}
+
+// Direct click handler for keyboard row (avoids label search issues)
+static void keyboard_row_click_handler(lv_event_t *e) {
+    (void)e;
+    navigate_to_settings_detail("Keyboard");
+}
+
+static void add_keyboard_row_to_hardware_tab(void) {
+    if (!objects.settings_screen_tabs_hardware_content) return;
+    if (keyboard_settings_row) return;  // Already added
+
+    // Create keyboard row matching NFC/Scale/Display style exactly
+    // Layout: NFC=y10, Scale=y70, Display=y130, Keyboard=y190
+    lv_obj_t *row = lv_obj_create(objects.settings_screen_tabs_hardware_content);
+    keyboard_settings_row = row;
+    lv_obj_set_pos(row, 15, 190);
+    lv_obj_set_size(row, 770, 50);
+    lv_obj_set_style_pad_top(row, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_bottom(row, 0, LV_PART_MAIN);
+    lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_SCROLL_CHAIN_HOR |
+                      LV_OBJ_FLAG_SCROLL_CHAIN_VER | LV_OBJ_FLAG_SCROLL_ELASTIC |
+                      LV_OBJ_FLAG_SCROLL_MOMENTUM | LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+    lv_obj_set_style_bg_color(row, lv_color_hex(0xff2d2d2d), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(row, 255, LV_PART_MAIN);
+    lv_obj_set_style_radius(row, 8, LV_PART_MAIN);
+    lv_obj_set_style_border_width(row, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_left(row, 15, LV_PART_MAIN);
+    lv_obj_set_style_pad_right(row, 15, LV_PART_MAIN);
+
+    // Keyboard icon (using keyboard symbol with green color like other icons)
+    lv_obj_t *icon = lv_label_create(row);
+    lv_obj_set_pos(icon, 5, 13);
+    lv_label_set_text(icon, LV_SYMBOL_KEYBOARD);
+    lv_obj_set_style_text_font(icon, &lv_font_montserrat_24, LV_PART_MAIN);
+    lv_obj_set_style_text_color(icon, lv_color_hex(0xff00ff00), LV_PART_MAIN);  // Green like other icons
+
+    // Label "Keyboard" (position matches other rows)
+    lv_obj_t *label = lv_label_create(row);
+    lv_obj_set_pos(label, 45, 15);
+    lv_obj_set_size(label, 200, 20);
+    lv_label_set_text(label, "Keyboard");
+    lv_obj_set_style_text_color(label, lv_color_hex(0xffffffff), LV_PART_MAIN);
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_16, LV_PART_MAIN);
+
+    // Type label (current layout - position matches other rows)
+    lv_obj_t *type_label = lv_label_create(row);
+    lv_obj_set_pos(type_label, 535, 15);  // Adjusted to match other rows
+    lv_obj_set_size(type_label, 150, 20);
+    KeyboardLayout layout = get_keyboard_layout();
+    const char *layout_name = "QWERTY";
+    if (layout == KEYBOARD_LAYOUT_QWERTZ) layout_name = "QWERTZ";
+    else if (layout == KEYBOARD_LAYOUT_AZERTY) layout_name = "AZERTY";
+    lv_label_set_text(type_label, layout_name);
+    lv_obj_set_style_text_color(type_label, lv_color_hex(0xff888888), LV_PART_MAIN);
+    lv_obj_set_style_text_font(type_label, &lv_font_montserrat_14, LV_PART_MAIN);
+
+    // Arrow ">" (position matches other rows)
+    lv_obj_t *arrow = lv_label_create(row);
+    lv_obj_set_pos(arrow, 710, 15);  // Adjusted to match other rows
+    lv_label_set_text(arrow, ">");
+    lv_obj_set_style_text_color(arrow, lv_color_hex(0xff666666), LV_PART_MAIN);
+    lv_obj_set_style_text_font(arrow, &lv_font_montserrat_18, LV_PART_MAIN);
+
+    // Make row clickable with direct handler (not generic settings_row_click_handler)
+    lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
+    lv_obj_set_style_bg_color(row, lv_color_hex(0xff3d3d3d), LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_add_event_cb(row, keyboard_row_click_handler, LV_EVENT_CLICKED, NULL);
+}
+
+// =============================================================================
 // Wire Functions
 // =============================================================================
 
@@ -154,6 +234,9 @@ void wire_settings_buttons(void) {
     wire_content_rows(objects.settings_screen_tabs_printers_content);
     wire_content_rows(objects.settings_screen_tabs_hardware_content);
     wire_content_rows(objects.settings_screen_tabs_system_content);
+
+    // Add keyboard row to hardware tab (not in EEZ design)
+    add_keyboard_row_to_hardware_tab();
 
     // Initialize with first tab selected, hide others
     select_settings_tab(0);

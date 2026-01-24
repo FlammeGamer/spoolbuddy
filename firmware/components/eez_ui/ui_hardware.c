@@ -908,6 +908,416 @@ void update_scale_calibration_screen(void) {
 }
 
 // =============================================================================
+// Keyboard Layout Screen
+// =============================================================================
+
+// Keyboard Layout Screen objects
+static lv_obj_t *keyboard_layout_screen = NULL;
+static lv_obj_t *kb_layout_top_bar_icon_back = NULL;
+static lv_obj_t *kb_layout_top_bar_clock = NULL;
+static lv_obj_t *kb_layout_qwerty_row = NULL;
+static lv_obj_t *kb_layout_qwertz_row = NULL;
+static lv_obj_t *kb_layout_azerty_row = NULL;
+static lv_obj_t *kb_layout_qwerty_check = NULL;
+static lv_obj_t *kb_layout_qwertz_check = NULL;
+static lv_obj_t *kb_layout_azerty_check = NULL;
+static lv_obj_t *kb_layout_preview = NULL;
+
+// Current keyboard layout (defaults to QWERTY)
+static KeyboardLayout current_keyboard_layout = KEYBOARD_LAYOUT_QWERTY;
+static bool keyboard_layout_loaded = false;
+
+// =============================================================================
+// Custom Keyboard Maps for QWERTZ and AZERTY
+// =============================================================================
+
+#define LV_KB_BTN(width) LV_BUTTONMATRIX_CTRL_POPOVER | width
+
+// QWERTZ lowercase map (German layout - Y and Z swapped)
+static const char * const kb_map_qwertz_lc[] = {
+    "1#", "q", "w", "e", "r", "t", "z", "u", "i", "o", "p", LV_SYMBOL_BACKSPACE, "\n",
+    "ABC", "a", "s", "d", "f", "g", "h", "j", "k", "l", LV_SYMBOL_NEW_LINE, "\n",
+    "_", "-", "y", "x", "c", "v", "b", "n", "m", ".", ",", ":", "\n",
+    LV_SYMBOL_KEYBOARD, LV_SYMBOL_LEFT, " ", LV_SYMBOL_RIGHT, LV_SYMBOL_OK, ""
+};
+
+// QWERTZ uppercase map
+static const char * const kb_map_qwertz_uc[] = {
+    "1#", "Q", "W", "E", "R", "T", "Z", "U", "I", "O", "P", LV_SYMBOL_BACKSPACE, "\n",
+    "abc", "A", "S", "D", "F", "G", "H", "J", "K", "L", LV_SYMBOL_NEW_LINE, "\n",
+    "_", "-", "Y", "X", "C", "V", "B", "N", "M", ".", ",", ":", "\n",
+    LV_SYMBOL_CLOSE, LV_SYMBOL_LEFT, " ", LV_SYMBOL_RIGHT, LV_SYMBOL_OK, ""
+};
+
+// AZERTY lowercase map (French layout)
+static const char * const kb_map_azerty_lc[] = {
+    "1#", "a", "z", "e", "r", "t", "y", "u", "i", "o", "p", LV_SYMBOL_BACKSPACE, "\n",
+    "ABC", "q", "s", "d", "f", "g", "h", "j", "k", "l", "m", LV_SYMBOL_NEW_LINE, "\n",
+    "_", "-", "w", "x", "c", "v", "b", "n", ".", ",", ":", "\n",
+    LV_SYMBOL_KEYBOARD, LV_SYMBOL_LEFT, " ", LV_SYMBOL_RIGHT, LV_SYMBOL_OK, ""
+};
+
+// AZERTY uppercase map
+static const char * const kb_map_azerty_uc[] = {
+    "1#", "A", "Z", "E", "R", "T", "Y", "U", "I", "O", "P", LV_SYMBOL_BACKSPACE, "\n",
+    "abc", "Q", "S", "D", "F", "G", "H", "J", "K", "L", "M", LV_SYMBOL_NEW_LINE, "\n",
+    "_", "-", "W", "X", "C", "V", "B", "N", ".", ",", ":", "\n",
+    LV_SYMBOL_CLOSE, LV_SYMBOL_LEFT, " ", LV_SYMBOL_RIGHT, LV_SYMBOL_OK, ""
+};
+
+// Control maps (same structure for all layouts)
+static const lv_buttonmatrix_ctrl_t kb_ctrl_text_map[] = {
+    LV_BUTTONMATRIX_CTRL_NO_REPEAT | LV_BUTTONMATRIX_CTRL_CLICK_TRIG | LV_BUTTONMATRIX_CTRL_CHECKED | 5,
+    LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4),
+    LV_BUTTONMATRIX_CTRL_CHECKED | 7,
+    LV_BUTTONMATRIX_CTRL_NO_REPEAT | LV_BUTTONMATRIX_CTRL_CLICK_TRIG | LV_BUTTONMATRIX_CTRL_CHECKED | 6,
+    LV_KB_BTN(3), LV_KB_BTN(3), LV_KB_BTN(3), LV_KB_BTN(3), LV_KB_BTN(3), LV_KB_BTN(3), LV_KB_BTN(3), LV_KB_BTN(3), LV_KB_BTN(3),
+    LV_BUTTONMATRIX_CTRL_CHECKED | 7,
+    LV_BUTTONMATRIX_CTRL_CHECKED | LV_KB_BTN(1), LV_BUTTONMATRIX_CTRL_CHECKED | LV_KB_BTN(1),
+    LV_KB_BTN(1), LV_KB_BTN(1), LV_KB_BTN(1), LV_KB_BTN(1), LV_KB_BTN(1), LV_KB_BTN(1), LV_KB_BTN(1),
+    LV_BUTTONMATRIX_CTRL_CHECKED | LV_KB_BTN(1), LV_BUTTONMATRIX_CTRL_CHECKED | LV_KB_BTN(1), LV_BUTTONMATRIX_CTRL_CHECKED | LV_KB_BTN(1),
+    LV_BUTTONMATRIX_CTRL_NO_REPEAT | LV_BUTTONMATRIX_CTRL_CLICK_TRIG | LV_BUTTONMATRIX_CTRL_CHECKED | 2,
+    LV_BUTTONMATRIX_CTRL_CHECKED | 2, 6, LV_BUTTONMATRIX_CTRL_CHECKED | 2,
+    LV_BUTTONMATRIX_CTRL_NO_REPEAT | LV_BUTTONMATRIX_CTRL_CLICK_TRIG | LV_BUTTONMATRIX_CTRL_CHECKED | 2
+};
+
+// AZERTY control map (slightly different row layout - 11 keys in row 2)
+static const lv_buttonmatrix_ctrl_t kb_ctrl_azerty_map[] = {
+    LV_BUTTONMATRIX_CTRL_NO_REPEAT | LV_BUTTONMATRIX_CTRL_CLICK_TRIG | LV_BUTTONMATRIX_CTRL_CHECKED | 5,
+    LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4),
+    LV_BUTTONMATRIX_CTRL_CHECKED | 7,
+    LV_BUTTONMATRIX_CTRL_NO_REPEAT | LV_BUTTONMATRIX_CTRL_CLICK_TRIG | LV_BUTTONMATRIX_CTRL_CHECKED | 5,
+    LV_KB_BTN(3), LV_KB_BTN(3), LV_KB_BTN(3), LV_KB_BTN(3), LV_KB_BTN(3), LV_KB_BTN(3), LV_KB_BTN(3), LV_KB_BTN(3), LV_KB_BTN(3), LV_KB_BTN(3),
+    LV_BUTTONMATRIX_CTRL_CHECKED | 6,
+    LV_BUTTONMATRIX_CTRL_CHECKED | LV_KB_BTN(1), LV_BUTTONMATRIX_CTRL_CHECKED | LV_KB_BTN(1),
+    LV_KB_BTN(1), LV_KB_BTN(1), LV_KB_BTN(1), LV_KB_BTN(1), LV_KB_BTN(1), LV_KB_BTN(1),
+    LV_BUTTONMATRIX_CTRL_CHECKED | LV_KB_BTN(1), LV_BUTTONMATRIX_CTRL_CHECKED | LV_KB_BTN(1), LV_BUTTONMATRIX_CTRL_CHECKED | LV_KB_BTN(1),
+    LV_BUTTONMATRIX_CTRL_NO_REPEAT | LV_BUTTONMATRIX_CTRL_CLICK_TRIG | LV_BUTTONMATRIX_CTRL_CHECKED | 2,
+    LV_BUTTONMATRIX_CTRL_CHECKED | 2, 6, LV_BUTTONMATRIX_CTRL_CHECKED | 2,
+    LV_BUTTONMATRIX_CTRL_NO_REPEAT | LV_BUTTONMATRIX_CTRL_CLICK_TRIG | LV_BUTTONMATRIX_CTRL_CHECKED | 2
+};
+
+// =============================================================================
+// NVS Functions for Keyboard Layout
+// =============================================================================
+
+#ifdef ESP_PLATFORM
+#include "nvs_flash.h"
+#include "nvs.h"
+#include "esp_log.h"
+
+#define KEYBOARD_NVS_NAMESPACE "keyboard"
+#define KEYBOARD_NVS_KEY_LAYOUT "layout"
+
+void save_keyboard_layout(KeyboardLayout layout) {
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open(KEYBOARD_NVS_NAMESPACE, NVS_READWRITE, &handle);
+    if (err != ESP_OK) {
+        ESP_LOGE("ui_keyboard", "Failed to open NVS for keyboard: %s", esp_err_to_name(err));
+        return;
+    }
+
+    err = nvs_set_i32(handle, KEYBOARD_NVS_KEY_LAYOUT, (int32_t)layout);
+    if (err != ESP_OK) {
+        ESP_LOGE("ui_keyboard", "Failed to save keyboard layout: %s", esp_err_to_name(err));
+    } else {
+        err = nvs_commit(handle);
+        if (err == ESP_OK) {
+            ESP_LOGI("ui_keyboard", "Saved keyboard layout: %d", (int)layout);
+            current_keyboard_layout = layout;
+        }
+    }
+    nvs_close(handle);
+}
+
+static void load_keyboard_layout_from_nvs(void) {
+    if (keyboard_layout_loaded) return;
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open(KEYBOARD_NVS_NAMESPACE, NVS_READONLY, &handle);
+    if (err != ESP_OK) {
+        // No saved layout, use default
+        current_keyboard_layout = KEYBOARD_LAYOUT_QWERTY;
+        keyboard_layout_loaded = true;
+        return;
+    }
+
+    int32_t layout = 0;
+    err = nvs_get_i32(handle, KEYBOARD_NVS_KEY_LAYOUT, &layout);
+    if (err == ESP_OK && layout >= 0 && layout <= 2) {
+        current_keyboard_layout = (KeyboardLayout)layout;
+        ESP_LOGI("ui_keyboard", "Loaded keyboard layout: %d", (int)layout);
+    } else {
+        current_keyboard_layout = KEYBOARD_LAYOUT_QWERTY;
+    }
+    nvs_close(handle);
+    keyboard_layout_loaded = true;
+}
+
+#else
+// Simulator - in-memory only
+void save_keyboard_layout(KeyboardLayout layout) {
+    printf("[ui_keyboard] Simulator: saved layout=%d (in-memory only)\n", layout);
+    current_keyboard_layout = layout;
+}
+
+static void load_keyboard_layout_from_nvs(void) {
+    if (keyboard_layout_loaded) return;
+    current_keyboard_layout = KEYBOARD_LAYOUT_QWERTY;
+    keyboard_layout_loaded = true;
+    printf("[ui_keyboard] Simulator: using default QWERTY layout\n");
+}
+#endif
+
+KeyboardLayout get_keyboard_layout(void) {
+    if (!keyboard_layout_loaded) {
+        load_keyboard_layout_from_nvs();
+    }
+    return current_keyboard_layout;
+}
+
+// =============================================================================
+// Apply Keyboard Layout to a Keyboard Widget
+// =============================================================================
+
+void apply_keyboard_layout(lv_obj_t *keyboard) {
+    if (!keyboard) return;
+
+    KeyboardLayout layout = get_keyboard_layout();
+
+    switch (layout) {
+        case KEYBOARD_LAYOUT_QWERTZ:
+            lv_keyboard_set_map(keyboard, LV_KEYBOARD_MODE_TEXT_LOWER, kb_map_qwertz_lc, kb_ctrl_text_map);
+            lv_keyboard_set_map(keyboard, LV_KEYBOARD_MODE_TEXT_UPPER, kb_map_qwertz_uc, kb_ctrl_text_map);
+            break;
+        case KEYBOARD_LAYOUT_AZERTY:
+            lv_keyboard_set_map(keyboard, LV_KEYBOARD_MODE_TEXT_LOWER, kb_map_azerty_lc, kb_ctrl_azerty_map);
+            lv_keyboard_set_map(keyboard, LV_KEYBOARD_MODE_TEXT_UPPER, kb_map_azerty_uc, kb_ctrl_azerty_map);
+            break;
+        case KEYBOARD_LAYOUT_QWERTY:
+        default:
+            // QWERTY is the default LVGL layout, no need to set custom maps
+            break;
+    }
+}
+
+// =============================================================================
+// Keyboard Layout Screen Handlers
+// =============================================================================
+
+static void kb_layout_back_handler(lv_event_t *e) {
+    (void)e;
+    pendingScreen = SCREEN_ID_SETTINGS_SCREEN;
+    pending_settings_tab = 2;  // Hardware tab
+}
+
+static void update_layout_checkmarks(KeyboardLayout selected) {
+    // Hide all checkmarks
+    if (kb_layout_qwerty_check) lv_obj_add_flag(kb_layout_qwerty_check, LV_OBJ_FLAG_HIDDEN);
+    if (kb_layout_qwertz_check) lv_obj_add_flag(kb_layout_qwertz_check, LV_OBJ_FLAG_HIDDEN);
+    if (kb_layout_azerty_check) lv_obj_add_flag(kb_layout_azerty_check, LV_OBJ_FLAG_HIDDEN);
+
+    // Show selected checkmark
+    switch (selected) {
+        case KEYBOARD_LAYOUT_QWERTY:
+            if (kb_layout_qwerty_check) lv_obj_clear_flag(kb_layout_qwerty_check, LV_OBJ_FLAG_HIDDEN);
+            break;
+        case KEYBOARD_LAYOUT_QWERTZ:
+            if (kb_layout_qwertz_check) lv_obj_clear_flag(kb_layout_qwertz_check, LV_OBJ_FLAG_HIDDEN);
+            break;
+        case KEYBOARD_LAYOUT_AZERTY:
+            if (kb_layout_azerty_check) lv_obj_clear_flag(kb_layout_azerty_check, LV_OBJ_FLAG_HIDDEN);
+            break;
+    }
+}
+
+static void update_preview_keyboard(KeyboardLayout layout) {
+    if (!kb_layout_preview) return;
+
+    // Apply the selected layout to preview keyboard
+    switch (layout) {
+        case KEYBOARD_LAYOUT_QWERTZ:
+            lv_keyboard_set_map(kb_layout_preview, LV_KEYBOARD_MODE_TEXT_LOWER, kb_map_qwertz_lc, kb_ctrl_text_map);
+            break;
+        case KEYBOARD_LAYOUT_AZERTY:
+            lv_keyboard_set_map(kb_layout_preview, LV_KEYBOARD_MODE_TEXT_LOWER, kb_map_azerty_lc, kb_ctrl_azerty_map);
+            break;
+        case KEYBOARD_LAYOUT_QWERTY:
+        default:
+            // Reset to default QWERTY - need to reload widget to reset maps
+            // For now, just leave as-is since QWERTY is default
+            break;
+    }
+    lv_keyboard_set_mode(kb_layout_preview, LV_KEYBOARD_MODE_TEXT_LOWER);
+}
+
+static void kb_layout_qwerty_handler(lv_event_t *e) {
+    (void)e;
+    save_keyboard_layout(KEYBOARD_LAYOUT_QWERTY);
+    update_layout_checkmarks(KEYBOARD_LAYOUT_QWERTY);
+    update_preview_keyboard(KEYBOARD_LAYOUT_QWERTY);
+}
+
+static void kb_layout_qwertz_handler(lv_event_t *e) {
+    (void)e;
+    save_keyboard_layout(KEYBOARD_LAYOUT_QWERTZ);
+    update_layout_checkmarks(KEYBOARD_LAYOUT_QWERTZ);
+    update_preview_keyboard(KEYBOARD_LAYOUT_QWERTZ);
+}
+
+static void kb_layout_azerty_handler(lv_event_t *e) {
+    (void)e;
+    save_keyboard_layout(KEYBOARD_LAYOUT_AZERTY);
+    update_layout_checkmarks(KEYBOARD_LAYOUT_AZERTY);
+    update_preview_keyboard(KEYBOARD_LAYOUT_AZERTY);
+}
+
+// =============================================================================
+// Create Keyboard Layout Screen
+// =============================================================================
+
+static lv_obj_t *create_layout_row(lv_obj_t *parent, int y, const char *layout_name, const char *description,
+                                    lv_obj_t **check_out, lv_event_cb_t handler) {
+    // Row container
+    lv_obj_t *row = lv_obj_create(parent);
+    lv_obj_set_pos(row, 0, y);
+    lv_obj_set_size(row, 765, 60);
+    lv_obj_set_style_bg_color(row, lv_color_hex(COLOR_BG_PANEL), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(row, 255, LV_PART_MAIN);
+    lv_obj_set_style_radius(row, 12, LV_PART_MAIN);
+    lv_obj_set_style_border_width(row, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_left(row, 15, LV_PART_MAIN);
+    lv_obj_set_style_pad_right(row, 15, LV_PART_MAIN);
+    lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_style_bg_color(row, lv_color_hex(0x3d3d3d), LV_PART_MAIN | LV_STATE_PRESSED);
+
+    // Layout name
+    lv_obj_t *name_label = lv_label_create(row);
+    lv_label_set_text(name_label, layout_name);
+    lv_obj_set_style_text_font(name_label, &lv_font_montserrat_18, LV_PART_MAIN);
+    lv_obj_set_style_text_color(name_label, lv_color_hex(COLOR_TEXT_PRIMARY), LV_PART_MAIN);
+    lv_obj_align(name_label, LV_ALIGN_LEFT_MID, 0, -10);
+
+    // Description
+    lv_obj_t *desc_label = lv_label_create(row);
+    lv_label_set_text(desc_label, description);
+    lv_obj_set_style_text_font(desc_label, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_set_style_text_color(desc_label, lv_color_hex(COLOR_TEXT_SECONDARY), LV_PART_MAIN);
+    lv_obj_align(desc_label, LV_ALIGN_LEFT_MID, 0, 12);
+
+    // Checkmark (green circle with check)
+    lv_obj_t *check = lv_obj_create(row);
+    lv_obj_set_size(check, 32, 32);
+    lv_obj_align(check, LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_obj_set_style_bg_color(check, lv_color_hex(COLOR_ACCENT_GREEN), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(check, 255, LV_PART_MAIN);
+    lv_obj_set_style_radius(check, 16, LV_PART_MAIN);
+    lv_obj_set_style_border_width(check, 0, LV_PART_MAIN);
+    lv_obj_clear_flag(check, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(check, LV_OBJ_FLAG_HIDDEN);  // Hidden by default
+
+    lv_obj_t *check_icon = lv_label_create(check);
+    lv_label_set_text(check_icon, LV_SYMBOL_OK);
+    lv_obj_set_style_text_font(check_icon, &lv_font_montserrat_16, LV_PART_MAIN);
+    lv_obj_set_style_text_color(check_icon, lv_color_hex(0x000000), LV_PART_MAIN);
+    lv_obj_center(check_icon);
+
+    if (check_out) *check_out = check;
+
+    // Click handler
+    lv_obj_add_event_cb(row, handler, LV_EVENT_CLICKED, NULL);
+
+    return row;
+}
+
+void create_keyboard_layout_screen(void) {
+    if (keyboard_layout_screen) return;
+
+    // Load saved layout
+    load_keyboard_layout_from_nvs();
+
+    // Main screen
+    keyboard_layout_screen = lv_obj_create(NULL);
+    lv_obj_set_size(keyboard_layout_screen, 800, 480);
+    lv_obj_set_style_bg_color(keyboard_layout_screen, lv_color_hex(COLOR_BG_DARK), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(keyboard_layout_screen, 255, LV_PART_MAIN);
+
+    // Top bar
+    create_top_bar(keyboard_layout_screen, "Keyboard Layout", &kb_layout_top_bar_icon_back, &kb_layout_top_bar_clock);
+    lv_obj_add_event_cb(kb_layout_top_bar_icon_back, kb_layout_back_handler, LV_EVENT_CLICKED, NULL);
+
+    // Content area
+    lv_obj_t *content = lv_obj_create(keyboard_layout_screen);
+    lv_obj_set_pos(content, 0, 44);
+    lv_obj_set_size(content, 800, 436);
+    lv_obj_set_style_bg_color(content, lv_color_hex(COLOR_BG_DARK), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(content, 255, LV_PART_MAIN);
+    lv_obj_set_style_border_width(content, 0, LV_PART_MAIN);
+    lv_obj_set_style_radius(content, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(content, 15, LV_PART_MAIN);
+    lv_obj_clear_flag(content, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Section header
+    lv_obj_t *header = lv_label_create(content);
+    lv_label_set_text(header, "SELECT LAYOUT");
+    lv_obj_set_style_text_font(header, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_set_style_text_color(header, lv_color_hex(COLOR_TEXT_SECONDARY), LV_PART_MAIN);
+    lv_obj_set_pos(header, 0, 0);
+
+    // Layout rows
+    kb_layout_qwerty_row = create_layout_row(content, 20, "QWERTY", "English (US/UK)", &kb_layout_qwerty_check, kb_layout_qwerty_handler);
+    kb_layout_qwertz_row = create_layout_row(content, 90, "QWERTZ", "German, Swiss, Austrian", &kb_layout_qwertz_check, kb_layout_qwertz_handler);
+    kb_layout_azerty_row = create_layout_row(content, 160, "AZERTY", "French, Belgian", &kb_layout_azerty_check, kb_layout_azerty_handler);
+
+    // Set initial checkmark
+    update_layout_checkmarks(current_keyboard_layout);
+
+    // Preview header
+    lv_obj_t *preview_header = lv_label_create(content);
+    lv_label_set_text(preview_header, "PREVIEW");
+    lv_obj_set_style_text_font(preview_header, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_set_style_text_color(preview_header, lv_color_hex(COLOR_TEXT_SECONDARY), LV_PART_MAIN);
+    lv_obj_set_pos(preview_header, 0, 235);
+
+    // Preview keyboard (smaller, non-interactive display)
+    kb_layout_preview = lv_keyboard_create(content);
+    lv_obj_set_pos(kb_layout_preview, 0, 255);
+    lv_obj_set_size(kb_layout_preview, 765, 160);
+    lv_keyboard_set_mode(kb_layout_preview, LV_KEYBOARD_MODE_TEXT_LOWER);
+    // Style the preview keyboard
+    lv_obj_set_style_bg_color(kb_layout_preview, lv_color_hex(COLOR_BG_PANEL), LV_PART_MAIN);
+    lv_obj_set_style_border_width(kb_layout_preview, 0, LV_PART_MAIN);
+    lv_obj_set_style_radius(kb_layout_preview, 12, LV_PART_MAIN);
+    // Remove click functionality from preview (read-only)
+    lv_obj_remove_flag(kb_layout_preview, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(kb_layout_preview, LV_OBJ_FLAG_CLICK_FOCUSABLE);
+
+    // Apply current layout to preview
+    update_preview_keyboard(current_keyboard_layout);
+}
+
+lv_obj_t *get_keyboard_layout_screen(void) {
+    return keyboard_layout_screen;
+}
+
+void update_keyboard_layout_screen(void) {
+    if (!keyboard_layout_screen || lv_scr_act() != keyboard_layout_screen) return;
+
+    // Update clock
+    if (kb_layout_top_bar_clock) {
+        int time_hhmm = time_get_hhmm();
+        if (time_hhmm >= 0) {
+            int hour = (time_hhmm >> 8) & 0xFF;
+            int minute = time_hhmm & 0xFF;
+            char time_str[8];
+            snprintf(time_str, sizeof(time_str), "%02d:%02d", hour, minute);
+            lv_label_set_text(kb_layout_top_bar_clock, time_str);
+        }
+    }
+}
+
+// =============================================================================
 // Cleanup
 // =============================================================================
 
@@ -932,6 +1342,10 @@ void cleanup_hardware_screens(void) {
         lv_obj_delete(scale_calibration_screen);
         scale_calibration_screen = NULL;
     }
+    if (keyboard_layout_screen && keyboard_layout_screen != active) {
+        lv_obj_delete(keyboard_layout_screen);
+        keyboard_layout_screen = NULL;
+    }
     // Reset other pointers (only if screens were deleted)
     if (!nfc_screen) {
         nfc_screen_top_bar_icon_back = NULL;
@@ -953,5 +1367,16 @@ void cleanup_hardware_screens(void) {
         scale_cal_weight_label = NULL;
         scale_cal_status_label = NULL;
         scale_cal_keyboard = NULL;
+    }
+    if (!keyboard_layout_screen) {
+        kb_layout_top_bar_icon_back = NULL;
+        kb_layout_top_bar_clock = NULL;
+        kb_layout_qwerty_row = NULL;
+        kb_layout_qwertz_row = NULL;
+        kb_layout_azerty_row = NULL;
+        kb_layout_qwerty_check = NULL;
+        kb_layout_qwertz_check = NULL;
+        kb_layout_azerty_check = NULL;
+        kb_layout_preview = NULL;
     }
 }

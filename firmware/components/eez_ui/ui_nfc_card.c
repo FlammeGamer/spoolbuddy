@@ -403,8 +403,8 @@ void ui_nfc_card_show_details(void) {
             lv_obj_set_style_text_font(k_lbl, &lv_font_montserrat_10, 0);
             lv_obj_set_style_text_color(k_lbl, lv_color_hex(0x666666), 0);
             lv_obj_set_width(k_lbl, 60);
-            char k_text[80];
-            snprintf(k_text, sizeof(k_text), "%s (k=%s)", k_profile.name, k_profile.k_value[0] ? k_profile.k_value : "-");
+            char k_text[96];
+            snprintf(k_text, sizeof(k_text), "%.63s (k=%.15s)", k_profile.name, k_profile.k_value[0] ? k_profile.k_value : "-");
             lv_obj_t *k_val = lv_label_create(k_row);
             lv_label_set_text(k_val, k_text);
             lv_obj_set_style_text_font(k_val, &lv_font_montserrat_10, 0);
@@ -506,7 +506,7 @@ void ui_nfc_card_show_details(void) {
 
         // Inventory weight
         char inv_str[32];
-        snprintf(inv_str, sizeof(inv_str), "%dg", spool_info.weight_current);
+        snprintf(inv_str, sizeof(inv_str), "%dg", (int)spool_info.weight_current);
         lv_obj_t *inv_val = lv_label_create(weight_row);
         lv_label_set_text(inv_val, inv_str);
         lv_obj_set_style_text_font(inv_val, &lv_font_montserrat_16, 0);
@@ -628,7 +628,12 @@ static void popup_close_handler(lv_event_t *e) {
 
 static void configure_ams_click_handler(lv_event_t *e) {
     (void)e;
-    // Close popup first
+    // Pre-set tag ID BEFORE closing popup to avoid race condition
+    // The scan_result screen will use this instead of reading NFC directly
+    if (popup_tag_uid[0] != '\0') {
+        ui_scan_result_set_tag_id((const char*)popup_tag_uid);
+    }
+    // Close popup
     popup_close_handler(NULL);
     // Navigate to scan_result screen (Encode Tag)
     pendingScreen = SCREEN_ID_SCAN_RESULT;
@@ -780,7 +785,8 @@ static void spool_item_click_handler(lv_event_t *e) {
              popup_tag_uid, spool->id, spool->brand, spool->material);
 
     // Link the tag to this spool
-    bool success = spool_link_tag(spool->id, (const char*)popup_tag_uid, "generic");
+    // Returns: 0 = success, -1 = connection error, 409 = already assigned, other = server error
+    int result = spool_link_tag(spool->id, (const char*)popup_tag_uid, "generic");
 
     // Close link popup
     if (link_popup) {
@@ -788,12 +794,18 @@ static void spool_item_click_handler(lv_event_t *e) {
         link_popup = NULL;
     }
 
-    if (success) {
+    if (result == 0) {
         char msg[128];
         snprintf(msg, sizeof(msg), "Tag Linked!\n%s %s", spool->brand, spool->material);
         show_success_overlay(msg);
+    } else if (result == 409) {
+        show_success_overlay("Tag already assigned\nto another spool.");
+    } else if (result == -1) {
+        show_success_overlay("Connection error.\nPlease try again.");
     } else {
-        show_success_overlay("Failed to link tag.\nPlease try again.");
+        char msg[64];
+        snprintf(msg, sizeof(msg), "Server error (%d).\nPlease try again.", result);
+        show_success_overlay(msg);
     }
 }
 
@@ -1345,7 +1357,7 @@ void ui_nfc_card_update(void) {
             uint32_t elapsed = lv_tick_get() - tag_lost_time;
             if (elapsed >= TAG_REMOVAL_DEBOUNCE_MS) {
                 // Tag has been gone long enough - clear suppression
-                ESP_LOGI(TAG, "Tag gone for %dms, clearing suppression", elapsed);
+                ESP_LOGI(TAG, "Tag gone for %ums, clearing suppression", (unsigned int)elapsed);
                 configured_tag_id[0] = '\0';
                 dismissed_tag_uid[0] = '\0';
                 popup_user_closed = false;

@@ -93,7 +93,8 @@ export function WebSocketProvider({ children }: { children: ComponentChildren })
           setDeviceUpdateAvailable(device.update_available ?? false);
           setCurrentWeight(device.last_weight ?? null);
           setWeightStable(device.weight_stable ?? false);
-          setCurrentTagId(device.current_tag_id ?? null);
+          // Don't set currentTagId from initial_state - it may be stale
+          // Only set from real-time device_state/tag_detected messages
         }
         // Parse initial printer statuses
         if (message.printers && typeof message.printers === "object") {

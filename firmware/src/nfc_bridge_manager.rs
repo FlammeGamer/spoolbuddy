@@ -417,6 +417,7 @@ pub fn get_tag_type() -> String {
 
 /// Get tag vendor (returns pointer to static string, valid until next call)
 #[no_mangle]
+#[allow(static_mut_refs)]
 pub extern "C" fn nfc_get_tag_vendor() -> *const std::ffi::c_char {
     static mut VENDOR_BUF: [u8; 32] = [0; 32];
     let data = DECODED_TAG.lock().unwrap();
@@ -428,6 +429,7 @@ pub extern "C" fn nfc_get_tag_vendor() -> *const std::ffi::c_char {
 
 /// Get tag material type
 #[no_mangle]
+#[allow(static_mut_refs)]
 pub extern "C" fn nfc_get_tag_material() -> *const std::ffi::c_char {
     static mut MATERIAL_BUF: [u8; 32] = [0; 32];
     let data = DECODED_TAG.lock().unwrap();
@@ -439,6 +441,7 @@ pub extern "C" fn nfc_get_tag_material() -> *const std::ffi::c_char {
 
 /// Get tag material subtype
 #[no_mangle]
+#[allow(static_mut_refs)]
 pub extern "C" fn nfc_get_tag_material_subtype() -> *const std::ffi::c_char {
     static mut SUBTYPE_BUF: [u8; 32] = [0; 32];
     let data = DECODED_TAG.lock().unwrap();
@@ -450,6 +453,7 @@ pub extern "C" fn nfc_get_tag_material_subtype() -> *const std::ffi::c_char {
 
 /// Get tag color name
 #[no_mangle]
+#[allow(static_mut_refs)]
 pub extern "C" fn nfc_get_tag_color_name() -> *const std::ffi::c_char {
     static mut COLOR_BUF: [u8; 32] = [0; 32];
     let data = DECODED_TAG.lock().unwrap();
@@ -475,6 +479,7 @@ pub extern "C" fn nfc_get_tag_spool_weight() -> i32 {
 
 /// Get tag type (e.g., "bambu", "spoolease", "generic")
 #[no_mangle]
+#[allow(static_mut_refs)]
 pub extern "C" fn nfc_get_tag_type() -> *const std::ffi::c_char {
     static mut TYPE_BUF: [u8; 32] = [0; 32];
     let data = DECODED_TAG.lock().unwrap();

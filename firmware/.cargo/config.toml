@@ -1,6 +1,6 @@
 [target.xtensa-esp32s3-espidf]
 linker = "ldproxy"
-runner = "espflash flash --monitor --chip esp32s3"
+runner = "espflash flash --monitor --chip esp32s3 --baud 900000"
 rustflags = ["--cfg", "espidf_time64"]
 
 [env]

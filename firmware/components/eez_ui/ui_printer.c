@@ -895,6 +895,7 @@ void wire_printer_add_buttons(void) {
         // Handle keyboard ready (checkmark) and cancel (X) events
         lv_obj_add_event_cb(printer_keyboard, keyboard_ready_handler, LV_EVENT_READY, NULL);
         lv_obj_add_event_cb(printer_keyboard, keyboard_ready_handler, LV_EVENT_CANCEL, NULL);
+        apply_keyboard_layout(printer_keyboard);
     }
 
     // Wire textareas with keyboard and change detection

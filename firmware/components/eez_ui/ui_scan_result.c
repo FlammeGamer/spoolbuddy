@@ -51,6 +51,9 @@ static int selected_ams_id = -1;      // AMS unit ID (-1 = none)
 static int selected_slot_index = -1;  // Slot index within AMS (0-3)
 static lv_obj_t *selected_slot_obj = NULL;  // Currently selected slot object
 
+// Pre-set tag ID (set before navigating to this screen to avoid race conditions)
+static char preset_tag_id[32] = {0};
+
 // Captured tag data (frozen when screen opens)
 static bool has_tag_data = false;
 static char captured_tag_id[32] = {0};
@@ -63,6 +66,18 @@ static uint32_t captured_color_rgba = 0;
 static int32_t captured_spool_weight = 0;  // Label weight in grams from NFC tag
 static char captured_slicer_filament[32] = {0};
 static bool captured_in_inventory = false;  // True if spool found in backend inventory
+
+// Pre-set the tag ID before navigating to scan_result screen
+// This avoids race conditions where nfc_tag_present() might return false during screen transition
+void ui_scan_result_set_tag_id(const char *tag_id) {
+    if (tag_id && tag_id[0]) {
+        strncpy(preset_tag_id, tag_id, sizeof(preset_tag_id) - 1);
+        preset_tag_id[sizeof(preset_tag_id) - 1] = '\0';
+        ESP_LOGI("ui_scan_result", "Pre-set tag ID: %s", preset_tag_id);
+    } else {
+        preset_tag_id[0] = '\0';
+    }
+}
 
 // Helper to convert RGBA packed color to lv_color
 static lv_color_t rgba_to_lv_color(uint32_t rgba) {
@@ -277,21 +292,38 @@ static void capture_tag_data(void) {
     captured_spool_id[0] = '\0';
     captured_slicer_filament[0] = '\0';
 
-    // Get tag UID
-    uint8_t uid_buf[32];
-    nfc_get_uid_hex(uid_buf, sizeof(uid_buf));
-    strncpy(captured_tag_id, (const char*)uid_buf, sizeof(captured_tag_id) - 1);
-    captured_tag_id[sizeof(captured_tag_id) - 1] = '\0';
+    // Check if we have a pre-set tag ID (avoids race condition during screen transition)
+    if (preset_tag_id[0] != '\0') {
+        ESP_LOGI("ui_scan_result", "Using pre-set tag ID: %s", preset_tag_id);
+        strncpy(captured_tag_id, preset_tag_id, sizeof(captured_tag_id) - 1);
+        captured_tag_id[sizeof(captured_tag_id) - 1] = '\0';
+        preset_tag_id[0] = '\0';  // Clear after use
+    } else {
+        // Fallback: try to read from NFC directly
+        uint8_t uid_buf[32];
+        nfc_get_uid_hex(uid_buf, sizeof(uid_buf));
+        strncpy(captured_tag_id, (const char*)uid_buf, sizeof(captured_tag_id) - 1);
+        captured_tag_id[sizeof(captured_tag_id) - 1] = '\0';
 
-    if (!nfc_tag_present() || captured_tag_id[0] == '\0') {
-        // No tag - clear captured data
-        captured_tag_id[0] = '\0';
-        captured_vendor[0] = '\0';
-        captured_material[0] = '\0';
-        captured_subtype[0] = '\0';
-        captured_color_name[0] = '\0';
-        captured_color_rgba = 0;
-        captured_spool_weight = 0;
+        bool tag_present = nfc_tag_present();
+        ESP_LOGI("ui_scan_result", "capture_tag_data: nfc_tag_present=%d, uid='%s'", tag_present, captured_tag_id);
+
+        if (!tag_present || captured_tag_id[0] == '\0') {
+            // No tag - clear captured data
+            ESP_LOGW("ui_scan_result", "No tag detected, clearing data");
+            captured_tag_id[0] = '\0';
+            captured_vendor[0] = '\0';
+            captured_material[0] = '\0';
+            captured_subtype[0] = '\0';
+            captured_color_name[0] = '\0';
+            captured_color_rgba = 0;
+            captured_spool_weight = 0;
+            return;
+        }
+    }
+
+    // At this point we have a valid captured_tag_id
+    if (captured_tag_id[0] == '\0') {
         return;
     }
 
@@ -348,23 +380,42 @@ static void capture_tag_data(void) {
 
 // Populate status panel (top green bar) with tag info
 static void populate_status_panel(void) {
-    // Show checkmark icon
-    if (objects.scan_screen_main_panel_top_panel_icon_ok) {
-        lv_obj_clear_flag(objects.scan_screen_main_panel_top_panel_icon_ok, LV_OBJ_FLAG_HIDDEN);
-    }
-
-    // Show tag ID in message label
-    if (objects.scan_screen_main_panel_top_panel_label_message) {
-        if (has_tag_data) {
+    if (has_tag_data) {
+        // Tag detected - show green status
+        if (objects.scan_screen_main_panel_top_panel_icon_ok) {
+            lv_obj_clear_flag(objects.scan_screen_main_panel_top_panel_icon_ok, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_style_image_recolor(objects.scan_screen_main_panel_top_panel_icon_ok,
+                                           lv_color_hex(0x00FF00), 0);  // Green
+        }
+        if (objects.scan_screen_main_panel_top_panel_label_status) {
+            lv_label_set_text(objects.scan_screen_main_panel_top_panel_label_status,
+                              captured_in_inventory ? "Spool Recognized" : "Unknown Tag");
+            lv_obj_set_style_text_color(objects.scan_screen_main_panel_top_panel_label_status,
+                                        captured_in_inventory ? lv_color_hex(0x00FF00) : lv_color_hex(0xFF9800), 0);
+        }
+        if (objects.scan_screen_main_panel_top_panel_label_message) {
             char tag_str[64];
             snprintf(tag_str, sizeof(tag_str), "Tag: %s", captured_tag_id);
             lv_label_set_text(objects.scan_screen_main_panel_top_panel_label_message, tag_str);
             lv_obj_set_style_text_color(objects.scan_screen_main_panel_top_panel_label_message,
-                                        lv_color_hex(0x00FF00), 0);  // Green
-        } else {
-            lv_label_set_text(objects.scan_screen_main_panel_top_panel_label_message, "No Tag Detected");
-            lv_obj_set_style_text_color(objects.scan_screen_main_panel_top_panel_label_message,
+                                        lv_color_hex(0xAAAAAA), 0);  // Gray
+        }
+    } else {
+        // No tag - show orange warning
+        if (objects.scan_screen_main_panel_top_panel_icon_ok) {
+            lv_obj_clear_flag(objects.scan_screen_main_panel_top_panel_icon_ok, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_style_image_recolor(objects.scan_screen_main_panel_top_panel_icon_ok,
+                                           lv_color_hex(0xFF6600), 0);  // Orange
+        }
+        if (objects.scan_screen_main_panel_top_panel_label_status) {
+            lv_label_set_text(objects.scan_screen_main_panel_top_panel_label_status, "No Tag Detected");
+            lv_obj_set_style_text_color(objects.scan_screen_main_panel_top_panel_label_status,
                                         lv_color_hex(0xFF6600), 0);  // Orange
+        }
+        if (objects.scan_screen_main_panel_top_panel_label_message) {
+            lv_label_set_text(objects.scan_screen_main_panel_top_panel_label_message, "Place spool on scale");
+            lv_obj_set_style_text_color(objects.scan_screen_main_panel_top_panel_label_message,
+                                        lv_color_hex(0x888888), 0);  // Gray
         }
     }
 }
@@ -945,8 +996,8 @@ static void show_assign_result_popup(int result, const char *ams_name, int slot_
 
     // Spool details
     lv_obj_t *spool_label = lv_label_create(card);
-    char spool_text[128];
-    snprintf(spool_text, sizeof(spool_text), "%s %s%s%s - %s",
+    char spool_text[192];
+    snprintf(spool_text, sizeof(spool_text), "%.31s %.31s%.1s%.31s - %.31s",
              captured_vendor[0] ? captured_vendor : "",
              captured_material[0] ? captured_material : "Unknown",
              captured_subtype[0] ? " " : "",

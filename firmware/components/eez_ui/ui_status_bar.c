@@ -66,10 +66,10 @@ static bool get_active_tray_info(uint32_t *color_out, char *material_out, size_t
         return false;
     }
 
-    // Get tray_now values
-    int tray_now = info.tray_now;
-    int tray_now_left = info.tray_now_left;
-    int tray_now_right = info.tray_now_right;
+    // Get tray_now values from separate functions
+    int tray_now = backend_get_tray_now(printer_idx);
+    int tray_now_left = backend_get_tray_now_left(printer_idx);
+    int tray_now_right = backend_get_tray_now_right(printer_idx);
 
     // Determine which tray is active
     int active_tray = -1;

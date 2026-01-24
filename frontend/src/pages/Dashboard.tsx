@@ -110,7 +110,8 @@ export function Dashboard() {
   // Current Spool card state - persists until user closes or new tag detected
   const [displayedTagId, setDisplayedTagId] = useState<string | null>(null);
   const [displayedWeight, setDisplayedWeight] = useState<number | null>(null);
-  const [cardDismissed, setCardDismissed] = useState(false);
+  // Track which specific tag is hidden (so closing doesn't affect different tags)
+  const [hiddenTagId, setHiddenTagId] = useState<string | null>(null);
 
   // Compute spools without tags for the Link To Spool feature
   const untaggedSpools = useMemo(() => {
@@ -135,27 +136,37 @@ export function Dashboard() {
   // Handle tag detection - show card when tag detected, keep until user closes or new tag
   useEffect(() => {
     if (currentTagId) {
-      // New tag detected - check if it's different from current display
-      if (currentTagId !== displayedTagId) {
-        // Show the new tag and reset dismissed state
+      // Tag present
+      const isHidden = hiddenTagId === currentTagId;
+      const isDifferentTag = displayedTagId !== null && displayedTagId !== currentTagId;
+
+      if (isDifferentTag || (!isHidden && displayedTagId !== currentTagId)) {
+        // New tag or same tag that's not hidden - show it
         setDisplayedTagId(currentTagId);
         setDisplayedWeight(null);
-        setCardDismissed(false);
+        setHiddenTagId(null);
       }
-      // Update weight when stable
-      if (currentWeight !== null && weightStable) {
+
+      // Update weight when stable and card is visible
+      if (!isHidden && currentWeight !== null && weightStable) {
         setDisplayedWeight(Math.round(Math.max(0, currentWeight)));
       }
+    } else {
+      // Tag removed - clear hidden state so same tag can show when re-placed
+      // But keep displayedTagId for persistence (unless it was hidden)
+      if (hiddenTagId) {
+        // Card was hidden when tag removed - clear everything for fresh start
+        setDisplayedTagId(null);
+        setHiddenTagId(null);
+        setDisplayedWeight(null);
+      }
     }
-    // Note: We don't clear displayedTagId when currentTagId becomes null
-    // The card persists until user clicks Close or a new tag is detected
-  }, [currentTagId, currentWeight, weightStable, displayedTagId]);
+  }, [currentTagId, currentWeight, weightStable, displayedTagId, hiddenTagId]);
 
   // Close handler for the Current Spool card
   const handleCloseSpoolCard = () => {
-    setCardDismissed(true);
-    setDisplayedTagId(null);
-    setDisplayedWeight(null);
+    // Mark this specific tag as hidden
+    setHiddenTagId(displayedTagId);
   };
 
   // Link tag to an existing spool
@@ -526,7 +537,7 @@ export function Dashboard() {
             </div>
             <div class="flex-1 flex items-center justify-center">
 
-            {displayedTagId && !cardDismissed ? (
+            {displayedTagId && displayedTagId !== hiddenTagId ? (
               displayedSpool ? (
                 // Known spool from inventory
                 (() => {
