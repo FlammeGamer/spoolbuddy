@@ -210,7 +210,7 @@ export function isMatchingCalibration(
   const profileName = cal.name || ''
 
   // Remove flow type prefixes
-  let cleanName = profileName
+  const cleanName = profileName
     .replace(/^High Flow[_\s]+/i, '')
     .replace(/^Standard[_\s]+/i, '')
     .replace(/^HF[_\s]+/i, '')

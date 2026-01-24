@@ -488,6 +488,7 @@ export function AssignAmsModal({ isOpen, onClose, spool }: AssignAmsModalProps) 
     });
 
     return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, subscribe]);
 
   const loadPrinters = async () => {

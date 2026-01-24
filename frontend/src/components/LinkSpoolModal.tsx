@@ -25,6 +25,7 @@ export function LinkSpoolModal({
     if (e.key === 'Escape') {
       handleClose()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {

@@ -28,7 +28,7 @@ export function SpoolCatalogSettings() {
     try {
       const entries = await api.getSpoolCatalog()
       setCatalog(entries)
-    } catch (e) {
+    } catch {
       showToast('error', 'Failed to load spool catalog')
     } finally {
       setLoading(false)
@@ -61,7 +61,7 @@ export function SpoolCatalogSettings() {
       setFormName('')
       setFormWeight('')
       showToast('success', 'Entry added')
-    } catch (e) {
+    } catch {
       showToast('error', 'Failed to add entry')
     } finally {
       setSaving(false)
@@ -99,7 +99,7 @@ export function SpoolCatalogSettings() {
       setFormName('')
       setFormWeight('')
       showToast('success', 'Entry updated')
-    } catch (e) {
+    } catch {
       showToast('error', 'Failed to update entry')
     } finally {
       setSaving(false)
@@ -118,7 +118,7 @@ export function SpoolCatalogSettings() {
       await api.deleteCatalogEntry(deleteId)
       setCatalog(prev => prev.filter(e => e.id !== deleteId))
       showToast('success', 'Entry deleted')
-    } catch (e) {
+    } catch {
       showToast('error', 'Failed to delete entry')
     } finally {
       setDeleteId(null)
@@ -134,7 +134,7 @@ export function SpoolCatalogSettings() {
       await api.resetSpoolCatalog()
       await loadCatalog()
       showToast('success', 'Catalog reset to defaults')
-    } catch (e) {
+    } catch {
       showToast('error', 'Failed to reset catalog')
       setLoading(false)
     }
@@ -192,7 +192,7 @@ export function SpoolCatalogSettings() {
       }
 
       showToast('success', `Imported ${added} entries (${skipped} skipped)`)
-    } catch (e) {
+    } catch {
       showToast('error', 'Failed to import: invalid JSON format')
     }
 

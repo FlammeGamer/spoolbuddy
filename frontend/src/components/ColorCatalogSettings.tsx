@@ -35,7 +35,7 @@ export function ColorCatalogSettings() {
     try {
       const entries = await api.getColorCatalog()
       setCatalog(entries)
-    } catch (e) {
+    } catch {
       showToast('error', 'Failed to load color catalog')
     } finally {
       setLoading(false)
@@ -89,7 +89,7 @@ export function ColorCatalogSettings() {
       setShowAddForm(false)
       resetForm()
       showToast('success', 'Color added')
-    } catch (e) {
+    } catch {
       showToast('error', 'Failed to add color')
     } finally {
       setSaving(false)
@@ -133,7 +133,7 @@ export function ColorCatalogSettings() {
       setEditingId(null)
       resetForm()
       showToast('success', 'Color updated')
-    } catch (e) {
+    } catch {
       showToast('error', 'Failed to update color')
     } finally {
       setSaving(false)
@@ -152,7 +152,7 @@ export function ColorCatalogSettings() {
       await api.deleteColorEntry(deleteId)
       setCatalog(prev => prev.filter(e => e.id !== deleteId))
       showToast('success', 'Color deleted')
-    } catch (e) {
+    } catch {
       showToast('error', 'Failed to delete color')
     } finally {
       setDeleteId(null)
@@ -168,7 +168,7 @@ export function ColorCatalogSettings() {
       await api.resetColorCatalog()
       await loadCatalog()
       showToast('success', 'Color catalog reset to defaults')
-    } catch (e) {
+    } catch {
       showToast('error', 'Failed to reset catalog')
       setLoading(false)
     }
@@ -225,7 +225,7 @@ export function ColorCatalogSettings() {
       }
 
       await loadCatalog()
-    } catch (e) {
+    } catch {
       showToast('error', 'Failed to sync from FilamentColors.xyz')
     } finally {
       setSyncing(false)
@@ -300,7 +300,7 @@ export function ColorCatalogSettings() {
       }
 
       showToast('success', `Imported ${added} colors (${skipped} skipped)`)
-    } catch (e) {
+    } catch {
       showToast('error', 'Failed to import: invalid JSON format')
     }
 

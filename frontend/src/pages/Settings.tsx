@@ -105,7 +105,7 @@ function AMSSettings() {
         setThresholds(updated);
         setPendingChanges({});
         showToast('success', 'AMS thresholds saved');
-      } catch (err) {
+      } catch {
         showToast('error', 'Failed to save thresholds');
       } finally {
         setSaving(false);
@@ -526,7 +526,7 @@ export function Settings() {
     try {
       await api.rebootESP32();
       showToast('success', 'Reboot command sent');
-    } catch (e) {
+    } catch {
       showToast('error', 'Failed to send reboot command');
     }
   }, [showToast]);
@@ -609,7 +609,7 @@ export function Settings() {
       setTimeout(() => {
         setDeviceUpdating(false);
       }, 120000); // Reset after 2 min (OTA takes longer)
-    } catch (e) {
+    } catch {
       setDeviceUpdating(false);
       showToast('error', 'Failed to send update command');
     }
@@ -743,7 +743,7 @@ export function Settings() {
       await api.cloudLogout();
       setCloudStatus({ is_authenticated: false, email: null });
       showToast('success', 'Logged out of Bambu Cloud');
-    } catch (e) {
+    } catch {
       showToast('error', 'Failed to logout');
     }
   };
@@ -897,7 +897,7 @@ export function Settings() {
       try {
         const state = await api.getDebugLogging();
         setDebugLogging(state);
-      } catch (e) {
+      } catch {
         // Silently ignore polling errors
       }
     }, 10000);
@@ -931,7 +931,7 @@ export function Settings() {
       const newState = await api.setDebugLogging(!debugLogging.enabled);
       setDebugLogging(newState);
       showToast('success', newState.enabled ? 'Debug logging enabled' : 'Debug logging disabled');
-    } catch (e) {
+    } catch {
       showToast('error', 'Failed to toggle debug logging');
     } finally {
       setLoadingDebug(false);
@@ -945,7 +945,7 @@ export function Settings() {
       setLogsTotal(0);
       setLogsFiltered(0);
       showToast('success', 'Logs cleared');
-    } catch (e) {
+    } catch {
       showToast('error', 'Failed to clear logs');
     }
   };
@@ -982,6 +982,7 @@ export function Settings() {
       }, 300);
       return () => clearTimeout(timeout);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logLevel, logSearch]);
 
   // Auto-refresh logs when streaming is enabled
@@ -991,6 +992,7 @@ export function Settings() {
       refreshLogs();
     }, 2000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logStreaming, activeTab]);
 
   // Stop streaming when leaving support tab
@@ -1029,7 +1031,7 @@ export function Settings() {
       try {
         await api.tareScale();
         setCalibrationStep('weight');
-      } catch (e) {
+      } catch {
         showToast('error', 'Failed to set zero point');
       } finally {
         setCalibrating(false);
@@ -1051,7 +1053,7 @@ export function Settings() {
           setCalibrationStep('complete');
           showToast('success', 'Scale calibrated successfully');
         }
-      } catch (e) {
+      } catch {
         showToast('error', 'Calibration failed');
       } finally {
         setCalibrating(false);
@@ -1754,7 +1756,7 @@ export function Settings() {
                     try {
                       const info = await api.getSystemInfo();
                       setSystemInfo(info);
-                    } catch (e) {
+                    } catch {
                       showToast('error', 'Failed to refresh system info');
                     } finally {
                       setLoadingSystemInfo(false);

@@ -446,7 +446,7 @@ export function SpoolsTable({
     )
 
     // Filter and order based on config
-    const result: ColumnDef<Spool, any>[] = []
+    const result: ColumnDef<Spool, unknown>[] = []
     for (const cfg of columnConfig) {
       if (cfg.visible) {
         const col = columnDefsMap.get(cfg.id)

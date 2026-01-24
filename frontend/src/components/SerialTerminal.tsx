@@ -101,7 +101,7 @@ export function SerialTerminal() {
       } else if (response.status === 501) {
         setError('pyserial not installed on server. Run: pip install pyserial');
       }
-    } catch (e) {
+    } catch {
       setError('Failed to load serial ports from server');
     } finally {
       setLoadingPorts(false);
@@ -153,6 +153,7 @@ export function SerialTerminal() {
     } finally {
       setIsConnecting(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appendOutput]);
 
   const readBrowserLoop = useCallback(async (reader: ReadableStreamDefaultReader<Uint8Array>) => {

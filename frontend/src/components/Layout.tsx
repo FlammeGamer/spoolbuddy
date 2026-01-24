@@ -29,7 +29,7 @@ export function Layout({ children }: LayoutProps) {
       try {
         const state = await api.getDebugLogging();
         setDebugLogging(state);
-      } catch (e) {
+      } catch {
         // Silently fail - debug banner just won't show
       }
     };

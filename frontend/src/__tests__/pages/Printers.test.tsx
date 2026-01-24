@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/preact'
+import { screen, fireEvent, waitFor } from '@testing-library/preact'
 import { Printers } from '../../pages/Printers'
 import { renderWithProviders } from '../utils'
 import { server } from '../setup'
 import { http, HttpResponse } from 'msw'
-import { mockPrinters, mockCalibrations } from '../mocks/data'
+import { mockPrinters } from '../mocks/data'
 
 // Mock the toast hook
 vi.mock('../../lib/toast', () => ({

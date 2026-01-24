@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { api } from '../../lib/api'
 import { server } from '../setup'
 import { http, HttpResponse } from 'msw'

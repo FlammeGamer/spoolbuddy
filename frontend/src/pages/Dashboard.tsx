@@ -211,6 +211,7 @@ export function Dashboard() {
     if (displayedSpool?.id !== weightUpdatedForSpool) {
       setWeightUpdatedForSpool(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayedSpool?.id]);
 
   // Update spool weight in backend when known spool is detected on scale
@@ -234,6 +235,7 @@ export function Dashboard() {
         setWeightUpdatedForSpool(displayedSpool.id);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayedSpool?.id, currentTagId, currentWeight, weightStable, weightUpdatedForSpool]);
 
   const loadCloudStatus = async () => {

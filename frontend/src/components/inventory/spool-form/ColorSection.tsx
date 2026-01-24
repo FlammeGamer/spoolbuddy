@@ -261,7 +261,7 @@ export function ColorSection({
                   placeholder="RRGGBB"
                   value={currentHex.toUpperCase()}
                   onInput={(e) => {
-                    let val = (e.target as HTMLInputElement).value.replace('#', '').replace(/[^0-9A-Fa-f]/g, '')
+                    const val = (e.target as HTMLInputElement).value.replace('#', '').replace(/[^0-9A-Fa-f]/g, '')
                     if (val.length <= 8) updateField('rgba', `#${val}`)
                   }}
                 />

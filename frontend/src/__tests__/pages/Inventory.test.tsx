@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/preact'
+import { screen, fireEvent, waitFor } from '@testing-library/preact'
 import { Inventory } from '../../pages/Inventory'
 import { renderWithProviders } from '../utils'
 import { server } from '../setup'

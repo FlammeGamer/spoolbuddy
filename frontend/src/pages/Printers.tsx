@@ -257,6 +257,7 @@ export function Printers() {
         fetchCalibrations(printer.serial);
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [printers, printerStatuses]);
 
   // Load AMS thresholds

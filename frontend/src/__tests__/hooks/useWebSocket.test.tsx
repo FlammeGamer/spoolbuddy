@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, act, waitFor } from '@testing-library/preact'
+import { render, act } from '@testing-library/preact'
 import { useWebSocket, WebSocketProvider } from '../../lib/websocket'
-import { ComponentChildren } from 'preact'
 
 // Capture the last created WebSocket instance
 let mockWebSocketInstance: MockWebSocket | null = null
@@ -81,11 +80,9 @@ describe('useWebSocket', () => {
 
   describe('Connection', () => {
     it('connects on mount', async () => {
-      let capturedState: ReturnType<typeof useWebSocket> | null = null
-
       render(
         <WebSocketProvider>
-          <TestConsumer onState={(s) => { capturedState = s }} />
+          <TestConsumer onState={() => {}} />
         </WebSocketProvider>
       )
 
@@ -492,12 +489,10 @@ describe('useWebSocket', () => {
 
   describe('Subscribe', () => {
     it('subscribe() registers custom message handler', async () => {
-      let capturedState: ReturnType<typeof useWebSocket> | null = null
       const customHandler = vi.fn()
 
       function TestSubscriber() {
         const state = useWebSocket()
-        capturedState = state
 
         // Subscribe to messages
         state.subscribe(customHandler)

@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/preact'
+import { screen, waitFor } from '@testing-library/preact'
 import { Dashboard } from '../../pages/Dashboard'
 import { renderWithProviders } from '../utils'
 import { server } from '../setup'
 import { http, HttpResponse } from 'msw'
-import { mockSpools, mockPrinters, mockCloudStatus, mockAuthenticatedCloudStatus } from '../mocks/data'
+import { mockAuthenticatedCloudStatus } from '../mocks/data'
 
 describe('Dashboard', () => {
   beforeEach(() => {

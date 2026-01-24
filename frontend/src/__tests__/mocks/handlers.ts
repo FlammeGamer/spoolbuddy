@@ -1,14 +1,11 @@
 import { http, HttpResponse } from 'msw'
 import {
-  mockSpools as sharedMockSpools,
-  mockPrinters as sharedMockPrinters,
   mockCalibrations,
   mockSlicerPresets,
   mockSettingDetail,
   mockCloudStatus,
   mockVersionInfo,
   mockUpdateCheck,
-  mockDeviceStatus,
 } from './data'
 
 // Re-export mock data for backward compatibility
@@ -249,8 +246,7 @@ export const handlers = [
     return HttpResponse.json({ status: 'ok' })
   }),
 
-  http.post('/api/printers/:serial/ams/:amsId/tray/:trayId/assign', async ({ request }) => {
-    const body = await request.json() as { spool_id: string }
+  http.post('/api/printers/:serial/ams/:amsId/tray/:trayId/assign', async () => {
     return HttpResponse.json({
       status: 'configured',
       message: 'Spool assigned',
@@ -273,7 +269,7 @@ export const handlers = [
   }),
 
   // AMS thresholds
-  http.get('/api/ams/thresholds', () => {
+  http.get('/api/settings/ams/thresholds', () => {
     return HttpResponse.json({
       humidity_good: 40,
       humidity_fair: 60,
@@ -283,7 +279,7 @@ export const handlers = [
     })
   }),
 
-  http.put('/api/ams/thresholds', async ({ request }) => {
+  http.put('/api/settings/ams/thresholds', async ({ request }) => {
     const body = await request.json() as Record<string, unknown>
     return HttpResponse.json(body)
   }),

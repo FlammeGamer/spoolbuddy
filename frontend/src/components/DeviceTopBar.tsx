@@ -20,6 +20,7 @@ export function DeviceTopBar({ selectedPrinter, onPrinterChange }: DeviceTopBarP
     loadPrinters();
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadPrinters = async () => {
