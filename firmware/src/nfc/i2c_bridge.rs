@@ -168,11 +168,11 @@ pub fn scan_tag(i2c: &mut I2cDriver<'_>, state: &mut NfcBridgeState) -> Result<b
         state.tag_uid_len = uid_len;
         state.tag_uid[..uid_len as usize].copy_from_slice(&resp[2..2 + uid_len as usize]);
 
-        // Log tag detection without full UID (security: avoid logging sensitive tag identifiers)
-        debug!("[#{}] Tag found, uid_len={}", seq, uid_len);
+        // Tag detected - no sensitive data logged
+        debug!("[#{}] Tag detected", seq);
         Ok(true)
     } else {
-        debug!("[#{}] Invalid UID len: {}", seq, uid_len);
+        debug!("[#{}] No valid tag", seq);
         state.tag_present = false;
         state.tag_uid_len = 0;
         state.decoded_info = None;
@@ -225,7 +225,7 @@ pub fn read_tag_data(i2c: &mut I2cDriver<'_>, state: &mut NfcBridgeState) -> Res
     let uid_len = resp[2] as usize;
     state.tag_type = tag_type;
 
-    debug!("[#{}] Tag read success, type={}", seq, tag_type);
+    debug!("[#{}] Tag read success", seq);
 
     // Decode based on tag type
     let data_offset = 3 + uid_len;
