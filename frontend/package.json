@@ -18,7 +18,7 @@
     "@tanstack/react-table": "^8.20.6",
     "chart.js": "^4.5.1",
     "lucide-preact": "^0.469.0",
-    "preact": "^10.25.4",
+    "preact": "^10.28.2",
     "recharts": "^3.6.0",
     "wouter-preact": "^3.6.0"
   },
