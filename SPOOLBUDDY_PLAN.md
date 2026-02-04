@@ -36,7 +36,7 @@ SpoolBuddy is a reimagined filament management system that combines:
 | Device UI | LVGL 9.x + EEZ Studio |
 | Web UI | Dedicated server (Preact) |
 | Database | SQLite on server |
-| NFC Reader | PN5180 (~20cm range) |
+| NFC Reader | PN5180 (~20cm range) with Raspberry Pi Pico as bridge |
 
 ### Goals
 
@@ -85,6 +85,7 @@ SpoolBuddy is a reimagined filament management system that combines:
                           │  │                           │  │
                           │  │  Peripherals:             │  │
                           │  │  ├── PN5180 (SPI) - NFC   │  │
+                          │  │  ├── Pi Pico (SPI+I2C)    │  │
                           │  │  └── NAU7802 (I2C) - ADC  │  │
                           │  └───────────────────────────┘  │
                           │                                 │
@@ -123,6 +124,7 @@ ESP32 Device                    Server
 | **Main Board** | ELECROW CrowPanel 7.0" | - | ESP32-S3, 8MB Flash, 8MB PSRAM |
 | **Display** | Built-in 7.0" IPS | RGB565 Parallel | 800×480, capacitive touch (GT911) |
 | **NFC Reader** | PN5180 module | SPI | Extended range (~20cm), MIFARE Crypto1 support |
+| **SPI to I2C bridge** | Raspberry Pi Pico | SPI to I2C bridge | NFC bridge controller |
 | **Scale** | NAU7802 + Load Cell | I2C | 24-bit ADC, I2C interface |
 | **Power** | USB-C 5V/2A | - | Single power input |
 
@@ -142,6 +144,7 @@ ESP32 Device                    Server
 | CrowPanel 7.0" | [ELECROW](https://www.elecrow.com/) | ~€60 | Acquired |
 | NFC Reader PN5180 | [LaskaKit.cz](https://www.laskakit.cz/en/rfid-ctecka-s-vestavenou-antenou-nfc-rf-pn5180-iso15693-cteni-i-zapis/) | €10.23 | Ordered |
 | NAU7802 ADC + Load Cell | Various | ~€15 | TBD |
+| Raspberry Pi Pico | Various | ~€4 | TBD |
 
 ### GPIO Pin Allocation
 
@@ -181,6 +184,7 @@ Note: Pin assignments subject to change based on expansion connector availabilit
 - Extended NFC range (~20cm) enables reading Bambu Lab tags inside spool core
 - 7.0" display angled for visibility
 - Single USB-C power input
+- SPI to I2C bridge with Raspberry Pi Pico (powered by RP2040)
 
 ---
 
