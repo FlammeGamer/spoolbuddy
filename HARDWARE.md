@@ -1,7 +1,8 @@
 1) 7" Display Elecrow 7.0 Advance
 https://www.amazon.de/dp/B0F2TB4ZHL?ref=ppx_yo2ov_dt_b_fed_asin_title&th=1
 Make sure you choose the Advanced (AI) version!!!
-2) Raspberry Pi Zero 2 W
+2) Raspberry Pi Pico
+https://www.raspberrypi.com/products/raspberry-pi-pico/
 3) SparkFun Qwiic NAU7802
 https://www.ebay.de/itm/116887968109?mkevt=1&mkpid=0&emsid=e11401.m144671.l197929&mkcid=7&ch=osgood&euid=cc50a2cd126143d2ad6d47a92fb773a5&bu=43216651729&exe=0&ext=0&osub=-1~1&crd=20251217014716&segname=11401
 4) Load Cell 5kg
