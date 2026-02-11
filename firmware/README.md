@@ -4,26 +4,16 @@ ESP32-S3 firmware for the SpoolBuddy device.
 
 ## Hardware
 
-- **Board**: Waveshare ESP32-S3-Touch-LCD-4.3
-- **Display**: 4.3" 800x480 IPS RGB parallel interface (DPI)
-- **Touch**: GT911 capacitive touch controller (I2C)
-- **IO Expander**: CH422G (I2C) - controls backlight, LCD reset, touch reset
-- **NFC Reader**: PN5180 (SPI)
-- **Scale**: HX711 + Load Cell (GPIO)
+see [Hardware](../HARDWARE.md)
 
-### USB Ports
-
-The board has **two USB-C ports**:
-- **Bottom port**: USB-UART/JTAG - Use this for flashing and serial monitor
-- **Top port**: USB-OTG - For USB device mode (not used for development)
 
 ## Testing on Standalone ESP32-S3
 
-You can test the core firmware on any ESP32-S3 board (without the display) while waiting for the Waveshare LCD. The firmware will:
+You can test the core firmware on any ESP32-S3 board (without the display) while waiting for the Elecrow LCD. The firmware will:
 - Connect to WiFi
 - Log status to serial console
 - Read NFC tags (if PN5180 connected)
-- Read scale values (if HX711 connected)
+- Read scale values (if NAU7802 connected)
 
 The display UI won't render, but all other functionality works.
 
@@ -97,20 +87,7 @@ firmware/
 
 ## Pin Configuration
 
-| Function | GPIO | Notes |
-|----------|------|-------|
-| **PN5180 (SPI)** | | |
-| MOSI | GPIO11 | SPI data out |
-| MISO | GPIO13 | SPI data in |
-| SCLK | GPIO12 | SPI clock |
-| NSS | GPIO10 | Chip select |
-| BUSY | GPIO14 | Busy indicator |
-| RST | GPIO21 | Reset |
-| **HX711 (Scale)** | | |
-| DOUT | GPIO1 | Data out |
-| SCK | GPIO2 | Clock |
-
-*Note: Pin assignments are preliminary - verify against actual Waveshare pinout.*
+See [Cabling Plan](../CABLING_PLAN.md)
 
 ## Features
 
