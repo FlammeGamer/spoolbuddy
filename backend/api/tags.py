@@ -7,7 +7,7 @@ and decoding tag data for testing without hardware.
 import base64
 import logging
 import time
-from enum import Enum
+from enum import StrEnum
 
 from db import get_db
 from fastapi import APIRouter, HTTPException, Query
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/tags", tags=["tags"])
 
 
-class TagFormat(str, Enum):
+class TagFormat(StrEnum):
     """Available tag encoding formats."""
 
     SPOOLEASE_V2 = "SpoolEaseV2"

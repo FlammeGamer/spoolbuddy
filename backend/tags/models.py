@@ -1,11 +1,11 @@
 """Tag data models."""
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
 
-class TagType(str, Enum):
+class TagType(StrEnum):
     """Type of NFC tag."""
 
     SPOOLEASE_V1 = "SpoolEaseV1"
@@ -17,7 +17,7 @@ class TagType(str, Enum):
     UNKNOWN = "Unknown"
 
 
-class NfcTagType(str, Enum):
+class NfcTagType(StrEnum):
     """Physical NFC tag type."""
 
     NTAG = "NTAG"  # NTAG213/215/216
