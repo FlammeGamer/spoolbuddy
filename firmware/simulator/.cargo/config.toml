@@ -1,5 +1,0 @@
-# Override parent config to use host target for simulator
-# (Parent sets xtensa-esp32s3-none-elf which doesn't work for desktop)
-
-[build]
-target = "x86_64-unknown-linux-gnu"
